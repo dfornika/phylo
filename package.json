@@ -1,0 +1,19 @@
+{
+  "name": "phylo",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "clojure -M:dev -m shadow.cljs.devtools.cli watch app",
+    "build": "clojure -M:dev -m shadow.cljs.devtools.cli release app",
+    "test": "clojure -M:dev:test -m shadow.cljs.devtools.cli compile test",
+    "test:watch": "clojure -M:dev:test -m shadow.cljs.devtools.cli watch test",
+    "docs": "clojure -X:codox"
+  },
+  "devDependencies": {
+    "process": "^0.11.10",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-refresh": "^0.18.0",
+    "shadow-cljs": "3.3.5"
+  }
+}

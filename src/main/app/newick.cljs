@@ -1,15 +1,27 @@
 (ns app.newick
+  "Parses Newick-format phylogenetic tree strings into nested ClojureScript maps.
+
+  Newick format represents trees using nested parentheses with optional
+  branch names and lengths. For example: `(A:0.1,B:0.2)Root:0.3;`
+
+  The main entry point is [[newick->map]], which returns a recursive map
+  of `{:name :branch-length :children}`."
   (:require [clojure.string :as str]))
 
 (defn- tokenize
-  ""
+  "Splits a Newick-format string into a sequence of structural tokens.
+
+  Tokens include parentheses `(` `)`, commas `,`, colons `:`,
+  taxon labels, and branch length numbers. Trailing semicolons
+  are stripped before tokenization.
+
+  Returns an empty list for nil or empty input."
   [newick-str]
-  ;; Regex to split by structural characters while preserving them
   (cond (nil? newick-str)
         '()
         :else
         (-> newick-str
-            (str/replace #";$" "") ; Remove trailing semicolon
+            (str/replace #";$" "")
             (str/split #"(?=[(),:])|(?<=[(),:])")
             (->> (map str/trim)
                  (remove empty?)))))
@@ -17,12 +29,18 @@
 (comment
   (tokenize nil)
   (tokenize "")
-  (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;")
-  )
+  (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;"))
 
 (declare parse-node)
 
-(defn- parse-children [tokens]
+(defn- parse-children
+  "Parses a sequence of sibling nodes from the token stream.
+
+  Called after an opening `(` token has been consumed. Collects
+  child nodes separated by commas until a closing `)` is reached.
+
+  Returns a tuple of `[children remaining-tokens]`."
+  [tokens]
   (loop [current-tokens tokens
          children []]
     (let [[node remaining] (parse-node current-tokens)
@@ -32,9 +50,14 @@
         (= ")" next-token) [(conj children node) (rest remaining)]
         :else [children remaining]))))
 
+(defn- parse-label-and-length
+  "Extracts an optional node name and branch length from the token stream.
 
+  Handles four cases: `Name:Length`, `Name`, `:Length`, or neither.
+  Branch lengths are parsed as JavaScript floats.
 
-(defn- parse-label-and-length [tokens]
+  Returns a tuple of `[name branch-length remaining-tokens]`."
+  [tokens]
   (let [token (first tokens)]
     (if (or (nil? token) (= "," token) (= ")" token))
       [nil nil tokens]
@@ -44,25 +67,44 @@
                                          [nil remaining])]
         [name-part (js/parseFloat len-part) final-remaining]))))
 
-(defn- parse-node [tokens]
+(defn- parse-node
+  "Recursively parses a single node (and its subtree) from the token stream.
+
+  An opening `(` indicates an internal node with children; otherwise
+  the node is treated as a leaf. After parsing children (if any),
+  extracts the node's optional name and branch length.
+
+  Returns a tuple of `[node-map remaining-tokens]` where `node-map` has
+  keys `:name` (string or nil), `:branch-length` (number or NaN), and
+  `:children` (vector of child node maps)."
+  [tokens]
   (let [token (first tokens)]
     (cond
       (= "(" token)
       (let [[children remaining] (parse-children (rest tokens))
-            ;; After children, we might have Name:Length
             [name len next-tokens] (parse-label-and-length remaining)]
         [{:name name :branch-length len :children children} next-tokens])
-      
+
       :else
       (let [[name len next-tokens] (parse-label-and-length tokens)]
         [{:name name :branch-length len :children []} next-tokens]))))
 
-
 (comment
-  (parse-node   (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;"))
-  )
+  (parse-node (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;")))
 
-(defn newick->map [s]
+(defn newick->map
+  "Parses a Newick-format string into a nested tree map.
+
+  Input should be a standard Newick string, optionally terminated
+  by a semicolon. For example:
+
+    \"(A:0.1,(B:0.2,C:0.3):0.4)Root:0.5;\"
+
+  Returns a recursive map with keys:
+  - `:name`          - node label (string or nil)
+  - `:branch-length` - distance to parent (number or NaN)
+  - `:children`      - vector of child node maps (empty for leaves)"
+  [s]
   (first (parse-node (tokenize s))))
 
 (comment
@@ -121,7 +163,4 @@
         AV:4.32559)
         AW:10.4109")
 
-  (tap> (newick->map abc-tree))
-  
-  )
-
+  (tap> (newick->map abc-tree)))
