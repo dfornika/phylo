@@ -135,10 +135,17 @@
 
 (defn get-ticks
   "Generates a lazy sequence of tick positions from 0 to `max-x` in
-  increments of `unit`. Used to render scale bar gridlines and labels."
+  increments of `unit`. Used to render scale bar gridlines and labels.
+
+  Guards against non-positive `unit` to avoid a non-terminating sequence:
+  - If `max-x` is <= 0, returns a single tick at 0.
+  - If `unit` is <= 0 (and `max-x` is > 0), returns an empty sequence."
   [max-x unit]
-  (take-while #(<= % max-x)
-              (iterate #(+ % unit) 0)))
+  (cond
+    (<= max-x 0) [0]
+    (<= unit 0)  []
+    :else        (take-while #(<= % max-x)
+                              (iterate #(+ % unit) 0))))
 
 ;; ===== Tree Traversal Helpers =====
 
