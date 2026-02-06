@@ -2,9 +2,9 @@
   "Specs for the core data structures and function contracts in Phylo.
 
   Defines specs for Newick tree nodes, positioned tree nodes,
-  metadata structures, and UI component props. These specs serve
-  as living documentation and can be used for validation and
-  generative testing.
+  metadata structures, UI component props, and the shared app state
+  context. These specs serve as living documentation and can be used
+  for validation and generative testing.
 
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
@@ -44,6 +44,28 @@
 (s/def ::parsed-metadata
   (s/keys :req-un [::headers ::data]))
 
+;; ===== App State Context =====
+
+(s/def ::newick-str string?)
+(s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
+(s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
+(s/def ::x-mult number?)
+(s/def ::y-mult number?)
+
+(s/def ::set-newick-str! fn?)
+(s/def ::set-metadata-rows! fn?)
+(s/def ::set-active-cols! fn?)
+(s/def ::set-x-mult! fn?)
+(s/def ::set-y-mult! fn?)
+
+(s/def ::app-state
+  "Shape of the context map provided by `app.state/AppStateProvider`."
+  (s/keys :req-un [::newick-str ::set-newick-str!
+                   ::metadata-rows ::set-metadata-rows!
+                   ::active-cols ::set-active-cols!
+                   ::x-mult ::set-x-mult!
+                   ::y-mult ::set-y-mult!]))
+
 ;; ===== Component Props =====
 
 (s/def ::columns (s/coll-of ::metadata-header))
@@ -74,23 +96,14 @@
 (s/def ::tree-node-props
   (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale]))
 
-(s/def ::x-mult number?)
-(s/def ::y-mult number?)
-(s/def ::on-x-mult-change fn?)
-(s/def ::on-y-mult-change fn?)
-(s/def ::on-metadata-load fn?)
+;; Toolbar reads from context — no props spec needed.
+;; PhylogeneticTree receives only layout dimensions.
 
-(s/def ::toolbar-props
-  (s/keys :req-un [::x-mult ::y-mult
-                   ::on-x-mult-change ::on-y-mult-change
-                   ::on-metadata-load]))
-
-(s/def ::newick-str string?)
 (s/def ::width-px number?)
 (s/def ::component-height-px number?)
 
 (s/def ::phylogenetic-tree-props
-  (s/keys :req-un [::newick-str ::width-px ::component-height-px]))
+  (s/keys :req-un [::width-px ::component-height-px]))
 
 ;; ===== Function Specs =====
 

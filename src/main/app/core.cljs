@@ -7,12 +7,14 @@
 
     Newick string -> parsed tree -> positioned tree -> SVG rendering
 
-  See [[app.specs]] for the shape of the data structures used throughout."
-  (:require [clojure.string :as str]
-            [uix.core :as uix :refer [defui $]]
+  Shared state (Newick string, metadata, zoom settings) is managed by
+  [[app.state]] and accessed via React context. See [[app.specs]] for
+  the shape of data structures used throughout."
+  (:require [uix.core :as uix :refer [defui $]]
             [uix.dom]
             [app.newick :as newick]
-            [app.csv :as csv]))
+            [app.csv :as csv]
+            [app.state :as state]))
 
 ;; ===== Layout Constants =====
 
@@ -105,11 +107,11 @@
   using a `FileReader`, and calls `on-read-fn` with the string content
   when loading completes. This is a side-effecting function (note the `!`)."
   [js-event on-read-fn]
-  (let [file (-> js-event .-target .-files (aget 0))
-        reader (js/FileReader.)]
-    (set! (.-onload reader)
-          (fn [e] (on-read-fn (-> e .-target .-result))))
-    (.readAsText reader file)))
+  (when-let [file (-> js-event .-target .-files (aget 0))]
+    (let [reader (js/FileReader.)]
+      (set! (.-onload reader)
+            (fn [e] (on-read-fn (-> e .-target .-result))))
+      (.readAsText reader file))))
 
 ;; ===== Scale Bar Helpers =====
 
@@ -157,13 +159,7 @@
   [n]
   (if (empty? (:children n))
     [n]
-    (into [](mapcat get-leaves (:children n)))))
-
-(comment
-  (let [test-nwk-str "(((A:0.2, B:0.3):0.3,(C:0.5, D:0.3):0.2):0.3, E:0.7):1.0;"]
-    (get-leaves (newick/newick->map test-nwk-str)))
-  )
-  
+    (into [] (mapcat get-leaves (:children n)))))
 
 ;; ===== UI Components =====
 
@@ -273,60 +269,71 @@
                       :y-scale y-scale})))))
 
 (defui Toolbar
-  "Renders the control panel with tree width/spacing sliders and a file
-  upload input for loading metadata CSV/TSV files.
+  "Renders the control panel with file loaders and layout sliders.
 
-  Props (see `::app.specs/toolbar-props`):
-  - `:x-mult`            - current horizontal scale multiplier
-  - `:y-mult`            - current vertical spacing value
-  - `:on-x-mult-change`  - callback for horizontal slider changes
-  - `:on-y-mult-change`  - callback for vertical slider changes
-  - `:on-metadata-load`  - callback for metadata file input changes"
-  [{:keys [x-mult y-mult on-x-mult-change on-y-mult-change on-metadata-load]}]
-  ($ :div {:style {:padding "12px"
-                   :background "#f8f9fa"
-                   :border-bottom "1px solid #ddd"
-                   :display "flex"
-                   :gap (str (:toolbar-gap LAYOUT) "px")}}
-     ($ :div
-        ($ :label {:style {:font-weight "bold"}} "Tree Width: ")
-        ($ :input {:type "range"
-                   :min 0.05
-                   :max 1.5
-                   :step 0.01
-                   :value x-mult
-                   :on-change on-x-mult-change}))
-     ($ :div
-        ($ :label {:style {:font-weight "bold"}} "Vertical Spacing: ")
-        ($ :input {:type "range"
-                   :min 10
-                   :max 100
-                   :value y-mult
-                   :on-change on-y-mult-change}))
-     ($ :div {:style {:display "flex" :gap "10px" :padding "10px" :background "#eee"}}
-        ($ :div
-           ($ :label "Load Metadata (CSV/TSV): ")
-           ($ :input {:type "file"
-                      :accept ".csv,.tsv,.txt"
-                      :on-change on-metadata-load})))))
+  Reads all state from [[app.state/app-context]] via [[app.state/use-app-state]],
+  so this component requires no props. Provides:
+  - Newick file loader (new)
+  - Metadata CSV/TSV file loader
+  - Tree width (horizontal zoom) slider
+  - Vertical spacing slider"
+  [_props]
+  (let [{:keys [x-mult set-x-mult!
+                y-mult set-y-mult!
+                set-newick-str!
+                set-metadata-rows! set-active-cols!]} (state/use-app-state)]
+    ($ :div {:style {:padding "12px"
+                     :background "#f8f9fa"
+                     :border-bottom "1px solid #ddd"
+                     :display "flex"
+                     :gap (str (:toolbar-gap LAYOUT) "px")
+                     :align-items "center"
+                     :flex-wrap "wrap"}}
+       ($ :div {:style {:display "flex" :gap "10px" :padding "10px" :background "#eee" :border-radius "4px"}}
+          ($ :div
+             ($ :label {:style {:font-weight "bold"}} "Load Tree (Newick): ")
+             ($ :input {:type "file"
+                        :accept ".nwk,.newick,.tree,.txt"
+                        :on-change #(read-file! % (fn [content]
+                                                    (set-newick-str! (.trim content))))}))
+          ($ :div
+             ($ :label {:style {:font-weight "bold"}} "Load Metadata (CSV/TSV): ")
+             ($ :input {:type "file"
+                        :accept ".csv,.tsv,.txt"
+                        :on-change #(read-file! % (fn [content]
+                                                    (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
+                                                      (set-metadata-rows! data)
+                                                      (set-active-cols! headers))))})))
+       ($ :div
+          ($ :label {:style {:font-weight "bold"}} "Tree Width: ")
+          ($ :input {:type "range"
+                     :min 0.05
+                     :max 1.5
+                     :step 0.01
+                     :value x-mult
+                     :on-change #(set-x-mult! (js/parseFloat (.. % -target -value)))}))
+       ($ :div
+          ($ :label {:style {:font-weight "bold"}} "Vertical Spacing: ")
+          ($ :input {:type "range"
+                     :min 10
+                     :max 100
+                     :value y-mult
+                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))})))))
 
 (defui PhylogeneticTree
   "Main visualization component that combines tree rendering with
   metadata columns in a scrollable SVG viewport.
 
-  Manages local state for metadata rows, zoom multipliers, and
-  active columns. Parses the Newick string, assigns coordinates,
+  Reads the Newick string, metadata, and zoom settings from
+  [[app.state/app-context]]. Parses the tree, assigns coordinates,
   merges metadata into leaf nodes, and renders the full layout.
 
-  Props (see `::app.specs/phylogenetic-tree-props`):
-  - `:newick-str`         - Newick-format tree string to render
+  Props:
   - `:width-px`           - total available width in pixels
   - `:component-height-px` - total available height in pixels"
-  [{:keys [newick-str width-px component-height-px]}]
-  (let [[x-mult set-x-mult!] (uix/use-state 0.5)
-        [y-mult set-y-mult!] (uix/use-state 30)
-        [metadata-rows set-rows!] (uix/use-state [])
-        [active-cols set-cols!] (uix/use-state [])
+  [{:keys [width-px component-height-px]}]
+  (let [{:keys [newick-str metadata-rows active-cols
+                x-mult y-mult]} (state/use-app-state)
 
         ;; Process tree and merge metadata
         {:keys [tree tips max-depth]} (uix/use-memo
@@ -355,14 +362,7 @@
     ($ :div {:style {:display "flex" :flex-direction "column" :height (str component-height-px "px")}}
 
        ;; Toolbar
-       ($ Toolbar {:x-mult x-mult
-                   :y-mult y-mult
-                   :on-x-mult-change #(set-x-mult! (js/parseFloat (.. % -target -value)))
-                   :on-y-mult-change #(set-y-mult! (js/parseInt (.. % -target -value)))
-                   :on-metadata-load #(read-file! % (fn [content]
-                                                      (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
-                                                        (set-rows! data)
-                                                        (set-cols! headers))))})
+       ($ Toolbar)
 
        ;; Scrollable viewport
        ($ :div {:style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
@@ -401,74 +401,18 @@
                                          :column-key (:key col)}))
                     active-cols)))))))
 
-;; ===== Sample Data =====
-(def dog-cat-tree "(Dog,Cat)Mammal;")
-(def dog-cat-tree-with-distances "(Dog:0.1,Cat:0.2)Mammal:0.5;")
-
-(def abc-tree
-  "Sample Newick tree string with 31 taxa (A through AW).
-  Used as the default tree for development and demonstration."
-  "(((A:1.575,
-B:1.575
-)C:5.99484,
-((D:5.1375,
-(E:4.21625,
-(F:1.32,
-(G:0.525,
-H:0.525
-)I:0.795
-)J:2.89625
-)K:0.92125
-)L:1.5993,
-((M:2.895,
-(N:2.11,
-O:2.11
-)P:0.785
-)Q:3.1725,
-R:6.0675
-)S:0.6693
-)T:1.50234
-)U:2.86223,
-((V:1.58,
-(W:1.055,
-X:1.055
-)Y:0.525
-)Z:5.17966,
-(AA:4.60414,
-(AB:2.95656,
-((AC:1.8425,
-(AD:0.525,
-AE:0.525
-)AF:1.3175
-)AG:0.99844,
-((AH:1.1975,
-(AI:1.055,
-(AJ:0,
-AK:0
-)AL:1.055
-)AM:0.1425
-)AN:0.92281,
-(AO:1.58,
-AP:1.58
-)AQ:0.54031
-)AR:1.26094
-)AS:1.11406
-)AT:1.64758
-)AU:2.15552
-)AV:4.32559
-)AW:10.4109")
-
 ;; ===== App Shell =====
 
 (defui app
   "Root application component.
 
-  Renders the [[PhylogeneticTree]] with the sample [[abc-tree]] data
-  at a fixed 1200x800 pixel viewport."
+  Wraps the component tree with [[state/AppStateProvider]] so all
+  descendants can access shared state via context. Renders
+  [[PhylogeneticTree]] at a fixed 1200x800 pixel viewport."
   []
-  ($ PhylogeneticTree {:newick-str abc-tree
-                       :width-px 1200
-                       :component-height-px 800}))
+  ($ state/AppStateProvider
+     ($ PhylogeneticTree {:width-px 1200
+                          :component-height-px 800})))
 
 (defonce root
   (when (exists? js/document)
@@ -487,6 +431,8 @@ AP:1.58
   (render))
 
 (defn ^:dev/after-load re-render
-  "Hot-reload hook called by shadow-cljs after code changes."
+  "Hot-reload hook called by shadow-cljs after code changes.
+  Re-renders from root so that new component definitions take effect.
+  State is preserved because it lives in `defonce` atoms in [[app.state]]."
   []
   (render))
