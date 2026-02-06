@@ -22,9 +22,10 @@
 ;; Positioned nodes have x/y coordinates assigned by layout algorithms
 (s/def ::x number?)
 (s/def ::y number?)
+(s/def ::id nat-int?)
 
 (s/def ::positioned-node
-  (s/keys :req-un [::name ::branch-length ::children ::x ::y]))
+  (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]))
 
 ;; ===== Metadata Structures =====
 
@@ -148,6 +149,10 @@
 (s/fdef app.core/calculate-scale-unit
   :args (s/cat :max-x pos?)
   :ret  pos?)
+
+(s/fdef app.core/assign-node-ids
+  :args (s/cat :node ::tree-node)
+  :ret  ::positioned-node)
 
 (s/fdef app.core/prepare-tree
   :args (s/cat :newick-str string?

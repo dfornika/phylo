@@ -168,6 +168,24 @@
 
 ;; ===== Tree Preparation =====
 
+(defn assign-node-ids
+  "Assigns a unique `:id` to every node in the tree for stable React keys.
+  
+  Traverses the tree depth-first, assigning sequential integer IDs starting
+  from 0. The ID counter is passed as an atom to maintain state across
+  recursive calls.
+  
+  Returns a tuple of `[updated-node next-id-value]` where `updated-node`
+  has an `:id` key and all children have IDs assigned."
+  ([node]
+   (first (assign-node-ids node (atom 0))))
+  ([node next-id]
+   (let [current-id @next-id
+         _ (swap! next-id inc)
+         updated-children (mapv #(first (assign-node-ids % next-id))
+                                (:children node))]
+     [(assoc node :id current-id :children updated-children) @next-id])))
+
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.
 
@@ -182,7 +200,8 @@
   (let [root (-> (newick/newick->map newick-str)
                  (assign-y-coords (atom 0))
                  first
-                 assign-x-coords)
+                 assign-x-coords
+                 assign-node-ids)
         leaves (get-leaves root)
         id-key (-> active-cols first :key)
         metadata-index (into {} (map (fn [r] [(get r id-key) r]) metadata-rows))
@@ -300,7 +319,7 @@
 
        ;; Recurse into children
        (for [child (:children node)]
-         ($ TreeNode {:key (:name child)
+         ($ TreeNode {:key (:id child)
                       :node child
                       :parent-x (:x node)
                       :parent-y (:y node)
