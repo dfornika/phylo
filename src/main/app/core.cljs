@@ -157,7 +157,13 @@
   [n]
   (if (empty? (:children n))
     [n]
-    (mapcat get-leaves (:children n))))
+    (into [](mapcat get-leaves (:children n)))))
+
+(comment
+  (let [test-nwk-str "(((A:0.2, B:0.3):0.3,(C:0.5, D:0.3):0.2):0.3, E:0.7):1.0;"]
+    (get-leaves (newick/newick->map test-nwk-str)))
+  )
+  
 
 ;; ===== UI Components =====
 
