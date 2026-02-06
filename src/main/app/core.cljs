@@ -363,9 +363,11 @@
                      :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
        ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
           ($ :input {:type "checkbox"
+                     :id "show-internal-markers-checkbox"
                      :checked show-internal-markers
                      :on-change #(set-show-internal-markers! (not show-internal-markers))})
-          ($ :label {:style {:font-weight "bold"}} "Show internal node markers")))))
+          ($ :label {:style {:font-weight "bold"
+                              :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers")))))
 
 (defui PhylogeneticTree
   "Main visualization component that combines tree rendering with
