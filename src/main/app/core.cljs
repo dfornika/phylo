@@ -318,7 +318,7 @@
                      :min 10
                      :max 100
                      :value y-mult
-                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10)))})))))
+                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))})))))
 
 (defui PhylogeneticTree
   "Main visualization component that combines tree rendering with
