@@ -6,6 +6,8 @@ A phylogenetic tree viewer built with ClojureScript and [UIx](https://github.com
 
 Phylo renders Newick-format trees as interactive SVGs with support for metadata overlays from CSV/TSV files. Tree width and vertical spacing are adjustable via slider controls.
 
+![Screenshot](doc/images/screenshot-01.png)
+
 ## Prerequisites
 
 - [Clojure CLI](https://clojure.org/guides/install_clojure) (1.11+)
