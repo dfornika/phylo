@@ -10,4 +10,9 @@
         :output-dir "resources/public/js"
         :asset-path "/js"
         :modules {:main
-                  {:init-fn app.core/init}}}}}
+                  {:init-fn app.core/init}}}
+  :test {:deps true
+         :target :node-test
+         :output-to "target/test/test.js"
+         :ns-regexp "app\\..*-test$"
+         :autorun true}}}
