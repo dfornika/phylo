@@ -175,8 +175,8 @@
   from 0. The ID counter is passed as an atom to maintain state across
   recursive calls.
   
-  Returns a tuple of `[updated-node next-id-value]` where `updated-node`
-  has an `:id` key and all children have IDs assigned."
+  Single-arity version returns the updated node with `:id` on every node.
+  Two-arity version (internal) returns a tuple of `[updated-node next-id-value]`."
   ([node]
    (first (assign-node-ids node (atom 0))))
   ([node next-id]
