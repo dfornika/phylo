@@ -316,7 +316,8 @@
   - Newick file loader (new)
   - Metadata CSV/TSV file loader
   - Tree width (horizontal zoom) slider
-  - Vertical spacing slider"
+  - Vertical spacing slider
+  - Toggle for Showing internal nodes"
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
