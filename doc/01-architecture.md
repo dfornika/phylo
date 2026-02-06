@@ -8,28 +8,28 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 
 ```
 ┌─────────────────┐
-│ Newick string    │  Plain text input (e.g. "(A:0.1,B:0.2)Root;")
+│ Newick string   │  Plain text input (e.g. "(A:0.1,B:0.2)Root;")
 └────────┬────────┘
          │ newick/newick->map
          ▼
 ┌─────────────────┐
-│ Tree map         │  {:name "Root" :branch-length 0.3
-│ (recursive)      │   :children [{:name "A" ...} {:name "B" ...}]}
+│ Tree map        │  {:name "Root" :branch-length 0.3
+│ (recursive)     │   :children [{:name "A" ...} {:name "B" ...}]}
 └────────┬────────┘
          │ assign-y-coords + assign-x-coords
          ▼
 ┌─────────────────┐
-│ Positioned tree  │  Same structure with :x and :y added to every node
+│ Positioned tree │  Same structure with :x and :y added to every node
 └────────┬────────┘
          │ get-leaves → merge metadata from CSV
          ▼
 ┌─────────────────┐
-│ Enriched leaves  │  Leaf nodes with :metadata map from uploaded CSV
+│ Enriched leaves │  Leaf nodes with :metadata map from uploaded CSV
 └────────┬────────┘
          │ PhylogeneticTree component
          ▼
 ┌─────────────────┐
-│ SVG + HTML       │  TreeNode (branches/labels) + MetadataColumn (values)
+│ SVG + HTML      │  TreeNode (branches/labels) + MetadataColumn (values)
 └─────────────────┘
 ```
 
