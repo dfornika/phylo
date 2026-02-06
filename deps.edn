@@ -1,4 +1,4 @@
-{:paths ["src/main" "resources"]
+{:paths ["src/main" "src/gen" "resources"]
  :deps {org.clojure/clojurescript {:mvn/version "1.12.134"}
         com.pitch/uix.core {:mvn/version "1.4.7"}
         com.pitch/uix.dom  {:mvn/version "1.4.7"}}
