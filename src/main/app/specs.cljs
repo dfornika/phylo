@@ -62,8 +62,8 @@
 (s/def ::show-internal-markers boolean?)
 (s/def ::set-show-internal-markers! fn?)
 
+;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
-  "Shape of the context map provided by `app.state/AppStateProvider`."
   (s/keys :req-un [::newick-str ::set-newick-str!
                    ::metadata-rows ::set-metadata-rows!
                    ::active-cols ::set-active-cols!
