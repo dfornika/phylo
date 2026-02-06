@@ -123,7 +123,7 @@
   - ratio < 5 -> 50% of magnitude
   - otherwise  -> full magnitude
 
-  For example, `(calculate-scale-unit 0.37)` returns `0.1`."
+  For example, `(calculate-scale-unit 0.37)` returns `0.05`."
   [max-x]
   (let [log10 (js/Math.log10 max-x)
         magnitude (js/Math.pow 10 (js/Math.floor log10))
