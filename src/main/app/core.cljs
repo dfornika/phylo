@@ -293,7 +293,7 @@
           ($ :div
              ($ :label {:style {:font-weight "bold"}} "Load Tree (Newick): ")
              ($ :input {:type "file"
-                        :accept ".nwk,.newick,.tree,.nex,.txt"
+                        :accept ".nwk,.newick,.tree,.txt"
                         :on-change #(read-file! % (fn [content]
                                                     (set-newick-str! (.trim content))))}))
           ($ :div
