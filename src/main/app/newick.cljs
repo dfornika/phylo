@@ -79,7 +79,7 @@
   extracts the node's optional name and branch length.
 
   Returns a tuple of `[node-map remaining-tokens]` where `node-map` has
-  keys `:name` (string or nil), `:branch-length` (number or NaN), and
+  keys `:name` (string or nil), `:branch-length` (number or `nil`), and
   `:children` (vector of child node maps)."
   [tokens]
   (let [token (first tokens)]
