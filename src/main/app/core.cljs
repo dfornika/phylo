@@ -468,7 +468,8 @@ AP:1.58
 
 (defonce root
   (when (exists? js/document)
-    (uix.dom/create-root (js/document.getElementById "app"))))
+    (when-let [el (js/document.getElementById "app")]
+      (uix.dom/create-root el))))
 
 (defn render
   "Renders the root [[app]] component into the DOM."
