@@ -1,0 +1,6 @@
+{:paths ["src/main" "resources"]
+ :deps {org.clojure/clojurescript {:mvn/version "1.12.134"}
+        com.pitch/uix.core {:mvn/version "1.4.7"}
+        com.pitch/uix.dom  {:mvn/version "1.4.7"}}
+ :aliases {:dev {:extra-deps {thheller/shadow-cljs {:mvn/version "3.2.1"}}
+                 :extra-paths ["src/dev"]}}}
