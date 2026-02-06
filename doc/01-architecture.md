@@ -37,30 +37,68 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 
 ```
 app
-└── PhylogeneticTree          Main container, manages state
-    ├── Toolbar               Sliders + file upload
-    ├── MetadataHeader        Sticky column header labels
-    └── <svg>
-        ├── gridlines         Scale bar gridlines
-        ├── TreeNode          Recursive tree rendering
-        │   ├── Branch        Horizontal + vertical line segments
-        │   ├── <text>        Tip label (leaves only)
-        │   └── TreeNode...   Child nodes (recursive)
-        └── MetadataColumn    Per-column text values aligned to tips
+└── AppStateProvider          Context provider (app.state)
+    └── PhylogeneticTree      Main container, reads state from context
+        ├── Toolbar           File loaders + sliders (reads from context)
+        ├── MetadataHeader    Sticky column header labels
+        └── <svg>
+            ├── gridlines         Scale bar gridlines
+            ├── TreeNode          Recursive tree rendering
+            │   ├── Branch        Horizontal + vertical line segments
+            │   ├── <text>        Tip label (leaves only)
+            │   └── TreeNode...   Child nodes (recursive)
+            └── MetadataColumn    Per-column text values aligned to tips
 ```
 
 ## State Management
 
-All mutable state lives inside UIx `use-state` hooks within the `PhylogeneticTree` component:
+All shared mutable state lives in `defonce` atoms in the `app.state` namespace. This design provides two benefits:
 
-| State | Type | Purpose |
-|-------|------|---------|
-| `x-mult` | number | Horizontal zoom multiplier (0.05–1.5) |
-| `y-mult` | number | Vertical spacing in pixels (10–100) |
-| `metadata-rows` | vector of maps | Parsed rows from uploaded CSV/TSV |
-| `active-cols` | vector of header configs | Column definitions with `:key`, `:label`, `:width` |
+1. **Hot-reload resilience** — `defonce` atoms survive shadow-cljs namespace reloads, so loaded trees and metadata persist across code changes.
+2. **Decoupled components** — components read state via React context (`use-context`) instead of prop drilling.
 
-Tree parsing and metadata merging happen inside `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change.
+### State Atoms
+
+| Atom | Type | Default | Purpose |
+|------|------|---------|---------|
+| `!newick-str` | string | Small demo tree | Current Newick tree string |
+| `!metadata-rows` | vector of maps | `[]` | Parsed rows from uploaded CSV/TSV |
+| `!active-cols` | vector of header configs | `[]` | Column definitions with `:key`, `:label`, `:width` |
+| `!x-mult` | number | `0.5` | Horizontal zoom multiplier (0.05–1.5) |
+| `!y-mult` | number | `30` | Vertical tip spacing in pixels (10–100) |
+
+### Context Architecture
+
+```
+app
+└── AppStateProvider          Reads all atoms via uix/use-atom,
+    │                         bundles values + setters into a map,
+    │                         provides them through app-context
+    └── PhylogeneticTree      Consumes context via use-app-state
+        ├── Toolbar           Consumes context via use-app-state
+        └── ...               (other components receive computed
+                               values as props — no context needed)
+```
+
+`AppStateProvider` subscribes to each atom with `uix/use-atom` (which uses React's `useSyncExternalStore` internally) and exposes the context map:
+
+```clojure
+{:newick-str       "..."       :set-newick-str!       fn
+ :metadata-rows    [...]       :set-metadata-rows!    fn
+ :active-cols      [...]       :set-active-cols!      fn
+ :x-mult           0.5         :set-x-mult!           fn
+ :y-mult           30          :set-y-mult!           fn}
+```
+
+Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`) stay props-based since they receive computed/positioned data, not raw state.
+
+### Derived State
+
+Tree parsing and metadata merging happen inside `use-memo` within `PhylogeneticTree`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change.
+
+### Fast Refresh
+
+The `:app` shadow-cljs build includes `uix.dev` as a preload, which integrates with `react-refresh`. Combined with the `defonce` atoms, this gives robust state preservation during development — both React component state and application data survive hot reloads.
 
 ## Layout System
 
@@ -89,13 +127,15 @@ The `LAYOUT` constant in `app.core` centralizes all spacing values:
 - `::tree-node` — parsed Newick node (recursive)
 - `::positioned-node` — node with `:x` and `:y` coordinates
 - `::parsed-metadata` — result of `csv/parse-metadata`
-- Component prop specs (`::branch-props`, `::toolbar-props`, etc.)
+- `::app-state` — shape of the context map from `AppStateProvider`
+- Component prop specs (`::branch-props`, `::tree-node-props`, etc.)
 - `s/fdef` specs for key functions (`newick->map`, `count-tips`, etc.)
 
 ## Namespaces
 
 | Namespace | Purpose |
 |-----------|---------|
+| `app.state` | Shared state atoms, React context provider, `use-app-state` hook |
 | `app.core` | UI components, layout algorithms, app entry point |
 | `app.newick` | Recursive descent Newick parser |
 | `app.csv` | CSV/TSV parsing with column metadata |
