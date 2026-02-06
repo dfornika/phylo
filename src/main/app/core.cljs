@@ -346,7 +346,9 @@
                                        [newick-str metadata-rows active-cols])
 
         ;; Dynamic layout math
-        current-x-scale (* (/ (- width-px 400) max-depth) x-mult)
+        current-x-scale (if (> max-depth 0)
+                          (* (/ (- width-px 400) max-depth) x-mult)
+                          1)
         tree-end-x (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
         metadata-start-x (+ tree-end-x (:metadata-gap LAYOUT))]
 
@@ -400,6 +402,8 @@
                     active-cols)))))))
 
 ;; ===== Sample Data =====
+(def dog-cat-tree "(Dog,Cat)Mammal;")
+(def dog-cat-tree-with-distances "(Dog:0.1,Cat:0.2)Mammal:0.5;")
 
 (def abc-tree
   "Sample Newick tree string with 31 taxa (A through AW).
