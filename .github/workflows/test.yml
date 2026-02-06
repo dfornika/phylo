@@ -1,24 +1,20 @@
-name: Deploy Codox Docs
+name: Tests
 
 on:
   push:
     branches: [main]
-  workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
+  pull_request:
+    branches: [main]
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
 
       - name: Setup java
         uses: actions/setup-java@v5
@@ -38,20 +34,14 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('deps.edn') }}
           restore-keys: ${{ runner.os }}-maven-
 
-      - name: Generate docs
-        run: clojure -X:codox
-
-      - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - name: Cache npm deps
+        uses: actions/cache@v4
         with:
-          path: target/doc
+          path: ~/.npm
+          key: ${{ runner.os }}-npm-${{ hashFiles('package-lock.json') }}
+          restore-keys: ${{ runner.os }}-npm-
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - run: npm install
+
+      - name: Run tests
+        run: npm test
