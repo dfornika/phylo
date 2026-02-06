@@ -29,7 +29,8 @@
 (comment
   (tokenize nil)
   (tokenize "")
-  (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;"))
+  (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;")
+  (tokenize "(Dog,Cat)Mammal;"))
 
 (declare parse-node)
 
@@ -54,7 +55,8 @@
   "Extracts an optional node name and branch length from the token stream.
 
   Handles four cases: `Name:Length`, `Name`, `:Length`, or neither.
-  Branch lengths are parsed as JavaScript floats.
+  Branch lengths are parsed as JavaScript floats, or `nil` if missing
+  or not parseable.
 
   Returns a tuple of `[name branch-length remaining-tokens]`."
   [tokens]
@@ -64,8 +66,10 @@
       (let [[name-part remaining] (if (not= ":" token) [token (rest tokens)] [nil tokens])
             [len-part final-remaining] (if (= ":" (first remaining))
                                          [(second remaining) (nnext remaining)]
-                                         [nil remaining])]
-        [name-part (js/parseFloat len-part) final-remaining]))))
+                                         [nil remaining])
+            parsed-len (js/parseFloat len-part)
+            len-part (if (NaN? parsed-len) nil parsed-len)]
+        [name-part len-part final-remaining]))))
 
 (defn- parse-node
   "Recursively parses a single node (and its subtree) from the token stream.
@@ -90,7 +94,9 @@
         [{:name name :branch-length len :children []} next-tokens]))))
 
 (comment
-  (parse-node (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;")))
+  (parse-node (tokenize "(Dog:0.1,Cat:0.2)Mammal:0.5;"))
+  (parse-node (tokenize "(Dog,Cat)Mammal;"))
+  )
 
 (defn newick->map
   "Parses a Newick-format string into a nested tree map.
@@ -110,6 +116,8 @@
 (comment
   ;; Usage Example:
   (def cat-dog-tree "(Dog:0.1,Cat:0.2)Mammal:0.5;")
+  (def ab-tree "(A,B);")
+  (newick->map ab-tree)
   (newick->map cat-dog-tree)
 
   (def abc-tree
