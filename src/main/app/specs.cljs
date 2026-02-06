@@ -58,13 +58,17 @@
 (s/def ::set-x-mult! fn?)
 (s/def ::set-y-mult! fn?)
 
+(s/def ::show-internal-markers boolean?)
+(s/def ::set-show-internal-markers! fn?)
+
 (s/def ::app-state
   "Shape of the context map provided by `app.state/AppStateProvider`."
   (s/keys :req-un [::newick-str ::set-newick-str!
                    ::metadata-rows ::set-metadata-rows!
                    ::active-cols ::set-active-cols!
                    ::x-mult ::set-x-mult!
-                   ::y-mult ::set-y-mult!]))
+                   ::y-mult ::set-y-mult!
+                   ::show-internal-markers ::set-show-internal-markers!]))
 
 ;; ===== Component Props =====
 
@@ -94,15 +98,24 @@
 (s/def ::x-scale number?)
 
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale]))
+  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers]))
 
 ;; Toolbar reads from context — no props spec needed.
 ;; PhylogeneticTree receives only layout dimensions.
 
+(s/def ::tree ::positioned-node)
+(s/def ::max-depth number?)
 (s/def ::width-px number?)
 (s/def ::component-height-px number?)
 
 (s/def ::phylogenetic-tree-props
+  (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
+                   ::x-mult ::y-mult ::show-internal-markers
+                   ::width-px ::component-height-px]))
+
+;; TreeContainer receives only layout dimensions.
+
+(s/def ::tree-container-props
   (s/keys :req-un [::width-px ::component-height-px]))
 
 ;; ===== Function Specs =====
@@ -135,3 +148,9 @@
 (s/fdef app.core/calculate-scale-unit
   :args (s/cat :max-x pos?)
   :ret  pos?)
+
+(s/fdef app.core/prepare-tree
+  :args (s/cat :newick-str string?
+               :metadata-rows (s/coll-of ::metadata-row)
+               :active-cols (s/coll-of ::metadata-header))
+  :ret  (s/keys :req-un [::tree ::tips ::max-depth]))

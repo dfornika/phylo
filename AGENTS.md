@@ -61,14 +61,15 @@ doc/
 
 **Data flow:** Newick string → parsed tree map → positioned tree (x/y coords) → SVG + metadata columns
 
-**State management:** All shared state lives in `defonce` atoms in `app.state`. Components access state via a single React context (`app-context`) provided by `AppStateProvider`. The `use-app-state` hook returns a map of values + setter functions. `defonce` atoms survive hot reloads; `uix.dev` preload enables React fast-refresh.
+**State management:** All shared state lives in `defonce` atoms in `app.state`. Components access state via a single React context (`app-context`) provided by `AppStateProvider`. The `use-app-state` hook returns a map of values + setter functions. `TreeContainer` derives the positioned tree (via `prepare-tree`) and passes it as props to `PhylogeneticTree`, which is a pure rendering component. `defonce` atoms survive hot reloads; `uix.dev` preload enables React fast-refresh.
 
 **Component hierarchy:**
 ```
-app → AppStateProvider → PhylogeneticTree → Toolbar, MetadataHeader, TreeNode, MetadataColumn
+app → AppStateProvider → TreeContainer → PhylogeneticTree → Toolbar, MetadataHeader, TreeNode, MetadataColumn
 ```
 
-- `Toolbar` and `PhylogeneticTree` read state from context (no prop drilling)
+- `Toolbar` and `TreeContainer` read state from context (no prop drilling)
+- `PhylogeneticTree` is a pure rendering component — all data arrives via props
 - Leaf components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`) receive computed data as props
 
 ## UIx Specifics

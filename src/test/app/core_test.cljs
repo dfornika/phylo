@@ -137,3 +137,33 @@
   (testing "A single leaf returns itself"
     (let [leaf {:name "X" :branch-length 1.0 :children [] :x 0 :y 0}]
       (is (= [leaf] (core/get-leaves leaf))))))
+
+;; ===== prepare-tree =====
+
+(deftest prepare-tree-returns-expected-keys
+  (testing "prepare-tree returns :tree, :tips, and :max-depth"
+    (let [result (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+      (is (contains? result :tree))
+      (is (contains? result :tips))
+      (is (contains? result :max-depth)))))
+
+(deftest prepare-tree-tips-match-leaves
+  (testing "Tips are the leaf nodes of the prepared tree"
+    (let [{:keys [tips]} (core/prepare-tree "(A:0.1,(B:0.2,C:0.3):0.4)Root;" [] [])]
+      (is (= 3 (count tips)))
+      (is (= ["A" "B" "C"] (mapv :name tips))))))
+
+(deftest prepare-tree-max-depth-positive
+  (testing "max-depth is positive for a tree with branch lengths"
+    (let [{:keys [max-depth]} (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+      (is (pos? max-depth)))))
+
+(deftest prepare-tree-merges-metadata
+  (testing "Metadata is merged into leaf nodes by first-column ID"
+    (let [cols [{:key :id :label "ID" :width 120}
+                {:key :color :label "Color" :width 120}]
+          rows [{:id "A" :color "red"}
+                {:id "B" :color "blue"}]
+          {:keys [tips]} (core/prepare-tree "(A:0.1,B:0.2)Root;" rows cols)]
+      (is (= "red" (get-in (first tips) [:metadata :color])))
+      (is (= "blue" (get-in (second tips) [:metadata :color]))))))
