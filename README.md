@@ -1,5 +1,7 @@
 # Phylo
 
+[![Tests](https://github.com/dfornika/phylo/actions/workflows/test.yml/badge.svg)](https://github.com/dfornika/phylo/actions/workflows/test.yml)
+
 A phylogenetic tree viewer built with ClojureScript and [UIx](https://github.com/pitch-io/uix) (React 19).
 
 Phylo renders Newick-format trees as interactive SVGs with support for metadata overlays from CSV/TSV files. Tree width and vertical spacing are adjustable via slider controls.
