@@ -11,7 +11,8 @@
   - [[!metadata-rows]]  - parsed metadata rows (vector of maps)
   - [[!active-cols]]    - column header configs for metadata display
   - [[!x-mult]]         - horizontal zoom multiplier
-  - [[!y-mult]]         - vertical tip spacing (pixels)"
+  - [[!y-mult]]         - vertical tip spacing (pixels)
+  - [[!show-internal-markers]] - whether to show markers on internal nodes"
   (:require [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
@@ -45,6 +46,10 @@
 (defonce !y-mult
   (atom 30))
 
+;; "Atom holding whether to display circular markers on internal (non-leaf) nodes."
+(defonce !show-internal-markers
+  (atom false))
+
 ;; ===== Context =====
 
 (def app-context
@@ -70,13 +75,16 @@
   | `:x-mult`            | number   | Horizontal zoom multiplier         |
   | `:set-x-mult!`       | fn       | `(fn [v] ...)` — set zoom          |
   | `:y-mult`            | number   | Vertical tip spacing               |
-  | `:set-y-mult!`       | fn       | `(fn [v] ...)` — set spacing       |"
+  | `:set-y-mult!`       | fn       | `(fn [v] ...)` — set spacing       |
+  | `:show-internal-markers` | boolean | Show markers on internal nodes  |
+  | `:set-show-internal-markers!` | fn | `(fn [b] ...)` — toggle markers |"
   [{:keys [children]}]
   (let [newick-str     (uix/use-atom !newick-str)
         metadata-rows  (uix/use-atom !metadata-rows)
         active-cols    (uix/use-atom !active-cols)
         x-mult         (uix/use-atom !x-mult)
-        y-mult         (uix/use-atom !y-mult)]
+        y-mult         (uix/use-atom !y-mult)
+        show-internal-markers (uix/use-atom !show-internal-markers)]
     ($ app-context {:value {:newick-str       newick-str
                             :set-newick-str!  #(reset! !newick-str %)
                             :metadata-rows    metadata-rows
@@ -86,7 +94,9 @@
                             :x-mult           x-mult
                             :set-x-mult!      #(reset! !x-mult %)
                             :y-mult           y-mult
-                            :set-y-mult!      #(reset! !y-mult %)}}
+                            :set-y-mult!      #(reset! !y-mult %)
+                            :show-internal-markers show-internal-markers
+                            :set-show-internal-markers! #(reset! !show-internal-markers %)}}
        children)))
 
 (defn use-app-state

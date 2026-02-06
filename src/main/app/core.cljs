@@ -28,14 +28,18 @@
   - `:label-buffer`      - space reserved for tree tip labels
   - `:metadata-gap`      - gap between tip labels and metadata columns
   - `:default-col-width` - default pixel width for metadata columns
-  - `:toolbar-gap`       - spacing between toolbar controls"
+  - `:toolbar-gap`       - spacing between toolbar controls
+  - `:node-marker-radius` - radius of circular node markers
+  - `:node-marker-fill`   - fill color for node markers"
   {:svg-padding-x 40
    :svg-padding-y 40
    :header-height 36
    :label-buffer 150
    :metadata-gap 40
    :default-col-width 120
-   :toolbar-gap 20})
+   :toolbar-gap 20
+   :node-marker-radius 3
+   :node-marker-fill "#333"})
 
 ;; ===== Tree Layout Functions =====
 
@@ -161,6 +165,52 @@
     [n]
     (into [] (mapcat get-leaves (:children n)))))
 
+
+;; ===== Tree Preparation =====
+
+(defn assign-node-ids
+  "Assigns a unique `:id` to every node in the tree for stable React keys.
+  
+  Traverses the tree depth-first, assigning sequential integer IDs starting
+  from 0. The ID counter is passed as an atom to maintain state across
+  recursive calls.
+  
+  Single-arity version returns the updated node with `:id` on every node.
+  Two-arity version (internal) returns a tuple of `[updated-node next-id-value]`."
+  ([node]
+   (first (assign-node-ids node (atom 0))))
+  ([node next-id]
+   (let [current-id @next-id
+         _ (swap! next-id inc)
+         updated-children (mapv #(first (assign-node-ids % next-id))
+                                (:children node))]
+     [(assoc node :id current-id :children updated-children) @next-id])))
+
+(defn prepare-tree
+  "Builds a fully positioned tree with enriched leaf metadata.
+
+  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned,
+  then collects leaves and merges metadata from uploaded CSV/TSV rows.
+
+  Returns a map with:
+  - `:tree`      - root node with `:x` and `:y` on every node
+  - `:tips`      - flat vector of leaf nodes with `:metadata` merged
+  - `:max-depth` - maximum x-coordinate (for scale calculations)"
+  [newick-str metadata-rows active-cols]
+  (let [root (-> (newick/newick->map newick-str)
+                 (assign-y-coords (atom 0))
+                 first
+                 assign-x-coords
+                 assign-node-ids)
+        leaves (get-leaves root)
+        id-key (-> active-cols first :key)
+        metadata-index (into {} (map (fn [r] [(get r id-key) r]) metadata-rows))
+        enriched-leaves (mapv #(assoc % :metadata (get metadata-index (:name %)))
+                              leaves)]
+    {:tree root
+     :tips enriched-leaves
+     :max-depth (get-max-x root)}))
+
 ;; ===== UI Components =====
 
 (defui MetadataHeader
@@ -232,41 +282,50 @@
   "Recursively renders a tree node and all its descendants as SVG.
 
   Draws the branch connecting this node to its parent, renders a
-  text label for leaf nodes, and recurses into children.
+  text label and circle marker for leaf nodes, optionally renders
+  circle markers on internal nodes, and recurses into children.
 
   Props (see `::app.specs/tree-node-props`):
-  - `:node`     - positioned tree node map
-  - `:parent-x` - parent's x-coordinate (unscaled)
-  - `:parent-y` - parent's y-coordinate (unscaled)
-  - `:x-scale`  - horizontal scaling factor (pixels per branch-length unit)
-  - `:y-scale`  - vertical spacing in pixels between adjacent tips"
-  [{:keys [node parent-x parent-y x-scale y-scale]}]
+  - `:node`                   - positioned tree node map
+  - `:parent-x`               - parent's x-coordinate (unscaled)
+  - `:parent-y`               - parent's y-coordinate (unscaled)
+  - `:x-scale`                - horizontal scaling factor (pixels per branch-length unit)
+  - `:y-scale`                - vertical spacing in pixels between adjacent tips
+  - `:show-internal-markers`  - boolean, whether to render circles on internal nodes"
+  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
         p-y (* parent-y y-scale)
         line-width 0.5
-        line-color "#000"]
+        line-color "#000"
+        is-leaf? (empty? (:children node))
+        marker-r (:node-marker-radius LAYOUT)
+        marker-fill (:node-marker-fill LAYOUT)]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
+       ;; Node marker — always on leaves, optionally on internal nodes
+       (when (or is-leaf? show-internal-markers)
+         ($ :circle {:cx scaled-x :cy scaled-y :r marker-r :fill marker-fill}))
+
        ;; Tip label
-       (when (empty? (:children node))
-         ($ :g
-            ($ :text {:x (+ scaled-x 8)
-                      :y scaled-y
-                      :dominant-baseline "central"
-                      :style {:font-family "monospace" :font-size "12px" :font-weight "bold"}}
-               (:name node))))
+       (when is-leaf?
+         ($ :text {:x (+ scaled-x 8)
+                   :y scaled-y
+                   :dominant-baseline "central"
+                   :style {:font-family "monospace" :font-size "12px" :font-weight "bold"}}
+            (:name node)))
 
        ;; Recurse into children
        (for [child (:children node)]
-         ($ TreeNode {:key (:name child)
+         ($ TreeNode {:key (:id child)
                       :node child
                       :parent-x (:x node)
                       :parent-y (:y node)
                       :x-scale x-scale
-                      :y-scale y-scale})))))
+                      :y-scale y-scale
+                      :show-internal-markers show-internal-markers})))))
 
 (defui Toolbar
   "Renders the control panel with file loaders and layout sliders.
@@ -276,10 +335,12 @@
   - Newick file loader (new)
   - Metadata CSV/TSV file loader
   - Tree width (horizontal zoom) slider
-  - Vertical spacing slider"
+  - Vertical spacing slider
+  - Toggle for Showing internal nodes"
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
+                show-internal-markers set-show-internal-markers!
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
     ($ :div {:style {:padding "12px"
@@ -318,41 +379,35 @@
                      :min 10
                      :max 100
                      :value y-mult
-                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))})))))
+                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
+       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
+          ($ :input {:type "checkbox"
+                     :id "show-internal-markers-checkbox"
+                     :checked show-internal-markers
+                     :on-change #(set-show-internal-markers! (not show-internal-markers))})
+          ($ :label {:style {:font-weight "bold"
+                              :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers")))))
 
 (defui PhylogeneticTree
   "Main visualization component that combines tree rendering with
   metadata columns in a scrollable SVG viewport.
 
-  Reads the Newick string, metadata, and zoom settings from
-  [[app.state/app-context]]. Parses the tree, assigns coordinates,
-  merges metadata into leaf nodes, and renders the full layout.
+  Receives a pre-computed tree (from [[prepare-tree]]) and display
+  settings. Does no parsing itself — it is a pure rendering component.
 
   Props:
-  - `:width-px`           - total available width in pixels
-  - `:component-height-px` - total available height in pixels"
-  [{:keys [width-px component-height-px]}]
-  (let [{:keys [newick-str metadata-rows active-cols
-                x-mult y-mult]} (state/use-app-state)
-
-        ;; Process tree and merge metadata
-        {:keys [tree tips max-depth]} (uix/use-memo
-                                       (fn []
-                                         (let [root (-> (newick/newick->map newick-str)
-                                                        (assign-y-coords (atom 0))
-                                                        first
-                                                        assign-x-coords)
-                                               leaves (get-leaves root)
-                                               id-key (-> active-cols first :key)
-                                               metadata-index (into {} (map (fn [r] [(get r id-key) r]) metadata-rows))
-                                               enriched-leaves (mapv #(assoc % :metadata (get metadata-index (:name %)))
-                                                                     leaves)]
-                                           {:tree root
-                                            :tips enriched-leaves
-                                            :max-depth (get-max-x root)}))
-                                       [newick-str metadata-rows active-cols])
-
-        ;; Dynamic layout math
+  - `:tree`                    - positioned root node (recursive map with `:x`, `:y`)
+  - `:tips`                    - flat vector of enriched leaf nodes
+  - `:max-depth`               - maximum x-coordinate in the tree
+  - `:active-cols`             - vector of column config maps
+  - `:x-mult`                  - horizontal zoom multiplier
+  - `:y-mult`                  - vertical tip spacing
+  - `:show-internal-markers`   - whether to show circles on internal nodes
+  - `:width-px`                - total available width in pixels
+  - `:component-height-px`     - total available height in pixels"
+  [{:keys [tree tips max-depth active-cols x-mult y-mult
+           show-internal-markers width-px component-height-px]}]
+  (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
@@ -386,7 +441,8 @@
                                  :stroke-dasharray "4 4"
                                  :stroke-width 1})))
                   ($ TreeNode {:node tree :parent-x 0 :parent-y (:y tree)
-                               :x-scale current-x-scale :y-scale y-mult})))
+                               :x-scale current-x-scale :y-scale y-mult
+                               :show-internal-markers show-internal-markers})))
 
                 ;; Metadata columns
                 (let [offsets (reductions (fn [acc col] (+ acc (:width col)))
@@ -401,18 +457,43 @@
                                          :column-key (:key col)}))
                     active-cols)))))))
 
+(defui TreeContainer
+  "Intermediate component that bridges state context and pure rendering.
+
+  Reads raw state from context via [[state/use-app-state]], derives
+  the positioned tree via [[prepare-tree]] (memoized), and passes
+  everything as props to [[PhylogeneticTree]]."
+  [{:keys [width-px component-height-px]}]
+  (let [{:keys [newick-str metadata-rows active-cols
+                x-mult y-mult show-internal-markers]} (state/use-app-state)
+
+        {:keys [tree tips max-depth]} (uix/use-memo
+                                       (fn [] (prepare-tree newick-str metadata-rows active-cols))
+                                       [newick-str metadata-rows active-cols])]
+    ($ PhylogeneticTree {:tree tree
+                         :tips tips
+                         :max-depth max-depth
+                         :active-cols active-cols
+                         :x-mult x-mult
+                         :y-mult y-mult
+                         :show-internal-markers show-internal-markers
+                         :width-px width-px
+                         :component-height-px component-height-px})))
+
 ;; ===== App Shell =====
 
 (defui app
   "Root application component.
 
   Wraps the component tree with [[state/AppStateProvider]] so all
-  descendants can access shared state via context. Renders
-  [[PhylogeneticTree]] at a fixed 1200x800 pixel viewport."
+  descendants can access shared state via context. Derives the
+  positioned tree from raw state and passes it to [[PhylogeneticTree]]
+  as props, keeping the tree component a pure renderer."
   []
   ($ state/AppStateProvider
-     ($ PhylogeneticTree {:width-px 1200
-                          :component-height-px 800})))
+     ($ TreeContainer {:width-px 1200
+                       :component-height-px 800})))
+
 
 (defonce root
   (when (exists? js/document)

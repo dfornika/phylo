@@ -137,3 +137,73 @@
   (testing "A single leaf returns itself"
     (let [leaf {:name "X" :branch-length 1.0 :children [] :x 0 :y 0}]
       (is (= [leaf] (core/get-leaves leaf))))))
+
+;; ===== prepare-tree =====
+
+(deftest prepare-tree-returns-expected-keys
+  (testing "prepare-tree returns :tree, :tips, and :max-depth"
+    (let [result (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+      (is (contains? result :tree))
+      (is (contains? result :tips))
+      (is (contains? result :max-depth)))))
+
+(deftest prepare-tree-tips-match-leaves
+  (testing "Tips are the leaf nodes of the prepared tree"
+    (let [{:keys [tips]} (core/prepare-tree "(A:0.1,(B:0.2,C:0.3):0.4)Root;" [] [])]
+      (is (= 3 (count tips)))
+      (is (= ["A" "B" "C"] (mapv :name tips))))))
+
+(deftest prepare-tree-max-depth-positive
+  (testing "max-depth is positive for a tree with branch lengths"
+    (let [{:keys [max-depth]} (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+      (is (pos? max-depth)))))
+
+(deftest prepare-tree-merges-metadata
+  (testing "Metadata is merged into leaf nodes by first-column ID"
+    (let [cols [{:key :id :label "ID" :width 120}
+                {:key :color :label "Color" :width 120}]
+          rows [{:id "A" :color "red"}
+                {:id "B" :color "blue"}]
+          {:keys [tips]} (core/prepare-tree "(A:0.1,B:0.2)Root;" rows cols)]
+      (is (= "red" (get-in (first tips) [:metadata :color])))
+      (is (= "blue" (get-in (second tips) [:metadata :color]))))))
+
+;; ===== assign-node-ids =====
+
+(deftest assign-node-ids-single-node
+  (testing "Single node gets ID 0"
+    (let [node {:name "A" :branch-length 1.0 :children []}
+          result (core/assign-node-ids node)]
+      (is (= 0 (:id result))))))
+
+(deftest assign-node-ids-all-nodes-have-ids
+  (testing "Every node in the tree gets a unique ID"
+    (let [tree (newick/newick->map "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
+          result (core/assign-node-ids tree)]
+      (letfn [(check-ids [node]
+                (is (contains? node :id))
+                (is (number? (:id node)))
+                (doseq [child (:children node)]
+                  (check-ids child)))]
+        (check-ids result)))))
+
+(deftest assign-node-ids-unique
+  (testing "All IDs in the tree are unique"
+    (let [tree (newick/newick->map abc-tree-str)
+          result (core/assign-node-ids tree)
+          all-ids (atom [])]
+      (letfn [(collect-ids [node]
+                (swap! all-ids conj (:id node))
+                (doseq [child (:children node)]
+                  (collect-ids child)))]
+        (collect-ids result)
+        (is (= (count @all-ids) (count (distinct @all-ids))))))))
+
+(deftest assign-node-ids-includes-nil-named-nodes
+  (testing "Nodes with nil names still get unique IDs"
+    (let [tree (newick/newick->map "(A,B);")  ; Root and potentially internal nodes may have nil names
+          result (core/assign-node-ids tree)]
+      ;; Root should have an ID even if name is nil
+      (is (number? (:id result)))
+      ;; All children should have IDs
+      (is (every? #(number? (:id %)) (:children result))))))
