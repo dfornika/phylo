@@ -9,7 +9,7 @@ Last updated: 2026-02-06
 
 ### 1. JS/TSX Component Extraction
 
-Factor leaf rendering components out into plain JSX/TSX so they can be consumed by any React project.
+Factor leaf rendering components out into plain JSX/TSX so they can be consumed by any React project. This may also allow us to later test components in isolation using a tool like [Storybook](https://storybook.js.org).
 
 **Decision:** Start in-repo (e.g., `src/components/`), extract to a separate npm package later. Do not remove existing ClojureScript/UIx implementations
 while working on TypeScript counterparts. Preserve existing UIx components until we're ready to (potentially) adopt TSX versions. Allow swapping components independently, potentially using a mix of TSX and UIx components.
