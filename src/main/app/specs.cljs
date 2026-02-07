@@ -98,8 +98,11 @@
 (s/def ::node ::positioned-node)
 (s/def ::x-scale number?)
 
+(s/def ::marker-radius number?)
+(s/def ::marker-fill string?)
+
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers]))
+  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]))
 
 ;; Toolbar reads from context — no props spec needed.
 ;; PhylogeneticTree receives only layout dimensions.

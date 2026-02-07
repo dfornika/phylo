@@ -10,11 +10,14 @@
   Shared state (Newick string, metadata, zoom settings) is managed by
   [[app.state]] and accessed via React context. See [[app.specs]] for
   the shape of data structures used throughout."
-  (:require [uix.core :as uix :refer [defui $]]
+  (:require [clojure.string :as str]
+            [uix.core :as uix :refer [defui $]]
             [uix.dom]
             [app.newick :as newick]
             [app.csv :as csv]
-            [app.state :as state]))
+            [app.state :as state]
+            #_["/components/Branch" :refer (Branch)]
+            #_["/components/TreeNode" :refer (TreeNode)]))
 
 ;; ===== Layout Constants =====
 
@@ -285,29 +288,32 @@
   text label and circle marker for leaf nodes, optionally renders
   circle markers on internal nodes, and recurses into children.
 
+  All rendering parameters arrive via props — this component has no
+  implicit dependencies on layout constants or application state.
+
   Props (see `::app.specs/tree-node-props`):
   - `:node`                   - positioned tree node map
   - `:parent-x`               - parent's x-coordinate (unscaled)
   - `:parent-y`               - parent's y-coordinate (unscaled)
   - `:x-scale`                - horizontal scaling factor (pixels per branch-length unit)
   - `:y-scale`                - vertical spacing in pixels between adjacent tips
-  - `:show-internal-markers`  - boolean, whether to render circles on internal nodes"
-  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers]}]
+  - `:show-internal-markers`  - boolean, whether to render circles on internal nodes
+  - `:marker-radius`          - radius of the circular node marker in pixels
+  - `:marker-fill`            - fill color for node markers"
+  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers marker-radius marker-fill]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
         p-y (* parent-y y-scale)
         line-width 0.5
         line-color "#000"
-        is-leaf? (empty? (:children node))
-        marker-r (:node-marker-radius LAYOUT)
-        marker-fill (:node-marker-fill LAYOUT)]
+        is-leaf? (empty? (:children node))]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
        ;; Node marker — always on leaves, optionally on internal nodes
        (when (or is-leaf? show-internal-markers)
-         ($ :circle {:cx scaled-x :cy scaled-y :r marker-r :fill marker-fill}))
+         ($ :circle {:cx scaled-x :cy scaled-y :r marker-radius :fill marker-fill}))
 
        ;; Tip label
        (when is-leaf?
@@ -325,7 +331,9 @@
                       :parent-y (:y node)
                       :x-scale x-scale
                       :y-scale y-scale
-                      :show-internal-markers show-internal-markers})))))
+                      :show-internal-markers show-internal-markers
+                      :marker-radius marker-radius
+                      :marker-fill marker-fill})))))
 
 (defui Toolbar
   "Renders the control panel with file loaders and layout sliders.
@@ -388,6 +396,12 @@
           ($ :label {:style {:font-weight "bold"
                               :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers")))))
 
+(defn kebab-case->camelCase [k]
+  (let [words (str/split (name k) #"-")]
+    (->> (map str/capitalize (rest words))
+         (apply str (first words))
+         keyword)))
+
 (defui PhylogeneticTree
   "Main visualization component that combines tree rendering with
   metadata columns in a scrollable SVG viewport.
@@ -440,9 +454,14 @@
                                  :stroke "#eee"
                                  :stroke-dasharray "4 4"
                                  :stroke-width 1})))
-                  ($ TreeNode {:node tree :parent-x 0 :parent-y (:y tree)
-                               :x-scale current-x-scale :y-scale y-mult
-                               :show-internal-markers show-internal-markers})))
+                  ($ TreeNode {:node tree  ;; If using tsx component: (clj >js tree :keyword-fn #(-> % name (.replace "-" "") kebab-case->camelCase))
+                               :parent-x 0 
+                               :parent-y (:y tree)
+                               :x-scale current-x-scale 
+                               :y-scale y-mult
+                               :show-internal-markers show-internal-markers
+                               :marker-radius (:node-marker-radius LAYOUT)
+                               :marker-fill (:node-marker-fill LAYOUT)})))
 
                 ;; Metadata columns
                 (let [offsets (reductions (fn [acc col] (+ acc (:width col)))
