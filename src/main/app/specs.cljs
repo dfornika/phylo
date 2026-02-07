@@ -47,6 +47,10 @@
 (s/def ::parsed-metadata
   (s/keys :req-un [::headers ::data]))
 
+;; Date range specs
+(s/def ::min-date string?)
+(s/def ::max-date string?)
+
 ;; ===== App State Context =====
 
 (s/def ::newick-str string?)
@@ -227,3 +231,7 @@
                :date-col (s/nilable keyword?)
                :date-range (s/nilable (s/tuple string? string?)))
   :ret  (s/nilable (s/coll-of string? :kind set?)))
+
+(s/fdef app.core/compute-min-max-dates
+  :args (s/cat :date-strs (s/coll-of (s/nilable string?)))
+  :ret  (s/nilable (s/keys :req-un [::min-date ::max-date])))
