@@ -625,7 +625,9 @@
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
         tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
-        metadata-start-x (+ tree-end-x (:metadata-gap LAYOUT))
+        metadata-start-x (+ (:svg-padding-x LAYOUT)
+                            tree-end-x
+                            (:metadata-gap LAYOUT))
         tree-height     (* (count tips) y-mult)
         svg-width       (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
