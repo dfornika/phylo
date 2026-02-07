@@ -342,11 +342,12 @@
           result (core/compute-highlight-set rows :id :date ["2024-01-15" "2024-01-15"])]
       (is (= #{"B"} result)))))
 
-(deftest compute-highlight-set-preserves-id-types
-  (testing "Returns IDs as strings regardless of type"
+(deftest compute-highlight-set-returns-string-ids
+  (testing "Returns set of string ID values from matching rows"
     (let [rows [{:id "A" :date "2024-01-15"}
                 {:id "B" :date "2024-06-20"}]
           result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "B"} result))
       (is (every? string? result)))))
 
 (deftest compute-highlight-set-different-id-key
