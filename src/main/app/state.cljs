@@ -55,7 +55,7 @@
 
 ;; "Atom holding whether to display scale (evolutionary distance) gridlines behind the tree."
 (defonce !show-scale-gridlines
-  (atom true))
+  (atom false))
 
 ;; "Atom holding whether to display a pixel-coordinate debug grid over the SVG canvas."
 (defonce !show-pixel-grid

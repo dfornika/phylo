@@ -366,7 +366,7 @@
   - Newick file loader (new)
   - Metadata CSV/TSV file loader
   - Tree width (horizontal zoom) slider
-  - Vertical spacing slider
+  - Tree height (vertical zoom) slider
   - Toggle for showing internal nodes
   - Toggle for showing the tree scale gridlines
   - Toggle for showing a static pixel-based grid (for dev/troubleshooting)
@@ -411,7 +411,7 @@
                      :value x-mult
                      :on-change #(set-x-mult! (js/parseFloat (.. % -target -value)))}))
        ($ :div
-          ($ :label {:style {:font-weight "bold"}} "Vertical Spacing: ")
+          ($ :label {:style {:font-weight "bold"}} "Tree Height: ")
           ($ :input {:type "range"
                      :min 10
                      :max 100
