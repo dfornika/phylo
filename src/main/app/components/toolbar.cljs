@@ -26,6 +26,27 @@
             (fn [e] (on-read-fn (-> e .-target .-result))))
       (.readAsText reader file))))
 
+(defn- fallback-download!
+  "Downloads the blob using the fallback `<a download>` method.
+
+  Creates a temporary anchor element with an object URL, clicks it,
+  then cleans up asynchronously to avoid racing the download."
+  [blob filename]
+  (let [url (.createObjectURL js/URL blob)
+        a   (.createElement js/document "a")]
+    (set! (.-href a) url)
+    (set! (.-download a) filename)
+    ;; Some browsers require the link to be in the DOM, and revoking the
+    ;; object URL synchronously can race the download. Attach, click, then
+    ;; clean up asynchronously.
+    (.appendChild (.-body js/document) a)
+    (.click a)
+    (js/setTimeout
+     (fn []
+       (.removeChild (.-body js/document) a)
+       (.revokeObjectURL js/URL url))
+     0)))
+
 (defn- save-blob!
   "Triggers a browser file save for the given Blob.
 
@@ -45,22 +66,14 @@
                      (.then (fn [writable]
                               (-> (.write writable blob)
                                   (.then #(.close writable))))))))
-        (.catch (fn [_err] nil))) ;; user cancelled — ignore
+        (.catch (fn [err]
+                  ;; User cancelled — ignore silently
+                  (when-not (= (.-name err) "AbortError")
+                    ;; Unexpected error — log and fall back to <a download>
+                    (js/console.error "File System Access API failed:" err)
+                    (fallback-download! blob filename)))))
     ;; Fallback — invisible <a download> click
-    (let [url (.createObjectURL js/URL blob)
-          a   (.createElement js/document "a")]
-      (set! (.-href a) url)
-      (set! (.-download a) filename)
-      ;; Some browsers require the link to be in the DOM, and revoking the
-      ;; object URL synchronously can race the download. Attach, click, then
-      ;; clean up asynchronously.
-      (.appendChild (.-body js/document) a)
-      (.click a)
-      (js/setTimeout
-       (fn []
-         (.removeChild (.-body js/document) a)
-         (.revokeObjectURL js/URL url))
-       0))))
+    (fallback-download! blob filename)))
 
 (defn export-svg!
   "Exports the phylogenetic tree SVG to a file.
