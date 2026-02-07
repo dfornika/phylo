@@ -68,6 +68,9 @@
 (s/def ::show-pixel-grid boolean?)
 (s/def ::set-show-pixel-grid! fn?)
 
+(s/def ::col-spacing number?)
+(s/def ::set-col-spacing! fn?)
+
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
@@ -77,12 +80,17 @@
                    ::y-mult ::set-y-mult!
                    ::show-internal-markers ::set-show-internal-markers!
                    ::show-scale-gridlines ::set-show-scale-gridlines!
-                   ::show-pixel-grid ::set-show-pixel-grid!]))
+                   ::show-pixel-grid ::set-show-pixel-grid!
+                   ::col-spacing ::set-col-spacing!]))
 
 ;; ===== Component Props =====
 
 (s/def ::columns (s/coll-of ::metadata-header))
 (s/def ::start-offset number?)
+(s/def ::column-label string?)
+(s/def ::cell-height number?)
+(s/def ::tip-count nat-int?)
+(s/def ::tree-height number?)
 
 (s/def ::metadata-header-props
   (s/keys :req-un [::columns ::start-offset]))
@@ -92,8 +100,10 @@
 (s/def ::y-scale number?)
 (s/def ::column-key keyword?)
 
+(s/def ::col-width number?)
+
 (s/def ::metadata-column-props
-  (s/keys :req-un [::tips ::x-offset ::y-scale ::column-key]))
+  (s/keys :req-un [::tips ::x-offset ::y-scale ::column-key ::column-label ::cell-height ::col-width]))
 
 (s/def ::parent-x number?)
 (s/def ::parent-y number?)
@@ -120,11 +130,23 @@
 (s/def ::width-px number?)
 (s/def ::component-height-px number?)
 
-(s/def ::phylogenetic-tree-props
+(s/def ::tree-viewer-props
   (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
                    ::x-mult ::y-mult ::show-internal-markers
                    ::show-scale-gridlines ::show-pixel-grid
+                   ::col-spacing
                    ::width-px ::component-height-px]))
+
+(s/def ::phylogenetic-tree-props
+  (s/keys :req-un [::tree ::x-scale ::y-scale
+                   ::show-internal-markers
+                   ::marker-radius ::marker-fill]))
+
+(s/def ::scale-gridlines-props
+  (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
+
+(s/def ::metadata-table-props
+  (s/keys :req-un [::active-cols ::tips ::start-offset ::y-scale ::col-spacing]))
 
 ;; TreeContainer receives only layout dimensions.
 

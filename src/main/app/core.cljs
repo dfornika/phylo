@@ -237,7 +237,7 @@
                    :font-size "12px"
                    :font-weight "bold"}}
      ;; Spacer pushes headers to align with metadata columns
-     ($ :div {:style {:width (str (- start-offset (* 2 (:svg-padding-x LAYOUT))) "px") :flex-shrink 0}}
+     ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px") :flex-shrink 0}}
         "Phylogeny")
 
      (for [{:keys [key label width]} columns]
@@ -245,26 +245,48 @@
           label))))
 
 (defui MetadataColumn
-  "Renders one column of metadata values as SVG text elements.
+  "Renders one column of metadata values as SVG text elements,
+  with an in-SVG header label and subtle cell borders.
 
   Each value is vertically aligned with its corresponding tree tip.
 
   Props (see `::app.specs/metadata-column-props`):
-  - `:tips`       - positioned leaf nodes with merged `:metadata`
-  - `:x-offset`   - horizontal pixel position for this column
-  - `:y-scale`    - vertical spacing multiplier
-  - `:column-key` - keyword identifying which metadata field to display"
-  [{:keys [tips x-offset y-scale column-key]}]
-  ($ :g
-     (for [tip tips]
-       ($ :text {:key (str column-key "-" (:name tip))
-                 :x x-offset
-                 :y (+ (* (:y tip) y-scale) (:svg-padding-y LAYOUT))
+  - `:tips`         - positioned leaf nodes with merged `:metadata`
+  - `:x-offset`     - horizontal pixel position for this column
+  - `:y-scale`      - vertical spacing multiplier
+  - `:column-key`   - keyword identifying which metadata field to display
+  - `:column-label` - display label for the column header
+  - `:cell-height`  - height of each cell (typically = y-scale)
+  - `:col-width`    - total width for this column (including spacing)"
+  [{:keys [tips x-offset y-scale column-key column-label cell-height col-width]}]
+  (let [header-y   (- (:svg-padding-y LAYOUT) 24)
+        rect-x     x-offset
+        rect-w     col-width]
+    ($ :g
+       ;; In-SVG column header
+       ($ :text {:x x-offset
+                 :y header-y
                  :dominant-baseline "central"
-                 :style {:font-family "monospace"
-                         :font-size "12px"}}
+                 :style {:font-family "sans-serif"
+                         :font-size "12px"
+                         :font-weight "bold"}}
+          column-label)
 
-          (get-in tip [:metadata column-key] "N/A")))))
+       ;; Data cells with borders
+       (for [tip tips]
+         (let [cy (+ (* (:y tip) y-scale) (:svg-padding-y LAYOUT))]
+           ($ :g {:key (str column-key "-" (:name tip))}
+              ;; Horizontal cell border (bottom edge only)
+              ($ :line {:x1 rect-x :y1 (+ cy (/ cell-height 2))
+                        :x2 (+ rect-x rect-w) :y2 (+ cy (/ cell-height 2))
+                        :stroke "#e0e0e0" :stroke-width 0.5})
+              ;; Cell text
+              ($ :text {:x x-offset
+                        :y cy
+                        :dominant-baseline "central"
+                        :style {:font-family "monospace"
+                                :font-size "12px"}}
+                 (get-in tip [:metadata column-key] "N/A"))))))))
 
 (defui Branch
   "Renders a single tree branch as two SVG lines: a horizontal segment
@@ -352,6 +374,7 @@
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
+                col-spacing set-col-spacing!
                 show-internal-markers set-show-internal-markers!
                 show-scale-gridlines set-show-scale-gridlines!
                 show-pixel-grid set-show-pixel-grid!
@@ -394,6 +417,14 @@
                      :max 100
                      :value y-mult
                      :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
+       ($ :div
+          ($ :label {:style {:font-weight "bold"}} "Column Spacing: ")
+          ($ :input {:type "range"
+                     :min 0
+                     :max 50
+                     :step 1
+                     :value col-spacing
+                     :on-change #(set-col-spacing! (js/parseInt (.. % -target -value) 10))}))
        ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
           ($ :input {:type "checkbox"
                      :id "show-internal-markers-checkbox"
@@ -464,6 +495,111 @@
             (str y))))))
 
 
+(defui ScaleGridlines
+  "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
+
+  Computes human-friendly tick intervals via [[calculate-scale-unit]] and
+  [[get-ticks]], then draws one dashed line per tick across the full
+  `tree-height`. Intended to be placed as a sibling of the tree and
+  metadata in the SVG, inside the translated coordinate group.
+
+  Props (see `::app.specs/scale-gridlines-props`):
+  - `:max-depth`   - maximum x-coordinate in the tree
+  - `:x-scale`     - horizontal scaling factor (pixels per branch-length unit)
+  - `:tree-height` - total height in pixels to span"
+  [{:keys [max-depth x-scale tree-height]}]
+  (if (pos? max-depth)
+    (let [unit  (calculate-scale-unit (/ max-depth 5))
+          ticks (get-ticks max-depth unit)]
+      ($ :g
+         (for [t ticks]
+           ($ :line {:key (str "grid-" t)
+                     :x1 (* t x-scale) :y1 0
+                     :x2 (* t x-scale) :y2 tree-height
+                     :stroke "#eee"
+                     :stroke-dasharray "4 4"
+                     :stroke-width 1}))))
+    ;; For non-positive max-depth, avoid calling `calculate-scale-unit`.
+    ;; Render a single tick at 0 so the origin is still visible.
+    (let [ticks [0]]
+      ($ :g
+         (for [t ticks]
+           ($ :line {:key (str "grid-" t)
+                     :x1 (* t x-scale) :y1 0
+                     :x2 (* t x-scale) :y2 tree-height
+                     :stroke "#eee"
+                     :stroke-dasharray "4 4"
+                     :stroke-width 1}))))))
+
+(defui PhylogeneticTree
+  "Renders the phylogenetic tree as a positioned SVG group.
+
+  A thin wrapper that places a `<g>` with the standard SVG padding
+  transform and delegates recursive node rendering to [[TreeNode]].
+  This component represents just the tree itself — no toolbar, no
+  metadata, no chrome.
+
+  Props (see `::app.specs/phylogenetic-tree-props`):
+  - `:tree`                   - positioned root node (recursive map)
+  - `:x-scale`                - horizontal scaling factor
+  - `:y-scale`                - vertical tip spacing
+  - `:show-internal-markers`  - whether to render circles on internal nodes
+  - `:marker-radius`          - radius of the circular node marker in pixels
+  - `:marker-fill`            - fill color for node markers"
+  [{:keys [tree x-scale y-scale show-internal-markers marker-radius marker-fill]}]
+  ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+     ($ TreeNode {:node tree
+                  :parent-x 0
+                  :parent-y (:y tree)
+                  :x-scale x-scale
+                  :y-scale y-scale
+                  :show-internal-markers show-internal-markers
+                  :marker-radius marker-radius
+                  :marker-fill marker-fill})))
+
+(defui MetadataTable
+  "Renders all metadata columns as a group, computing per-column offsets.
+
+  Wraps [[MetadataColumn]] instances with correct horizontal positioning
+  based on column widths and the optional `col-spacing` gap. This
+  component does not apply an SVG transform itself; vertical alignment
+  with the phylogenetic tree is handled by the child columns using the
+  shared `y-scale` and any global SVG padding.
+
+  Props (see `::app.specs/metadata-table-props`):
+  - `:active-cols`      - vector of column config maps
+  - `:tips`             - positioned leaf nodes with merged metadata
+  - `:start-offset`     - pixel x where metadata columns begin
+  - `:y-scale`          - vertical tip spacing
+  - `:col-spacing`      - extra horizontal gap between columns"
+  [{:keys [active-cols tips start-offset y-scale col-spacing]}]
+  (let [offsets (reductions (fn [acc col] (+ acc (:width col) col-spacing))
+                            start-offset
+                            active-cols)]
+    (let [last-idx    (dec (count active-cols))
+          table-x1   (nth offsets 0)
+          table-x2   (+ (nth offsets last-idx)
+                        (:width (nth active-cols last-idx))
+                        col-spacing)
+          border-y   (- (:svg-padding-y LAYOUT) 10)]
+      ($ :g
+         ;; Solid header underline (fixed position, unaffected by vertical scaling)
+         ($ :line {:x1 table-x1 :y1 border-y
+                   :x2 table-x2 :y2 border-y
+                   :stroke "#000" :stroke-width 0.5})
+
+         (map-indexed
+          (fn [idx col]
+            ($ MetadataColumn {:key (str "col-" (:key col))
+                               :tips tips
+                               :x-offset (nth offsets idx)
+                               :y-scale y-scale
+                               :column-key (:key col)
+                               :column-label (:label col)
+                               :cell-height y-scale
+                               :col-width (+ (:width col) col-spacing)}))
+          active-cols)))))
+
 (defn kebab-case->camelCase
   "Converts between kebab-case and camelCase"
   [k]
@@ -472,14 +608,15 @@
          (apply str (first words))
          keyword)))
 
-(defui PhylogeneticTree
-  "Main visualization component that combines tree rendering with
-  metadata columns in a scrollable SVG viewport.
+(defui TreeViewer
+  "Top-level visualization shell that combines toolbar, metadata header,
+  and a scrollable SVG viewport containing the tree, gridlines, and
+  metadata columns.
 
   Receives a pre-computed tree (from [[prepare-tree]]) and display
   settings. Does no parsing itself — it is a pure rendering component.
 
-  Props:
+  Props (see `::app.specs/tree-viewer-props`):
   - `:tree`                    - positioned root node (recursive map with `:x`, `:y`)
   - `:tips`                    - flat vector of enriched leaf nodes
   - `:max-depth`               - maximum x-coordinate in the tree
@@ -487,17 +624,28 @@
   - `:x-mult`                  - horizontal zoom multiplier
   - `:y-mult`                  - vertical tip spacing
   - `:show-internal-markers`   - whether to show circles on internal nodes
+  - `:show-scale-gridlines`    - whether to show evolutionary distance gridlines
+  - `:show-pixel-grid`         - whether to show pixel coordinate debug grid
+  - `:col-spacing`             - extra horizontal spacing between metadata columns
   - `:width-px`                - total available width in pixels
   - `:component-height-px`     - total available height in pixels"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers width-px component-height-px
-           show-scale-gridlines show-pixel-grid]}]
+           show-scale-gridlines show-pixel-grid col-spacing]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
-        tree-end-x (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
-        metadata-start-x (+ tree-end-x (:metadata-gap LAYOUT))]
+        tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
+        metadata-start-x (+ (:svg-padding-x LAYOUT)
+                            tree-end-x
+                            (:metadata-gap LAYOUT))
+        tree-height     (* (count tips) y-mult)
+        svg-width       (+ metadata-start-x
+                           (reduce + 0 (map :width active-cols))
+                           (* col-spacing (max 0 (dec (count active-cols))))
+                           100)
+        svg-height      (+ tree-height 100)]
 
     ($ :div {:style {:display "flex" :flex-direction "column" :height (str component-height-px "px")}}
 
@@ -509,75 +657,61 @@
           (when (seq active-cols)
             ($ MetadataHeader {:columns active-cols :start-offset metadata-start-x}))
 
-          ($ :svg {:width (+ metadata-start-x (reduce + (map :width active-cols)) 100)
-                   :height (+ (* (count tips) y-mult) 100)}
+          ($ :svg {:width svg-width :height svg-height}
              ;; Debugging pixel grid
-             (when show-pixel-grid 
-               ($ PixelGrid {:width (+ metadata-start-x (reduce + (map :width active-cols)) 100)
-                             :height (+ (* (count tips) y-mult) 100)
-                             :spacing 50}))
-             ;; Scale gridlines
-             (let [unit (calculate-scale-unit (/ max-depth 5))
-                   ticks (get-ticks max-depth unit)
-                   tree-height (* (count tips) y-mult)
-                   svg-transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")]
-               ($ :g {:transform svg-transform}
-                  (when show-scale-gridlines
-                    ($ :g
-                     (for [t ticks]
-                       ($ :line {:key (str "grid-" t)
-                                 :x1 (* t current-x-scale) :y1 0
-                                 :x2 (* t current-x-scale) :y2 tree-height
-                                 :stroke "#eee"
-                                 :stroke-dasharray "4 4"
-                                 :stroke-width 1}))))
-                  ($ TreeNode {:node tree  ;; If using tsx component: (clj >js tree :keyword-fn #(-> % name (.replace "-" "") kebab-case->camelCase))
-                               :parent-x 0 
-                               :parent-y (:y tree)
-                               :x-scale current-x-scale 
-                               :y-scale y-mult
-                               :show-internal-markers show-internal-markers
-                               :marker-radius (:node-marker-radius LAYOUT)
-                               :marker-fill (:node-marker-fill LAYOUT)})))
+             (when show-pixel-grid
+               ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
-                ;; Metadata columns
-                (let [offsets (reductions (fn [acc col] (+ acc (:width col)))
-                                          metadata-start-x
-                                          active-cols)]
-                  (map-indexed
-                    (fn [idx col]
-                      ($ MetadataColumn {:key (str "col-" (:key col))
-                                         :tips tips
-                                         :x-offset (- (nth offsets idx) (:svg-padding-x LAYOUT))
-                                         :y-scale y-mult
-                                         :column-key (:key col)}))
-                    active-cols)))))))
+             ;; Scale gridlines (sibling — spans full SVG height)
+             (when show-scale-gridlines
+               ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+                  ($ ScaleGridlines {:max-depth max-depth
+                                     :x-scale current-x-scale
+                                     :tree-height tree-height})))
+
+             ;; The tree itself
+             ($ PhylogeneticTree {:tree tree
+                                  :x-scale current-x-scale
+                                  :y-scale y-mult
+                                  :show-internal-markers show-internal-markers
+                                  :marker-radius (:node-marker-radius LAYOUT)
+                                  :marker-fill (:node-marker-fill LAYOUT)})
+
+             ;; Metadata columns
+             (when (seq active-cols)
+               ($ MetadataTable {:active-cols active-cols
+                                 :tips tips
+                                 :start-offset metadata-start-x
+                                 :y-scale y-mult
+                                 :col-spacing col-spacing})))))))
 
 (defui TreeContainer
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
   the positioned tree via [[prepare-tree]] (memoized), and passes
-  everything as props to [[PhylogeneticTree]]."
+  everything as props to [[TreeViewer]]."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers
-                show-scale-gridlines show-pixel-grid]} (state/use-app-state)
+                show-scale-gridlines show-pixel-grid
+                col-spacing]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
                                        (fn [] (prepare-tree newick-str metadata-rows active-cols))
                                        [newick-str metadata-rows active-cols])]
-    ($ PhylogeneticTree {:tree tree
-                         :tips tips
-                         :max-depth max-depth
-                         :active-cols active-cols
-                         :x-mult x-mult
-                         :y-mult y-mult
-                         :show-internal-markers show-internal-markers
-                         :show-scale-gridlines show-scale-gridlines
-                         :show-pixel-grid show-pixel-grid
-                         :width-px width-px
-                         :component-height-px component-height-px})))
+    ($ TreeViewer {:tree tree
+                   :tips tips
+                   :max-depth max-depth
+                   :active-cols active-cols
+                   :x-mult x-mult
+                   :y-mult y-mult
+                   :show-internal-markers show-internal-markers
+                   :show-scale-gridlines show-scale-gridlines
+                   :show-pixel-grid show-pixel-grid
+                   :col-spacing col-spacing
+                   :width-px width-px
+                   :component-height-px component-height-px})))
 
 ;; ===== App Shell =====
 
@@ -586,7 +720,7 @@
 
   Wraps the component tree with [[state/AppStateProvider]] so all
   descendants can access shared state via context. Derives the
-  positioned tree from raw state and passes it to [[PhylogeneticTree]]
+  positioned tree from raw state and passes it to [[TreeViewer]]
   as props, keeping the tree component a pure renderer."
   []
   ($ state/AppStateProvider

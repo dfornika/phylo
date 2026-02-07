@@ -26,10 +26,11 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 ┌─────────────────┐
 │ Enriched leaves │  Leaf nodes with :metadata map from uploaded CSV
 └────────┬────────┘
-         │ PhylogeneticTree component
+         │ TreeViewer component
          ▼
 ┌─────────────────┐
-│ SVG + HTML      │  TreeNode (branches/labels) + MetadataColumn (values)
+│ SVG + HTML      │  PhylogeneticTree → TreeNode (branches/labels)
+│                 │  MetadataTable → MetadataColumn (values)
 └─────────────────┘
 ```
 
@@ -37,19 +38,22 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 
 ```
 app
-└── AppStateProvider          Context provider (app.state)
-    └── TreeContainer         Reads context, derives positioned tree
-        └── PhylogeneticTree  Pure renderer — receives all data as props
-            ├── Toolbar       File loaders, sliders, toggles (reads from context)
-            ├── MetadataHeader  Sticky column header labels
+└── AppStateProvider              Context provider (app.state)
+    └── TreeContainer             Reads context, derives positioned tree
+        └── TreeViewer            Layout shell — toolbar, viewport, SVG canvas
+            ├── Toolbar           File loaders, sliders, toggles (reads from context)
+            ├── MetadataHeader    Sticky HTML column header labels
             └── <svg>
-                ├── gridlines       Scale bar gridlines
-                ├── TreeNode        Recursive tree rendering
-                │   ├── Branch      Horizontal + vertical line segments
-                │   ├── <circle>    Node marker (always on leaves, optional on internals)
-                │   ├── <text>      Tip label (leaves only)
-                │   └── TreeNode... Child nodes (recursive)
-                └── MetadataColumn  Per-column text values aligned to tips
+                ├── PixelGrid         Debug pixel coordinate grid (conditional)
+                ├── ScaleGridlines    Evolutionary distance gridlines (conditional)
+                ├── PhylogeneticTree  Thin wrapper — SVG group with padding transform
+                │   └── TreeNode      Recursive tree rendering
+                │       ├── Branch    Horizontal + vertical line segments
+                │       ├── <circle>  Node marker (always on leaves, optional on internals)
+                │       ├── <text>    Tip label (leaves only)
+                │       └── TreeNode... Child nodes (recursive)
+                └── MetadataTable     Computes column offsets, wraps columns
+                    └── MetadataColumn  Per-column header + data cells with borders
 ```
 
 ## State Management
@@ -69,6 +73,9 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!x-mult` | number | `0.5` | Horizontal zoom multiplier (0.05–1.5) |
 | `!y-mult` | number | `30` | Vertical tip spacing in pixels (10–100) |
 | `!show-internal-markers` | boolean | `false` | Show circle markers on internal nodes |
+| `!show-scale-gridlines` | boolean | `true` | Show evolutionary distance gridlines |
+| `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
+| `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
 
 ### Context Architecture
 
@@ -78,7 +85,7 @@ app
     │                         bundles values + setters into a map,
     │                         provides them through app-context
     └── TreeContainer         Consumes context, calls prepare-tree
-        └── PhylogeneticTree  Pure renderer — all data via props
+        └── TreeViewer        Layout shell — all data via props
             ├── Toolbar       Consumes context via use-app-state
             └── ...           (leaf components receive computed
                                values as props — no context needed)
@@ -87,15 +94,18 @@ app
 `AppStateProvider` subscribes to each atom with `uix/use-atom` (which uses React's `useSyncExternalStore` internally) and exposes the context map:
 
 ```clojure
-{:newick-str              "..."   :set-newick-str!              fn
- :metadata-rows           [...]   :set-metadata-rows!           fn
- :active-cols             [...]   :set-active-cols!             fn
+{:newick-str              "..."  :set-newick-str!              fn
+ :metadata-rows           [...]  :set-metadata-rows!           fn
+ :active-cols             [...]  :set-active-cols!             fn
  :x-mult                  0.5    :set-x-mult!                  fn
  :y-mult                  30     :set-y-mult!                  fn
- :show-internal-markers   false  :set-show-internal-markers!   fn}
+ :show-internal-markers   false  :set-show-internal-markers!   fn
+ :show-scale-gridlines    true   :set-show-scale-gridlines!    fn
+ :show-pixel-grid         false  :set-show-pixel-grid!         fn
+ :col-spacing             0      :set-col-spacing!             fn}
 ```
 
-Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`) stay props-based since they receive computed/positioned data, not raw state.
+Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
 
 ### Derived State
 
@@ -157,10 +167,14 @@ TSX components are **pure functions of their props** — they have no implicit d
 |-----------|:-:|:-:|
 | `Branch` | ✓ | ✓ |
 | `TreeNode` | ✓ | ✓ |
+| `PixelGrid` | ✓ | ✓ |
+| `ScaleGridlines` | ✓ | — |
+| `PhylogeneticTree` | ✓ (thin SVG wrapper) | — |
 | `MetadataColumn` | ✓ | — |
+| `MetadataTable` | ✓ | — |
 | `MetadataHeader` | ✓ | — |
 | `Toolbar` | ✓ (stateful) | — (stays in CLJS) |
-| `PhylogeneticTree` | ✓ (orchestrator) | — (stays in CLJS) |
+| `TreeViewer` | ✓ (layout shell) | — (stays in CLJS) |
 | `TreeContainer` | ✓ (context bridge) | — (stays in CLJS) |
 
 ### Build Pipeline
