@@ -144,7 +144,7 @@
           (when (seq active-cols)
             ($ MetadataHeader {:columns active-cols :start-offset metadata-start-x}))
 
-          ($ :svg {:width svg-width :height svg-height}
+          ($ :svg {:id "phylo-svg" :width svg-width :height svg-height}
              ;; Debugging pixel grid
              (when show-pixel-grid
                ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
