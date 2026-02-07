@@ -217,6 +217,11 @@
           result (core/compute-highlight-set rows :id nil ["2024-01-01" "2024-12-31"])]
       (is (nil? result)))))
 
+(deftest compute-highlight-set-nil-metadata-rows
+  (testing "Returns empty set when metadata-rows is nil"
+    (let [result (core/compute-highlight-set nil :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{} result)))))
+
 (deftest compute-highlight-set-nil-date-range
   (testing "Returns nil when date-range is nil"
     (let [rows [{:id "A" :date "2024-01-15"}]
