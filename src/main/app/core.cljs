@@ -345,7 +345,10 @@
   - Metadata CSV/TSV file loader
   - Tree width (horizontal zoom) slider
   - Vertical spacing slider
-  - Toggle for Showing internal nodes"
+  - Toggle for showing internal nodes
+  - Toggle for showing the tree scale gridlines
+  - Toggle for showing a static pixel-based grid (for dev/troubleshooting)
+  "
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
@@ -397,21 +400,21 @@
                      :checked show-internal-markers
                      :on-change #(set-show-internal-markers! (not show-internal-markers))})
           ($ :label {:style {:font-weight "bold"
-                              :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers"))
+                             :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers"))
        ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
           ($ :input {:type "checkbox"
                      :id "show-scale-gridlines-checkbox"
                      :checked show-scale-gridlines
                      :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
           ($ :label {:style {:font-weight "bold"
-                              :htmlFor "show-scale-gridlines-checkbox"}} "Show scale gridlines"))
+                             :htmlFor "show-scale-gridlines-checkbox"}} "Show scale gridlines"))
        ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
           ($ :input {:type "checkbox"
                      :id "show-pixel-grid-checkbox"
                      :checked show-pixel-grid
                      :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
           ($ :label {:style {:font-weight "bold"
-                              :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid")))))
+                             :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid")))))
 
 
 (defui PixelGrid
