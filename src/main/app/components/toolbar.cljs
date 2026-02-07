@@ -51,8 +51,16 @@
           a   (.createElement js/document "a")]
       (set! (.-href a) url)
       (set! (.-download a) filename)
+      ;; Some browsers require the link to be in the DOM, and revoking the
+      ;; object URL synchronously can race the download. Attach, click, then
+      ;; clean up asynchronously.
+      (.appendChild (.-body js/document) a)
       (.click a)
-      (.revokeObjectURL js/URL url))))
+      (js/setTimeout
+       (fn []
+         (.removeChild (.-body js/document) a)
+         (.revokeObjectURL js/URL url))
+       0))))
 
 (defn export-svg!
   "Exports the phylogenetic tree SVG to a file.
