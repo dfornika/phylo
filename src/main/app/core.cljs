@@ -259,7 +259,7 @@
   - `:cell-height`  - height of each cell (typically = y-scale)
   - `:col-width`    - total width for this column (including spacing)"
   [{:keys [tips x-offset y-scale column-key column-label cell-height col-width]}]
-  (let [header-y   (- (:svg-padding-y LAYOUT) 20)
+  (let [header-y   (- (:svg-padding-y LAYOUT) 24)
         rect-x     x-offset
         rect-w     col-width]
     ($ :g
@@ -563,18 +563,29 @@
   (let [offsets (reductions (fn [acc col] (+ acc (:width col) col-spacing))
                             start-offset
                             active-cols)]
-    ($ :g
-       (map-indexed
-        (fn [idx col]
-          ($ MetadataColumn {:key (str "col-" (:key col))
-                             :tips tips
-                             :x-offset (nth offsets idx)
-                             :y-scale y-scale
-                             :column-key (:key col)
-                             :column-label (:label col)
-                             :cell-height y-scale
-                             :col-width (+ (:width col) col-spacing)}))
-        active-cols))))
+    (let [last-idx    (dec (count active-cols))
+          table-x1   (nth offsets 0)
+          table-x2   (+ (nth offsets last-idx)
+                        (:width (nth active-cols last-idx))
+                        col-spacing)
+          border-y   (- (:svg-padding-y LAYOUT) 10)]
+      ($ :g
+         ;; Solid header underline (fixed position, unaffected by vertical scaling)
+         ($ :line {:x1 table-x1 :y1 border-y
+                   :x2 table-x2 :y2 border-y
+                   :stroke "#000" :stroke-width 0.5})
+
+         (map-indexed
+          (fn [idx col]
+            ($ MetadataColumn {:key (str "col-" (:key col))
+                               :tips tips
+                               :x-offset (nth offsets idx)
+                               :y-scale y-scale
+                               :column-key (:key col)
+                               :column-label (:label col)
+                               :cell-height y-scale
+                               :col-width (+ (:width col) col-spacing)}))
+          active-cols)))))
 
 (defn kebab-case->camelCase
   "Converts between kebab-case and camelCase"
