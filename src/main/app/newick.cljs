@@ -172,3 +172,32 @@
         AW:10.4109")
 
   (tap> (newick->map abc-tree)))
+
+
+(defn- node->newick
+  "Converts a single tree node to its Newick string representation (no trailing semicolon).
+
+  Recursively serializes children inside parentheses, then appends the
+  optional node name and branch length."
+  [{:keys [name branch-length children]}]
+  (let [children-str (when (seq children)
+                       (str "(" (str/join "," (map node->newick children)) ")"))
+        name-str (or name "")
+        length-str (when (some? branch-length) (str ":" branch-length))]
+    (str children-str name-str length-str)))
+
+(defn map->newick
+  "Converts a tree map back into a Newick-format string.
+
+  This is the inverse of [[newick->map]]. Takes a recursive map with keys
+  `:name`, `:branch-length`, and `:children` and produces a standard
+  Newick string terminated by a semicolon.
+
+  Example:
+
+    (map->newick {:name \"Root\" :branch-length 0.3
+                  :children [{:name \"A\" :branch-length 0.1 :children []}
+                             {:name \"B\" :branch-length 0.2 :children []}]})
+    ;;=> \"(A:0.1,B:0.2)Root:0.3;\""
+  [node]
+  (str (node->newick node) ";"))

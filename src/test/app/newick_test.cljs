@@ -90,3 +90,32 @@
                                   (reduce + (map count-tips (:children n)))))]
                       (count-tips tree))]
       (is (= 25 tip-count)))))
+
+
+;; ===== Round-trip =====
+
+(deftest map->newick-simple
+  (testing "Simple tree serializes to Newick"
+    (is (= "(Dog:0.1,Cat:0.2)Mammal:0.5;"
+           (newick/map->newick {:name "Mammal" :branch-length 0.5
+                                :children [{:name "Dog" :branch-length 0.1 :children []}
+                                           {:name "Cat" :branch-length 0.2 :children []}]})))))
+
+(deftest map->newick-no-lengths
+  (testing "Tree without branch lengths"
+    (is (= "(A,B);" (newick/map->newick {:name nil :branch-length nil
+                                          :children [{:name "A" :branch-length nil :children []}
+                                                     {:name "B" :branch-length nil :children []}]})))))
+
+(deftest map->newick-round-trip
+  (testing "newick->map then map->newick round-trips"
+    (doseq [s ["(A:0.1,B:0.2)Root:0.3;"
+               "(A,B);"
+               "A:0.1;"
+               "((A,B)C,(D,E)F)Root;"]]
+      (is (= s (newick/map->newick (newick/newick->map s)))))))
+
+(deftest map->newick-large-tree-round-trip
+  (testing "abc-tree round-trips through parse and serialize"
+    (is (= (str abc-tree-str ";")
+           (newick/map->newick (newick/newick->map abc-tree-str))))))
