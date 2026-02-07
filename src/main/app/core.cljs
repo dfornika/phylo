@@ -549,9 +549,10 @@
   "Renders all metadata columns as a group, computing per-column offsets.
 
   Wraps [[MetadataColumn]] instances with correct horizontal positioning
-  based on column widths and the optional `col-spacing` gap. Also places
-  columns inside a translated SVG group so they share the tree's
-  vertical coordinate system.
+  based on column widths and the optional `col-spacing` gap. This
+  component does not apply an SVG transform itself; vertical alignment
+  with the phylogenetic tree is handled by the child columns using the
+  shared `y-scale` and any global SVG padding.
 
   Props (see `::app.specs/metadata-table-props`):
   - `:active-cols`      - vector of column config maps
