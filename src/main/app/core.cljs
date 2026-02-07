@@ -401,7 +401,6 @@
                 date-filter-range set-date-filter-range!
                 highlight-color set-highlight-color!]} (state/use-app-state)
         date-cols (filterv #(= :date (:type %)) active-cols)
-        id-key (-> active-cols first :key)
         ;; Compute min/max dates from the selected column
         col-dates (uix/use-memo
                    (fn []
