@@ -37,23 +37,23 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 ## Component Hierarchy
 
 ```
-app
-└── AppStateProvider              Context provider (app.state)
-    └── TreeContainer             Reads context, derives positioned tree
-        └── TreeViewer            Layout shell — toolbar, viewport, SVG canvas
-            ├── Toolbar           File loaders, sliders, toggles (reads from context)
-            ├── MetadataHeader    Sticky HTML column header labels
+app                               (app.core)
+└── AppStateProvider              (app.state) Context provider
+    └── TreeContainer             (app.components.viewer) Reads context, derives positioned tree
+        └── TreeViewer            (app.components.viewer) Layout shell — toolbar, viewport, SVG canvas
+            ├── Toolbar           (app.components.toolbar) File loaders, sliders, toggles (reads from context)
+            ├── MetadataHeader    (app.components.metadata) Sticky HTML column header labels
             └── <svg>
-                ├── PixelGrid         Debug pixel coordinate grid (conditional)
-                ├── ScaleGridlines    Evolutionary distance gridlines (conditional)
-                ├── PhylogeneticTree  Thin wrapper — SVG group with padding transform
-                │   └── TreeNode      Recursive tree rendering
-                │       ├── Branch    Horizontal + vertical line segments
+                ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
+                ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
+                ├── PhylogeneticTree  (app.components.tree) Thin wrapper — SVG group with padding transform
+                │   └── TreeNode      (app.components.tree) Recursive tree rendering
+                │       ├── Branch    (app.components.tree) Horizontal + vertical line segments
                 │       ├── <circle>  Node marker (always on leaves, optional on internals)
                 │       ├── <text>    Tip label (leaves only)
                 │       └── TreeNode... Child nodes (recursive)
-                └── MetadataTable     Computes column offsets, wraps columns
-                    └── MetadataColumn  Per-column header + data cells with borders
+                └── MetadataTable     (app.components.metadata) Computes column offsets, wraps columns
+                    └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
 ```
 
 ## State Management
@@ -115,7 +115,7 @@ Components that need shared state call `(state/use-app-state)` to get this map. 
 
 ### Derived State
 
-The `prepare-tree` function (in `app.core`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
+The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
 
 `TreeContainer` also derives a `highlight-set` (set of leaf names matching the active date filter) via `compute-highlight-set`, memoized on the date filter state. This set is threaded as a prop through `TreeViewer` → `PhylogeneticTree` → `TreeNode`, where matching leaf markers are rendered in `highlight-color`.
 
@@ -125,7 +125,7 @@ The `:app` shadow-cljs build includes `uix.dev` as a preload, which integrates w
 
 ## Layout System
 
-The `LAYOUT` constant in `app.core` centralizes all spacing values:
+The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 
 | Key | Default | Purpose |
 |-----|---------|---------|
@@ -163,7 +163,7 @@ Pure rendering components are being translated from UIx (ClojureScript) into Typ
 1. **Portability** — TSX components can be consumed by any React project, not just ClojureScript apps.
 2. **Storybook testing** — TSX components can be rendered and tested in isolation using [Storybook](https://storybook.js.org).
 
-**This is a work in progress.** The UIx implementations in `app.core` remain the canonical versions. TSX counterparts live in `src/tsx/components/` and are compiled to `src/gen/` (gitignored build artifacts). The two implementations are kept in sync, and the ClojureScript layer can import either version.
+**This is a work in progress.** The UIx implementations in the `app.components.*` namespaces remain the canonical versions. TSX counterparts live in `src/tsx/components/` and are compiled to `src/gen/` (gitignored build artifacts). The two implementations are kept in sync, and the ClojureScript layer can import either version.
 
 ### Design Principle
 
@@ -171,19 +171,20 @@ TSX components are **pure functions of their props** — they have no implicit d
 
 ### Current Status
 
-| Component | UIx (canonical) | TSX |
-|-----------|:-:|:-:|
-| `Branch` | ✓ | ✓ |
-| `TreeNode` | ✓ | ✓ |
-| `PixelGrid` | ✓ | ✓ |
-| `ScaleGridlines` | ✓ | — |
-| `PhylogeneticTree` | ✓ (thin SVG wrapper) | — |
-| `MetadataColumn` | ✓ | — |
-| `MetadataTable` | ✓ | — |
-| `MetadataHeader` | ✓ | — |
-| `Toolbar` | ✓ (stateful) | — (stays in CLJS) |
-| `TreeViewer` | ✓ (layout shell) | — (stays in CLJS) |
-| `TreeContainer` | ✓ (context bridge) | — (stays in CLJS) |
+| Component | UIx (canonical) | Namespace | TSX |
+|-----------|:-:|-----------|:-:|
+| `Branch` | ✓ | `app.components.tree` | ✓ |
+| `TreeNode` | ✓ | `app.components.tree` | ✓ |
+| `PixelGrid` | ✓ | `app.components.viewer` | ✓ |
+| `ScaleGridlines` | ✓ | `app.components.viewer` | — |
+| `PhylogeneticTree` | ✓ (thin SVG wrapper) | `app.components.tree` | — |
+| `MetadataColumn` | ✓ | `app.components.metadata` | — |
+| `MetadataTable` | ✓ | `app.components.metadata` | — |
+| `MetadataHeader` | ✓ | `app.components.metadata` | — |
+| `DateRangeFilter` | ✓ (stateful) | `app.components.toolbar` | — (stays in CLJS) |
+| `Toolbar` | ✓ (stateful) | `app.components.toolbar` | — (stays in CLJS) |
+| `TreeViewer` | ✓ (layout shell) | `app.components.viewer` | — (stays in CLJS) |
+| `TreeContainer` | ✓ (context bridge) | `app.components.viewer` | — (stays in CLJS) |
 
 ### Build Pipeline
 
@@ -213,8 +214,14 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 
 | Namespace | Purpose |
 |-----------|---------|
+| `app.core` | Thin app shell — mounts root component, provides `init` / `re-render` entry points |
 | `app.state` | Shared state atoms, React context provider, `use-app-state` hook |
-| `app.core` | UI components, layout algorithms, app entry point |
+| `app.layout` | `LAYOUT` constant — spacing, padding, marker sizes used across all component namespaces |
+| `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `prepare-tree`, `compute-highlight-set`, etc.) |
 | `app.newick` | Recursive descent Newick parser |
 | `app.csv` | CSV/TSV parsing with column metadata and data type detection |
 | `app.specs` | Spec definitions for data structures & functions |
+| `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
+| `app.components.metadata` | `MetadataHeader`, `MetadataColumn`, `MetadataTable` — metadata overlay |
+| `app.components.toolbar` | `Toolbar`, `DateRangeFilter`, `read-file!` — user controls |
+| `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `PixelGrid` — top-level composition |

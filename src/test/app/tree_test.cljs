@@ -1,7 +1,7 @@
-(ns app.core-test
-  "Tests for tree layout and utility functions in [[app.core]]."
+(ns app.tree-test
+  "Tests for tree layout and utility functions in [[app.tree]]."
   (:require [cljs.test :refer [deftest testing is]]
-            [app.core :as core]
+            [app.tree :as tree]
             [app.newick :as newick]))
 
 ;; ===== Helper: build a positioned tree from a Newick string =====
@@ -10,20 +10,20 @@
   "Parses a Newick string and assigns x/y coordinates."
   [newick-str]
   (-> (newick/newick->map newick-str)
-      (core/assign-y-coords (atom 0))
+      (tree/assign-y-coords (atom 0))
       first
-      core/assign-x-coords))
+      tree/assign-x-coords))
 
 ;; ===== count-tips =====
 
 (deftest count-tips-single-leaf
   (testing "A single leaf counts as 1 tip"
-    (is (= 1 (core/count-tips {:name "A" :branch-length 1.0 :children []})))))
+    (is (= 1 (tree/count-tips {:name "A" :branch-length 1.0 :children []})))))
 
 (deftest count-tips-two-leaf-tree
   (testing "A two-leaf tree has 2 tips"
     (let [tree (newick/newick->map "(A:0.1,B:0.2)Root:0.3;")]
-      (is (= 2 (core/count-tips tree))))))
+      (is (= 2 (tree/count-tips tree))))))
 
 (def ^:private abc-tree-str
   "Local copy of the 25-taxon sample tree for testing."
@@ -32,37 +32,37 @@
 (deftest count-tips-abc-tree
   (testing "abc-tree has 25 tips"
     (let [tree (newick/newick->map abc-tree-str)]
-      (is (= 25 (core/count-tips tree))))))
+      (is (= 25 (tree/count-tips tree))))))
 
 ;; ===== get-max-x =====
 
 (deftest get-max-x-simple-tree
   (testing "max-x of a positioned two-leaf tree"
-    (let [tree (positioned-tree "(A:0.1,B:0.2)Root:0.3;")]
-      (is (> (core/get-max-x tree) 0))
+    (let [t (positioned-tree "(A:0.1,B:0.2)Root:0.3;")]
+      (is (> (tree/get-max-x t) 0))
       ;; B has the longer path: 0 + 0.2 = 0.2 (root length ignored)
-      (is (== 0.2 (core/get-max-x tree))))))
+      (is (== 0.2 (tree/get-max-x t))))))
 
 (deftest get-max-x-deeper-tree
   (testing "max-x on a deeper positioned tree"
-    (let [tree (positioned-tree "(A:1.0,(B:0.5,C:2.0):1.0):0.0;")]
+    (let [t (positioned-tree "(A:1.0,(B:0.5,C:2.0):1.0):0.0;")]
       ;; Deepest path: 0 + 1.0 + 2.0 = 3.0
-      (is (== 3.0 (core/get-max-x tree))))))
+      (is (== 3.0 (tree/get-max-x t))))))
 
 ;; ===== assign-y-coords =====
 
 (deftest assign-y-coords-sequential-leaves
   (testing "Leaves get sequential integer y-values"
-    (let [tree (newick/newick->map "(A:0.1,B:0.2,C:0.3)Root;")
-          [positioned _] (core/assign-y-coords tree (atom 0))
-          leaves (core/get-leaves positioned)]
+    (let [t (newick/newick->map "(A:0.1,B:0.2,C:0.3)Root;")
+          [positioned _] (tree/assign-y-coords t (atom 0))
+          leaves (tree/get-leaves positioned)]
       ;; After assign-y + get-leaves, y-values should be 0, 1, 2
       (is (= [0 1 2] (mapv :y leaves))))))
 
 (deftest assign-y-coords-internal-node-average
   (testing "Internal node y is the average of first and last child"
-    (let [tree (newick/newick->map "(A:0.1,B:0.2)Root;")
-          [positioned _] (core/assign-y-coords tree (atom 0))]
+    (let [t (newick/newick->map "(A:0.1,B:0.2)Root;")
+          [positioned _] (tree/assign-y-coords t (atom 0))]
       ;; A gets y=0, B gets y=1, Root gets (0+1)/2 = 0.5
       (is (= 0.5 (:y positioned))))))
 
@@ -70,34 +70,34 @@
 
 (deftest assign-x-coords-root-at-zero
   (testing "Root is always positioned at x=0"
-    (let [tree (positioned-tree "(A:0.1,B:0.2)Root:999;")]
+    (let [t (positioned-tree "(A:0.1,B:0.2)Root:999;")]
       ;; Root branch-length should be ignored
-      (is (== 0 (:x tree))))))
+      (is (== 0 (:x t))))))
 
 (deftest assign-x-coords-children-accumulate-length
   (testing "Children accumulate parent x + own branch-length"
-    (let [tree (positioned-tree "(A:0.5,B:1.0)Root:0.3;")]
-      (is (== 0.5 (-> tree :children first :x)))
-      (is (== 1.0 (-> tree :children second :x))))))
+    (let [t (positioned-tree "(A:0.5,B:1.0)Root:0.3;")]
+      (is (== 0.5 (-> t :children first :x)))
+      (is (== 1.0 (-> t :children second :x))))))
 
 ;; ===== calculate-scale-unit =====
 
 (deftest calculate-scale-unit-small-values
   (testing "Scale unit for small max-x values"
     ;; 0.37 has magnitude 0.1, ratio 3.7 -> 50% of magnitude -> 0.05
-    (let [unit (core/calculate-scale-unit 0.37)]
+    (let [unit (tree/calculate-scale-unit 0.37)]
       (is (pos? unit))
       (is (< unit 0.37)))))
 
 (deftest calculate-scale-unit-larger-values
   (testing "Scale unit for larger values"
-    (let [unit (core/calculate-scale-unit 5.2)]
+    (let [unit (tree/calculate-scale-unit 5.2)]
       ;; 5.2 has magnitude 1, ratio 5.2 -> full magnitude -> 1
       (is (== 1 unit)))))
 
 (deftest calculate-scale-unit-very-small
   (testing "Scale unit for very small max-x"
-    (let [unit (core/calculate-scale-unit 0.012)]
+    (let [unit (tree/calculate-scale-unit 0.012)]
       (is (pos? unit))
       (is (< unit 0.012)))))
 
@@ -105,57 +105,57 @@
 
 (deftest get-ticks-basic
   (testing "Ticks from 0 to max-x in increments of unit"
-    (let [ticks (core/get-ticks 1.0 0.25)]
+    (let [ticks (tree/get-ticks 1.0 0.25)]
       (is (= [0 0.25 0.5 0.75 1.0] ticks)))))
 
 (deftest get-ticks-doesnt-exceed-max
   (testing "Ticks never exceed max-x"
-    (let [ticks (core/get-ticks 0.9 0.5)]
+    (let [ticks (tree/get-ticks 0.9 0.5)]
       (is (every? #(<= % 0.9) ticks))
       (is (= [0 0.5] ticks)))))
 
 (deftest get-ticks-starts-at-zero
   (testing "Ticks always start at 0"
-    (is (= 0 (first (core/get-ticks 10 1))))))
+    (is (= 0 (first (tree/get-ticks 10 1))))))
 
 ;; ===== get-leaves =====
 
 (deftest get-leaves-all-tips
   (testing "get-leaves returns only leaf nodes"
-    (let [tree (positioned-tree "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
-          leaves (core/get-leaves tree)]
+    (let [t (positioned-tree "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
+          leaves (tree/get-leaves t)]
       (is (= 3 (count leaves)))
       (is (every? #(empty? (:children %)) leaves)))))
 
 (deftest get-leaves-preserves-order
   (testing "Leaves are in left-to-right order"
-    (let [tree (positioned-tree "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
-          names (mapv :name (core/get-leaves tree))]
+    (let [t (positioned-tree "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
+          names (mapv :name (tree/get-leaves t))]
       (is (= ["A" "B" "C"] names)))))
 
 (deftest get-leaves-single-node
   (testing "A single leaf returns itself"
     (let [leaf {:name "X" :branch-length 1.0 :children [] :x 0 :y 0}]
-      (is (= [leaf] (core/get-leaves leaf))))))
+      (is (= [leaf] (tree/get-leaves leaf))))))
 
 ;; ===== prepare-tree =====
 
 (deftest prepare-tree-returns-expected-keys
   (testing "prepare-tree returns :tree, :tips, and :max-depth"
-    (let [result (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+    (let [result (tree/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
       (is (contains? result :tree))
       (is (contains? result :tips))
       (is (contains? result :max-depth)))))
 
 (deftest prepare-tree-tips-match-leaves
   (testing "Tips are the leaf nodes of the prepared tree"
-    (let [{:keys [tips]} (core/prepare-tree "(A:0.1,(B:0.2,C:0.3):0.4)Root;" [] [])]
+    (let [{:keys [tips]} (tree/prepare-tree "(A:0.1,(B:0.2,C:0.3):0.4)Root;" [] [])]
       (is (= 3 (count tips)))
       (is (= ["A" "B" "C"] (mapv :name tips))))))
 
 (deftest prepare-tree-max-depth-positive
   (testing "max-depth is positive for a tree with branch lengths"
-    (let [{:keys [max-depth]} (core/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
+    (let [{:keys [max-depth]} (tree/prepare-tree "(A:0.1,B:0.2)Root:0.3;" [] [])]
       (is (pos? max-depth)))))
 
 (deftest prepare-tree-merges-metadata
@@ -164,7 +164,7 @@
                 {:key :color :label "Color" :width 120}]
           rows [{:id "A" :color "red"}
                 {:id "B" :color "blue"}]
-          {:keys [tips]} (core/prepare-tree "(A:0.1,B:0.2)Root;" rows cols)]
+          {:keys [tips]} (tree/prepare-tree "(A:0.1,B:0.2)Root;" rows cols)]
       (is (= "red" (get-in (first tips) [:metadata :color])))
       (is (= "blue" (get-in (second tips) [:metadata :color]))))))
 
@@ -173,13 +173,13 @@
 (deftest assign-node-ids-single-node
   (testing "Single node gets ID 0"
     (let [node {:name "A" :branch-length 1.0 :children []}
-          result (core/assign-node-ids node)]
+          result (tree/assign-node-ids node)]
       (is (= 0 (:id result))))))
 
 (deftest assign-node-ids-all-nodes-have-ids
   (testing "Every node in the tree gets a unique ID"
-    (let [tree (newick/newick->map "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
-          result (core/assign-node-ids tree)]
+    (let [t (newick/newick->map "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")
+          result (tree/assign-node-ids t)]
       (letfn [(check-ids [node]
                 (is (contains? node :id))
                 (is (number? (:id node)))
@@ -189,8 +189,8 @@
 
 (deftest assign-node-ids-unique
   (testing "All IDs in the tree are unique"
-    (let [tree (newick/newick->map abc-tree-str)
-          result (core/assign-node-ids tree)
+    (let [t (newick/newick->map abc-tree-str)
+          result (tree/assign-node-ids t)
           all-ids (atom [])]
       (letfn [(collect-ids [node]
                 (swap! all-ids conj (:id node))
@@ -201,8 +201,8 @@
 
 (deftest assign-node-ids-includes-nil-named-nodes
   (testing "Nodes with nil names still get unique IDs"
-    (let [tree (newick/newick->map "(A,B);")  ; Root and potentially internal nodes may have nil names
-          result (core/assign-node-ids tree)]
+    (let [t (newick/newick->map "(A,B);")  ; Root and potentially internal nodes may have nil names
+          result (tree/assign-node-ids t)]
       ;; Root should have an ID even if name is nil
       (is (number? (:id result)))
       ;; All children should have IDs
@@ -212,45 +212,45 @@
 
 (deftest compute-min-max-dates-empty-collection
   (testing "Returns nil for empty collection"
-    (is (nil? (core/compute-min-max-dates [])))))
+    (is (nil? (tree/compute-min-max-dates [])))))
 
 (deftest compute-min-max-dates-all-nil
   (testing "Returns nil when all values are nil"
-    (is (nil? (core/compute-min-max-dates [nil nil nil])))))
+    (is (nil? (tree/compute-min-max-dates [nil nil nil])))))
 
 (deftest compute-min-max-dates-single-valid-date
   (testing "Returns same date for min and max with single date"
-    (let [result (core/compute-min-max-dates ["2024-01-15"])]
+    (let [result (tree/compute-min-max-dates ["2024-01-15"])]
       (is (= "2024-01-15" (:min-date result)))
       (is (= "2024-01-15" (:max-date result))))))
 
 (deftest compute-min-max-dates-multiple-dates
   (testing "Computes correct min and max from multiple dates"
-    (let [result (core/compute-min-max-dates ["2024-03-15" "2024-01-01" "2024-12-31" "2024-06-15"])]
+    (let [result (tree/compute-min-max-dates ["2024-03-15" "2024-01-01" "2024-12-31" "2024-06-15"])]
       (is (= "2024-01-01" (:min-date result)))
       (is (= "2024-12-31" (:max-date result))))))
 
 (deftest compute-min-max-dates-with-nils
   (testing "Ignores nil values when computing min/max"
-    (let [result (core/compute-min-max-dates [nil "2024-03-15" nil "2024-01-01" "2024-12-31" nil])]
+    (let [result (tree/compute-min-max-dates [nil "2024-03-15" nil "2024-01-01" "2024-12-31" nil])]
       (is (= "2024-01-01" (:min-date result)))
       (is (= "2024-12-31" (:max-date result))))))
 
 (deftest compute-min-max-dates-with-invalid-dates
   (testing "Ignores unparseable date strings"
-    (let [result (core/compute-min-max-dates ["invalid" "2024-03-15" "not-a-date" "2024-01-01"])]
+    (let [result (tree/compute-min-max-dates ["invalid" "2024-03-15" "not-a-date" "2024-01-01"])]
       (is (= "2024-01-01" (:min-date result)))
       (is (= "2024-03-15" (:max-date result))))))
 
 (deftest compute-min-max-dates-dmy-format
   (testing "Handles DMY format dates"
-    (let [result (core/compute-min-max-dates ["15/03/2024" "01/01/2024" "31/12/2024"])]
+    (let [result (tree/compute-min-max-dates ["15/03/2024" "01/01/2024" "31/12/2024"])]
       (is (= "2024-01-01" (:min-date result)))
       (is (= "2024-12-31" (:max-date result))))))
 
 (deftest compute-min-max-dates-mixed-formats
   (testing "Handles mixed ISO and DMY formats"
-    (let [result (core/compute-min-max-dates ["2024-03-15" "01/01/2024" "31/12/2024"])]
+    (let [result (tree/compute-min-max-dates ["2024-03-15" "01/01/2024" "31/12/2024"])]
       (is (= "2024-01-01" (:min-date result)))
       (is (= "2024-12-31" (:max-date result))))))
 
@@ -259,42 +259,42 @@
 (deftest compute-highlight-set-nil-date-col
   (testing "Returns nil when date-col is nil"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows :id nil ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id nil ["2024-01-01" "2024-12-31"])]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-nil-metadata-rows
   (testing "Returns empty set when metadata-rows is nil"
-    (let [result (core/compute-highlight-set nil :id :date ["2024-01-01" "2024-12-31"])]
+    (let [result (tree/compute-highlight-set nil :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{} result)))))
 
 (deftest compute-highlight-set-nil-date-range
   (testing "Returns nil when date-range is nil"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows :id :date nil)]
+          result (tree/compute-highlight-set rows :id :date nil)]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-nil-id-key
   (testing "Returns nil when id-key is nil"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows nil :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows nil :date ["2024-01-01" "2024-12-31"])]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-blank-start-date
   (testing "Returns nil when start date is blank"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows :id :date ["" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["" "2024-12-31"])]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-blank-end-date
   (testing "Returns nil when end date is blank"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" ""])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" ""])]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-both-dates-blank
   (testing "Returns nil when both dates are blank"
     (let [rows [{:id "A" :date "2024-01-15"}]
-          result (core/compute-highlight-set rows :id :date ["" ""])]
+          result (tree/compute-highlight-set rows :id :date ["" ""])]
       (is (nil? result)))))
 
 (deftest compute-highlight-set-valid-dates-in-range
@@ -302,7 +302,7 @@
     (let [rows [{:id "A" :date "2024-01-15"}
                 {:id "B" :date "2024-06-20"}
                 {:id "C" :date "2024-12-25"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "B" "C"} result)))))
 
 (deftest compute-highlight-set-filters-out-of-range
@@ -310,19 +310,19 @@
     (let [rows [{:id "A" :date "2023-12-31"}  ; Before range
                 {:id "B" :date "2024-01-15"}  ; In range
                 {:id "C" :date "2025-01-01"}] ; After range
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"B"} result)))))
 
 (deftest compute-highlight-set-inclusive-start-boundary
   (testing "Start date is inclusive"
     (let [rows [{:id "A" :date "2024-01-01"}]  ; Exactly on start
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A"} result)))))
 
 (deftest compute-highlight-set-inclusive-end-boundary
   (testing "End date is inclusive"
     (let [rows [{:id "A" :date "2024-12-31"}]  ; Exactly on end
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A"} result)))))
 
 (deftest compute-highlight-set-both-boundaries
@@ -330,7 +330,7 @@
     (let [rows [{:id "A" :date "2024-01-01"}   ; On start
                 {:id "B" :date "2024-06-15"}   ; Middle
                 {:id "C" :date "2024-12-31"}]  ; On end
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "B" "C"} result)))))
 
 (deftest compute-highlight-set-missing-date-field
@@ -338,7 +338,7 @@
     (let [rows [{:id "A" :date "2024-01-15"}
                 {:id "B"}                      ; No date field
                 {:id "C" :date "2024-06-20"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "C"} result)))))
 
 (deftest compute-highlight-set-blank-date-values
@@ -347,7 +347,7 @@
                 {:id "B" :date ""}             ; Empty string
                 {:id "C" :date "   "}          ; Whitespace only
                 {:id "D" :date "2024-06-20"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "D"} result)))))
 
 (deftest compute-highlight-set-unparseable-dates
@@ -356,27 +356,27 @@
                 {:id "B" :date "invalid"}      ; Invalid format
                 {:id "C" :date "2024-13-45"}   ; Invalid month/day
                 {:id "D" :date "2024-06-20"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "D"} result)))))
 
 (deftest compute-highlight-set-dmy-format
   (testing "Handles DD/MM/YYYY format dates"
     (let [rows [{:id "A" :date "15/01/2024"}
                 {:id "B" :date "20/06/2024"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "B"} result)))))
 
 (deftest compute-highlight-set-mixed-formats
   (testing "Handles mixed ISO and DMY format dates"
     (let [rows [{:id "A" :date "2024-01-15"}   ; ISO
                 {:id "B" :date "20/06/2024"}]  ; DMY
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "B"} result)))))
 
 (deftest compute-highlight-set-empty-metadata
   (testing "Returns empty set for empty metadata"
     (let [rows []
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{} result)))))
 
 (deftest compute-highlight-set-single-day-range
@@ -384,14 +384,14 @@
     (let [rows [{:id "A" :date "2024-01-14"}
                 {:id "B" :date "2024-01-15"}
                 {:id "C" :date "2024-01-16"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-15" "2024-01-15"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-15" "2024-01-15"])]
       (is (= #{"B"} result)))))
 
 (deftest compute-highlight-set-returns-string-ids
   (testing "Returns set of string ID values from matching rows"
     (let [rows [{:id "A" :date "2024-01-15"}
                 {:id "B" :date "2024-06-20"}]
-          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
       (is (= #{"A" "B"} result))
       (is (every? string? result)))))
 
@@ -399,5 +399,5 @@
   (testing "Respects custom id-key parameter"
     (let [rows [{:taxon "species-A" :collection-date "2024-01-15"}
                 {:taxon "species-B" :collection-date "2024-06-20"}]
-          result (core/compute-highlight-set rows :taxon :collection-date ["2024-01-01" "2024-12-31"])]
+          result (tree/compute-highlight-set rows :taxon :collection-date ["2024-01-01" "2024-12-31"])]
       (is (= #{"species-A" "species-B"} result)))))

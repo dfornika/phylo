@@ -31,17 +31,25 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 src/
   main/
     app/
-      core.cljs     # UI components, layout algorithms, app entry point
-      newick.cljs   # Newick tree format parser
-      csv.cljs      # CSV/TSV parser with metadata column support
-      specs.cljs    # clojure.spec definitions for data structures & props
+      core.cljs               # Thin app shell — mount, init, re-render
+      state.cljs              # Shared state atoms, React context, use-app-state hook
+      layout.cljs             # LAYOUT constant — spacing, padding, marker sizes
+      tree.cljs               # Pure tree layout functions (assign coords, prepare-tree, etc.)
+      newick.cljs             # Newick tree format parser
+      csv.cljs                # CSV/TSV parser with metadata column support
+      specs.cljs              # clojure.spec definitions for data structures & props
+      components/
+        tree.cljs             # Branch, TreeNode, PhylogeneticTree — SVG tree rendering
+        metadata.cljs         # MetadataHeader, MetadataColumn, MetadataTable
+        toolbar.cljs          # Toolbar, DateRangeFilter — user controls
+        viewer.cljs           # TreeContainer, TreeViewer, ScaleGridlines, PixelGrid
   test/
     app/
-      core_test.cljs    # Tests for layout functions
-      newick_test.cljs  # Tests for Newick parser
-      csv_test.cljs     # Tests for CSV/TSV parser
+      tree_test.cljs          # Tests for tree layout functions
+      newick_test.cljs        # Tests for Newick parser
+      csv_test.cljs           # Tests for CSV/TSV parser
   dev/
-    user.clj      # REPL helper for shadow-cljs
+    user.clj                  # REPL helper for shadow-cljs
 ```
 
 ### Data Flow
@@ -49,8 +57,9 @@ src/
 ```
 Newick string
   → newick/newick->map     (parse to tree map)
-  → assign-y-coords        (vertical layout)
-  → assign-x-coords        (horizontal layout)
+  → tree/assign-y-coords   (vertical layout)
+  → tree/assign-x-coords   (horizontal layout)
+  → tree/prepare-tree      (enrich leaves with metadata)
   → PhylogeneticTree       (SVG rendering + metadata overlay)
 ```
 
