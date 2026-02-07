@@ -511,7 +511,7 @@
              ;; Debugging pixel grid
              (when show-pixel-grid 
                ($ PixelGrid {:width (+ metadata-start-x (reduce + (map :width active-cols)) 100)
-                             :height component-height-px
+                             :height (+ (* (count tips) y-mult) 100)
                              :spacing 50}))
              ;; Scale gridlines
              (let [unit (calculate-scale-unit (/ max-depth 5))
