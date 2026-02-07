@@ -74,3 +74,64 @@
           {:keys [data]} (csv/parse-metadata input)]
       (is (= "A" (:Group (first data))))
       (is (= "B" (:Group (second data)))))))
+
+;; ===== parse-date =====
+
+(deftest parse-date-iso-format
+  (testing "Parses YYYY-MM-DD format"
+    (is (= "2024-03-15" (csv/parse-date "2024-03-15")))
+    (is (= "2021-01-01" (csv/parse-date "2021-01-01")))))
+
+(deftest parse-date-dd-mm-yyyy-format
+  (testing "Parses DD/MM/YYYY format and normalizes to YYYY-MM-DD"
+    (is (= "2024-03-15" (csv/parse-date "15/03/2024")))
+    (is (= "2021-12-25" (csv/parse-date "25/12/2021")))))
+
+(deftest parse-date-invalid-returns-nil
+  (testing "Returns nil for non-date strings"
+    (is (nil? (csv/parse-date "hello")))
+    (is (nil? (csv/parse-date "123")))
+    (is (nil? (csv/parse-date "")))
+    (is (nil? (csv/parse-date nil)))))
+
+(deftest parse-date-whitespace-trimmed
+  (testing "Trims whitespace before parsing"
+    (is (= "2024-01-01" (csv/parse-date "  2024-01-01  ")))
+    (is (= "2024-01-01" (csv/parse-date " 01/01/2024 ")))))
+
+;; ===== detect-column-type =====
+
+(deftest detect-column-type-dates
+  (testing "Detects date columns"
+    (is (= :date (csv/detect-column-type ["2024-01-01" "2024-02-15" "2024-03-20"])))
+    (is (= :date (csv/detect-column-type ["15/03/2024" "20/06/2024" "01/01/2023"])))))
+
+(deftest detect-column-type-numeric
+  (testing "Detects numeric columns"
+    (is (= :numeric (csv/detect-column-type ["1.5" "2.3" "4.0"])))
+    (is (= :numeric (csv/detect-column-type ["100" "200" "300"])))))
+
+(deftest detect-column-type-string
+  (testing "Detects string columns"
+    (is (= :string (csv/detect-column-type ["alpha" "beta" "gamma"])))
+    (is (= :string (csv/detect-column-type ["B.1.1.7" "P.1" "AY.4"])))))
+
+(deftest detect-column-type-mixed-below-threshold
+  (testing "Mixed types below 80% threshold fall through"
+    ;; 2 out of 5 are dates = 40%, not enough
+    (is (= :string (csv/detect-column-type ["2024-01-01" "2024-02-15" "foo" "bar" "baz"])))))
+
+(deftest detect-column-type-empty
+  (testing "Empty column returns :string"
+    (is (= :string (csv/detect-column-type [])))))
+
+;; ===== parse-metadata type detection =====
+
+(deftest parse-metadata-detects-column-types
+  (testing "Headers include :type based on data sniffing"
+    (let [input "id,date,value,label\nS1,2024-01-01,1.5,alpha\nS2,2024-02-15,2.3,beta\nS3,2024-03-20,4.0,gamma"
+          {:keys [headers]} (csv/parse-metadata input)]
+      (is (= :string (:type (nth headers 0))))   ;; id column
+      (is (= :date   (:type (nth headers 1))))   ;; date column
+      (is (= :numeric (:type (nth headers 2))))  ;; value column
+      (is (= :string (:type (nth headers 3)))))))  ;; label column

@@ -15,10 +15,7 @@
             [uix.dom]
             [app.newick :as newick]
             [app.csv :as csv]
-            [app.state :as state]
-            #_["/components/PixelGrid" :refer (PixelGrid)]
-            #_["/components/Branch" :refer (Branch)]
-            #_["/components/TreeNode" :refer (TreeNode)]))
+            [app.state :as state]))
 
 ;; ===== Layout Constants =====
 
@@ -215,6 +212,31 @@
      :tips enriched-leaves
      :max-depth (get-max-x root)}))
 
+;; ===== Date Filtering =====
+
+(defn compute-highlight-set
+  "Computes the set of leaf names whose metadata date values fall within
+  the given date range.
+
+  `metadata-rows` is the vector of row maps. `id-key` is the keyword
+  for the ID column (first column). `date-col` is the keyword for the
+  date column to filter on. `date-range` is `[start end]` of normalized
+  YYYY-MM-DD strings.
+
+  Returns a set of ID strings (leaf names) that are within range, or
+  nil if inputs are incomplete."
+  [metadata-rows id-key date-col date-range]
+  (when (and date-col date-range id-key)
+    (let [[start end] date-range]
+      (when (and (not (str/blank? start)) (not (str/blank? end)))
+        (into #{}
+              (keep (fn [row]
+                      (when-let [normalized (csv/parse-date (get row date-col))]
+                        (when (and (>= (compare normalized start) 0)
+                                   (<= (compare normalized end) 0))
+                          (get row id-key)))))
+              metadata-rows)))))
+
 ;; ===== UI Components =====
 
 (defui MetadataHeader
@@ -311,32 +333,37 @@
   text label and circle marker for leaf nodes, optionally renders
   circle markers on internal nodes, and recurses into children.
 
-  All rendering parameters arrive via props — this component has no
-  implicit dependencies on layout constants or application state.
+  When `highlight-set` is provided and the leaf's name is in the set,
+  the marker circle uses `highlight-color` instead of `marker-fill`.
 
   Props (see `::app.specs/tree-node-props`):
   - `:node`                   - positioned tree node map
   - `:parent-x`               - parent's x-coordinate (unscaled)
   - `:parent-y`               - parent's y-coordinate (unscaled)
-  - `:x-scale`                - horizontal scaling factor (pixels per branch-length unit)
+  - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical spacing in pixels between adjacent tips
   - `:show-internal-markers`  - boolean, whether to render circles on internal nodes
   - `:marker-radius`          - radius of the circular node marker in pixels
-  - `:marker-fill`            - fill color for node markers"
-  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers marker-radius marker-fill]}]
+  - `:marker-fill`            - default fill color for node markers
+  - `:highlight-set`          - (optional) set of leaf names to highlight
+  - `:highlight-color`        - (optional) CSS color for highlighted markers"
+  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers
+           marker-radius marker-fill highlight-set highlight-color]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
         p-y (* parent-y y-scale)
         line-width 0.5
         line-color "#000"
-        is-leaf? (empty? (:children node))]
+        is-leaf? (empty? (:children node))
+        highlighted? (and is-leaf? highlight-set (contains? highlight-set (:name node)))
+        fill (if highlighted? (or highlight-color "#4682B4") marker-fill)]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
        ;; Node marker — always on leaves, optionally on internal nodes
        (when (or is-leaf? show-internal-markers)
-         ($ :circle {:cx scaled-x :cy scaled-y :r marker-radius :fill marker-fill}))
+         ($ :circle {:cx scaled-x :cy scaled-y :r (if highlighted? (+ marker-radius 1.5) marker-radius) :fill fill}))
 
        ;; Tip label
        (when is-leaf?
@@ -356,21 +383,115 @@
                       :y-scale y-scale
                       :show-internal-markers show-internal-markers
                       :marker-radius marker-radius
-                      :marker-fill marker-fill})))))
+                      :marker-fill marker-fill
+                      :highlight-set highlight-set
+                      :highlight-color highlight-color})))))
+
+(defn compute-min-max-dates
+  "Computes minimum and maximum dates from a collection of date strings.
+  
+  Takes a collection of strings and returns a map with `:min-date` and 
+  `:max-date` keys, or nil if no valid dates are found. Uses a single-pass
+  reduce for O(n) performance instead of sorting.
+  
+  Args:
+  - `date-strs` - collection of date strings to parse
+  
+  Returns:
+  - `{:min-date \"YYYY-MM-DD\" :max-date \"YYYY-MM-DD\"}` or `nil`"
+  [date-strs]
+  (let [dates (into [] (keep csv/parse-date date-strs))]
+    (when (seq dates)
+      (reduce (fn [acc date]
+                (-> acc
+                    (update :min-date #(if % (if (< date %) date %) date))
+                    (update :max-date #(if % (if (> date %) date %) date))))
+              {:min-date nil :max-date nil}
+              dates))))
+
+(defui DateRangeFilter
+  "Renders a date range filter control group in the toolbar.
+
+  Reads date filter state and metadata columns from context.
+  Shows a dropdown of detected date columns, two date inputs,
+  a color picker, and a clear button.
+
+  Requires no props — reads all state via [[app.state/use-app-state]]."
+  [_props]
+  (let [{:keys [active-cols metadata-rows
+                date-filter-col set-date-filter-col!
+                date-filter-range set-date-filter-range!
+                highlight-color set-highlight-color!]} (state/use-app-state)
+        date-cols (filterv #(= :date (:type %)) active-cols)
+        ;; Compute min/max dates from the selected column in O(n) time
+        col-dates (uix/use-memo
+                   (fn []
+                     (when date-filter-col
+                       (compute-min-max-dates
+                        (mapv #(get % date-filter-col) metadata-rows))))
+                   [date-filter-col metadata-rows])
+        start-date (first date-filter-range)
+        end-date (second date-filter-range)]
+    ($ :div {:style {:display "flex" :gap "8px" :padding "10px"
+                     :background "#e8f0fe" :border-radius "4px"
+                     :align-items "center" :flex-wrap "wrap"}}
+       ($ :label {:style {:font-weight "bold" :font-size "12px"}} "Date Filter:")
+       ;; Column selector
+       ($ :select {:value (or (some-> date-filter-col name) "")
+                   :on-change (fn [e]
+                                (let [v (.. e -target -value)]
+                                  (if (str/blank? v)
+                                    (do (set-date-filter-col! nil)
+                                        (set-date-filter-range! nil))
+                                    (let [col-kw (keyword v)
+                                          min-max (compute-min-max-dates
+                                                   (mapv #(get % col-kw) metadata-rows))]
+                                      (set-date-filter-col! col-kw)
+                                      (when min-max
+                                        (set-date-filter-range! [(:min-date min-max) (:max-date min-max)]))))))}
+          ($ :option {:value ""} "Select column...")
+          (for [col date-cols]
+            ($ :option {:key (:key col) :value (name (:key col))} (:label col))))
+       ;; Date inputs
+       (when date-filter-col
+         ($ :<>
+            ($ :label {:style {:font-size "11px"}} "From:")
+            ($ :input {:type "date"
+                       :value (or start-date "")
+                       :min (:min-date col-dates)
+                       :max (:max-date col-dates)
+                       :on-change (fn [e]
+                                    (let [v (.. e -target -value)]
+                                      (set-date-filter-range! [v (or end-date v)])))})
+            ($ :label {:style {:font-size "11px"}} "To:")
+            ($ :input {:type "date"
+                       :value (or end-date "")
+                       :min (:min-date col-dates)
+                       :max (:max-date col-dates)
+                       :on-change (fn [e]
+                                    (let [v (.. e -target -value)]
+                                      (set-date-filter-range! [(or start-date v) v])))})
+            ;; Color picker
+            ($ :label {:style {:font-size "11px"}} "Color:")
+            ($ :input {:type "color"
+                       :value highlight-color
+                       :on-change (fn [e]
+                                    (set-highlight-color! (.. e -target -value)))
+                       :style {:width "30px" :height "24px" :border "none"
+                               :padding "0" :cursor "pointer"}})
+            ;; Clear button
+            ($ :button {:on-click (fn [_]
+                                    (set-date-filter-col! nil)
+                                    (set-date-filter-range! nil))
+                        :style {:font-size "11px" :padding "2px 8px"
+                                :cursor "pointer"}}
+               "Clear"))))))
 
 (defui Toolbar
-  "Renders the control panel with file loaders and layout sliders.
+  "Renders the control panel with file loaders, layout sliders, and date filter.
 
   Reads all state from [[app.state/app-context]] via [[app.state/use-app-state]],
-  so this component requires no props. Provides:
-  - Newick file loader (new)
-  - Metadata CSV/TSV file loader
-  - Tree width (horizontal zoom) slider
-  - Tree height (vertical zoom) slider
-  - Toggle for showing internal nodes
-  - Toggle for showing the tree scale gridlines
-  - Toggle for showing a static pixel-based grid (for dev/troubleshooting)
-  "
+  so this component requires no props."
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
@@ -445,7 +566,9 @@
                      :checked show-pixel-grid
                      :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
           ($ :label {:style {:font-weight "bold"
-                             :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid")))))
+                             :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid"))
+       ;; Date range filter
+       ($ DateRangeFilter))))
 
 
 (defui PixelGrid
@@ -536,8 +659,6 @@
 
   A thin wrapper that places a `<g>` with the standard SVG padding
   transform and delegates recursive node rendering to [[TreeNode]].
-  This component represents just the tree itself — no toolbar, no
-  metadata, no chrome.
 
   Props (see `::app.specs/phylogenetic-tree-props`):
   - `:tree`                   - positioned root node (recursive map)
@@ -545,8 +666,11 @@
   - `:y-scale`                - vertical tip spacing
   - `:show-internal-markers`  - whether to render circles on internal nodes
   - `:marker-radius`          - radius of the circular node marker in pixels
-  - `:marker-fill`            - fill color for node markers"
-  [{:keys [tree x-scale y-scale show-internal-markers marker-radius marker-fill]}]
+  - `:marker-fill`            - fill color for node markers
+  - `:highlight-set`          - (optional) set of leaf names to highlight
+  - `:highlight-color`        - (optional) CSS color for highlighted markers"
+  [{:keys [tree x-scale y-scale show-internal-markers marker-radius marker-fill
+           highlight-set highlight-color]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -555,16 +679,12 @@
                   :y-scale y-scale
                   :show-internal-markers show-internal-markers
                   :marker-radius marker-radius
-                  :marker-fill marker-fill})))
+                  :marker-fill marker-fill
+                  :highlight-set highlight-set
+                  :highlight-color highlight-color})))
 
 (defui MetadataTable
   "Renders all metadata columns as a group, computing per-column offsets.
-
-  Wraps [[MetadataColumn]] instances with correct horizontal positioning
-  based on column widths and the optional `col-spacing` gap. This
-  component does not apply an SVG transform itself; vertical alignment
-  with the phylogenetic tree is handled by the child columns using the
-  shared `y-scale` and any global SVG padding.
 
   Props (see `::app.specs/metadata-table-props`):
   - `:active-cols`      - vector of column config maps
@@ -613,11 +733,8 @@
   and a scrollable SVG viewport containing the tree, gridlines, and
   metadata columns.
 
-  Receives a pre-computed tree (from [[prepare-tree]]) and display
-  settings. Does no parsing itself — it is a pure rendering component.
-
   Props (see `::app.specs/tree-viewer-props`):
-  - `:tree`                    - positioned root node (recursive map with `:x`, `:y`)
+  - `:tree`                    - positioned root node
   - `:tips`                    - flat vector of enriched leaf nodes
   - `:max-depth`               - maximum x-coordinate in the tree
   - `:active-cols`             - vector of column config maps
@@ -628,10 +745,13 @@
   - `:show-pixel-grid`         - whether to show pixel coordinate debug grid
   - `:col-spacing`             - extra horizontal spacing between metadata columns
   - `:width-px`                - total available width in pixels
-  - `:component-height-px`     - total available height in pixels"
+  - `:component-height-px`     - total available height in pixels
+  - `:highlight-set`           - (optional) set of leaf names to highlight
+  - `:highlight-color`         - (optional) CSS color for highlighted markers"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers width-px component-height-px
-           show-scale-gridlines show-pixel-grid col-spacing]}]
+           show-scale-gridlines show-pixel-grid col-spacing
+           highlight-set highlight-color]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -675,7 +795,9 @@
                                   :y-scale y-mult
                                   :show-internal-markers show-internal-markers
                                   :marker-radius (:node-marker-radius LAYOUT)
-                                  :marker-fill (:node-marker-fill LAYOUT)})
+                                  :marker-fill (:node-marker-fill LAYOUT)
+                                  :highlight-set highlight-set
+                                  :highlight-color highlight-color})
 
              ;; Metadata columns
              (when (seq active-cols)
@@ -689,17 +811,26 @@
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
-  the positioned tree via [[prepare-tree]] (memoized), and passes
-  everything as props to [[TreeViewer]]."
+  the positioned tree via [[prepare-tree]] (memoized), computes the
+  highlight set from date filter state, and passes everything as
+  props to [[TreeViewer]]."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers
                 show-scale-gridlines show-pixel-grid
-                col-spacing]} (state/use-app-state)
+                col-spacing
+                date-filter-col date-filter-range
+                highlight-color]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
                                        (fn [] (prepare-tree newick-str metadata-rows active-cols))
-                                       [newick-str metadata-rows active-cols])]
+                                       [newick-str metadata-rows active-cols])
+
+        id-key (-> active-cols first :key)
+
+        highlight-set (uix/use-memo
+                       (fn [] (compute-highlight-set metadata-rows id-key date-filter-col date-filter-range))
+                       [metadata-rows id-key date-filter-col date-filter-range])]
     ($ TreeViewer {:tree tree
                    :tips tips
                    :max-depth max-depth
@@ -710,6 +841,8 @@
                    :show-scale-gridlines show-scale-gridlines
                    :show-pixel-grid show-pixel-grid
                    :col-spacing col-spacing
+                   :highlight-set highlight-set
+                   :highlight-color highlight-color
                    :width-px width-px
                    :component-height-px component-height-px})))
 
@@ -719,9 +852,7 @@
   "Root application component.
 
   Wraps the component tree with [[state/AppStateProvider]] so all
-  descendants can access shared state via context. Derives the
-  positioned tree from raw state and passes it to [[TreeViewer]]
-  as props, keeping the tree component a pure renderer."
+  descendants can access shared state via context."
   []
   ($ state/AppStateProvider
      ($ TreeContainer {:width-px 1200
