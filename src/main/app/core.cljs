@@ -628,7 +628,7 @@
         metadata-start-x (+ tree-end-x (:metadata-gap LAYOUT))
         tree-height     (* (count tips) y-mult)
         svg-width       (+ metadata-start-x
-                           (reduce + (map :width active-cols))
+                           (reduce + 0 (map :width active-cols))
                            (* col-spacing (max 0 (dec (count active-cols))))
                            100)
         svg-height      (+ tree-height 100)]
