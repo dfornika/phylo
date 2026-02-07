@@ -16,6 +16,7 @@
             [app.newick :as newick]
             [app.csv :as csv]
             [app.state :as state]
+            #_["/components/PixelGrid" :refer (PixelGrid)]
             #_["/components/Branch" :refer (Branch)]
             #_["/components/TreeNode" :refer (TreeNode)]))
 
@@ -344,11 +345,16 @@
   - Metadata CSV/TSV file loader
   - Tree width (horizontal zoom) slider
   - Vertical spacing slider
-  - Toggle for Showing internal nodes"
+  - Toggle for showing internal nodes
+  - Toggle for showing the tree scale gridlines
+  - Toggle for showing a static pixel-based grid (for dev/troubleshooting)
+  "
   [_props]
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
                 show-internal-markers set-show-internal-markers!
+                show-scale-gridlines set-show-scale-gridlines!
+                show-pixel-grid set-show-pixel-grid!
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
     ($ :div {:style {:padding "12px"
@@ -394,7 +400,69 @@
                      :checked show-internal-markers
                      :on-change #(set-show-internal-markers! (not show-internal-markers))})
           ($ :label {:style {:font-weight "bold"
-                              :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers")))))
+                             :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers"))
+       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
+          ($ :input {:type "checkbox"
+                     :id "show-scale-gridlines-checkbox"
+                     :checked show-scale-gridlines
+                     :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
+          ($ :label {:style {:font-weight "bold"
+                             :htmlFor "show-scale-gridlines-checkbox"}} "Show scale gridlines"))
+       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
+          ($ :input {:type "checkbox"
+                     :id "show-pixel-grid-checkbox"
+                     :checked show-pixel-grid
+                     :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
+          ($ :label {:style {:font-weight "bold"
+                             :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid")))))
+
+
+(defui PixelGrid
+  "SVG debug grid showing pixel coordinates.
+
+  Renders light dashed lines at regular intervals with axis labels,
+  useful for development and layout troubleshooting. Rendered in
+  raw SVG pixel space (not affected by tree transforms).
+
+  Props:
+  - `:width`   - SVG canvas width in pixels
+  - `:height`  - SVG canvas height in pixels
+  - `:spacing` - grid line spacing in pixels (default 50)"
+  [{:keys [width height spacing]
+    :or {spacing 50}}]
+  (let [grid-color "rgb(115, 179, 243)"
+        label-color "#8ab"
+        v-lines (range 0 (inc width) spacing)
+        h-lines (range 0 (inc height) spacing)]
+    ($ :g {:class "pixel-grid"}
+       ;; Vertical lines
+       (for [x v-lines]
+         ($ :line {:key (str "pgv-" x)
+                   :x1 x :y1 0 :x2 x :y2 height
+                   :stroke grid-color
+                   :stroke-dasharray "2 4"
+                   :stroke-width 0.5}))
+       ;; Horizontal lines
+       (for [y h-lines]
+         ($ :line {:key (str "pgh-" y)
+                   :x1 0 :y1 y :x2 width :y2 y
+                   :stroke grid-color
+                   :stroke-dasharray "2 4"
+                   :stroke-width 0.5}))
+       ;; X-axis labels (top edge)
+       (for [x v-lines :when (pos? x)]
+         ($ :text {:key (str "pgxl-" x)
+                   :x x :y 8
+                   :text-anchor "middle"
+                   :style {:font-family "monospace" :font-size "8px" :fill label-color}}
+            (str x)))
+       ;; Y-axis labels (left edge)
+       (for [y h-lines :when (pos? y)]
+         ($ :text {:key (str "pgyl-" y)
+                   :x 2 :y (- y 2)
+                   :style {:font-family "monospace" :font-size "8px" :fill label-color}}
+            (str y))))))
+
 
 (defn kebab-case->camelCase
   "Converts between kebab-case and camelCase"
@@ -422,7 +490,8 @@
   - `:width-px`                - total available width in pixels
   - `:component-height-px`     - total available height in pixels"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
-           show-internal-markers width-px component-height-px]}]
+           show-internal-markers width-px component-height-px
+           show-scale-gridlines show-pixel-grid]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -442,20 +511,26 @@
 
           ($ :svg {:width (+ metadata-start-x (reduce + (map :width active-cols)) 100)
                    :height (+ (* (count tips) y-mult) 100)}
+             ;; Debugging pixel grid
+             (when show-pixel-grid 
+               ($ PixelGrid {:width (+ metadata-start-x (reduce + (map :width active-cols)) 100)
+                             :height (+ (* (count tips) y-mult) 100)
+                             :spacing 50}))
              ;; Scale gridlines
              (let [unit (calculate-scale-unit (/ max-depth 5))
                    ticks (get-ticks max-depth unit)
                    tree-height (* (count tips) y-mult)
                    svg-transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")]
                ($ :g {:transform svg-transform}
-                  ($ :g
+                  (when show-scale-gridlines
+                    ($ :g
                      (for [t ticks]
                        ($ :line {:key (str "grid-" t)
                                  :x1 (* t current-x-scale) :y1 0
                                  :x2 (* t current-x-scale) :y2 tree-height
                                  :stroke "#eee"
                                  :stroke-dasharray "4 4"
-                                 :stroke-width 1})))
+                                 :stroke-width 1}))))
                   ($ TreeNode {:node tree  ;; If using tsx component: (clj >js tree :keyword-fn #(-> % name (.replace "-" "") kebab-case->camelCase))
                                :parent-x 0 
                                :parent-y (:y tree)
@@ -486,7 +561,8 @@
   everything as props to [[PhylogeneticTree]]."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
-                x-mult y-mult show-internal-markers]} (state/use-app-state)
+                x-mult y-mult show-internal-markers
+                show-scale-gridlines show-pixel-grid]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
                                        (fn [] (prepare-tree newick-str metadata-rows active-cols))
@@ -498,6 +574,8 @@
                          :x-mult x-mult
                          :y-mult y-mult
                          :show-internal-markers show-internal-markers
+                         :show-scale-gridlines show-scale-gridlines
+                         :show-pixel-grid show-pixel-grid
                          :width-px width-px
                          :component-height-px component-height-px})))
 

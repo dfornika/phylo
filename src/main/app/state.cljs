@@ -12,7 +12,9 @@
   - [[!active-cols]]    - column header configs for metadata display
   - [[!x-mult]]         - horizontal zoom multiplier
   - [[!y-mult]]         - vertical tip spacing (pixels)
-  - [[!show-internal-markers]] - whether to show markers on internal nodes"
+  - [[!show-internal-markers]] - whether to show markers on internal nodes
+  - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
+  - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid"
   (:require [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
@@ -50,6 +52,14 @@
 (defonce !show-internal-markers
   (atom false))
 
+;; "Atom holding whether to display scale (evolutionary distance) gridlines behind the tree."
+(defonce !show-scale-gridlines
+  (atom true))
+
+;; "Atom holding whether to display a pixel-coordinate debug grid over the SVG canvas."
+(defonce !show-pixel-grid
+  (atom false))
+
 ;; ===== Context =====
 
 (def app-context
@@ -77,14 +87,20 @@
   | `:y-mult`            | number   | Vertical tip spacing               |
   | `:set-y-mult!`       | fn       | `(fn [v] ...)` — set spacing       |
   | `:show-internal-markers` | boolean | Show markers on internal nodes  |
-  | `:set-show-internal-markers!` | fn | `(fn [b] ...)` — toggle markers |"
+  | `:set-show-internal-markers!` | fn | `(fn [b] ...)` — toggle markers |
+  | `:show-scale-gridlines` | boolean | Show scale gridlines             |
+  | `:set-show-scale-gridlines!` | fn | `(fn [b] ...)` — toggle gridlines|
+  | `:show-pixel-grid`      | boolean | Show pixel coordinate grid       |
+  | `:set-show-pixel-grid!` | fn | `(fn [b] ...)` — toggle pixel grid  |"
   [{:keys [children]}]
   (let [newick-str     (uix/use-atom !newick-str)
         metadata-rows  (uix/use-atom !metadata-rows)
         active-cols    (uix/use-atom !active-cols)
         x-mult         (uix/use-atom !x-mult)
         y-mult         (uix/use-atom !y-mult)
-        show-internal-markers (uix/use-atom !show-internal-markers)]
+        show-internal-markers (uix/use-atom !show-internal-markers)
+        show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
+        show-pixel-grid       (uix/use-atom !show-pixel-grid)]
     ($ app-context {:value {:newick-str       newick-str
                             :set-newick-str!  #(reset! !newick-str %)
                             :metadata-rows    metadata-rows
@@ -96,7 +112,11 @@
                             :y-mult           y-mult
                             :set-y-mult!      #(reset! !y-mult %)
                             :show-internal-markers show-internal-markers
-                            :set-show-internal-markers! #(reset! !show-internal-markers %)}}
+                            :set-show-internal-markers! #(reset! !show-internal-markers %)
+                            :show-scale-gridlines show-scale-gridlines
+                            :set-show-scale-gridlines! #(reset! !show-scale-gridlines %)
+                            :show-pixel-grid show-pixel-grid
+                            :set-show-pixel-grid! #(reset! !show-pixel-grid %)}}
        children)))
 
 (defn use-app-state

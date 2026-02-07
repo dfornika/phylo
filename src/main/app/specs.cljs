@@ -62,6 +62,12 @@
 (s/def ::show-internal-markers boolean?)
 (s/def ::set-show-internal-markers! fn?)
 
+(s/def ::show-scale-gridlines boolean?)
+(s/def ::set-show-scale-gridlines! fn?)
+
+(s/def ::show-pixel-grid boolean?)
+(s/def ::set-show-pixel-grid! fn?)
+
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
@@ -69,7 +75,9 @@
                    ::active-cols ::set-active-cols!
                    ::x-mult ::set-x-mult!
                    ::y-mult ::set-y-mult!
-                   ::show-internal-markers ::set-show-internal-markers!]))
+                   ::show-internal-markers ::set-show-internal-markers!
+                   ::show-scale-gridlines ::set-show-scale-gridlines!
+                   ::show-pixel-grid ::set-show-pixel-grid!]))
 
 ;; ===== Component Props =====
 
@@ -115,6 +123,7 @@
 (s/def ::phylogenetic-tree-props
   (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
                    ::x-mult ::y-mult ::show-internal-markers
+                   ::show-scale-gridlines ::show-pixel-grid
                    ::width-px ::component-height-px]))
 
 ;; TreeContainer receives only layout dimensions.
