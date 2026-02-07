@@ -192,7 +192,7 @@
   :ret  (s/nilable string?))
 
 (s/fdef app.csv/detect-column-type
-  :args (s/cat :values (s/coll-of string?))
+  :args (s/cat :values (s/coll-of (s/nilable string?)))
   :ret  ::column-type)
 
 (s/fdef app.core/count-tips
