@@ -26,6 +26,49 @@
             (fn [e] (on-read-fn (-> e .-target .-result))))
       (.readAsText reader file))))
 
+(defn- save-blob!
+  "Triggers a browser file save for the given Blob.
+
+  Attempts the File System Access API (`showSaveFilePicker`) first,
+  which opens a native \"Save as...\" dialog. Falls back to a
+  programmatic `<a download>` click for browsers that do not
+  support it (Firefox, Safari)."
+  [blob filename]
+  (if (exists? js/window.showSaveFilePicker)
+    ;; Modern Chromium browsers — native Save As dialog
+    (-> (js/window.showSaveFilePicker
+         (clj->js {:suggestedName filename
+                    :types [{:description "SVG Image"
+                             :accept {"image/svg+xml" [".svg"]}}]}))
+        (.then (fn [handle]
+                 (-> (.createWritable handle)
+                     (.then (fn [writable]
+                              (-> (.write writable blob)
+                                  (.then #(.close writable))))))))
+        (.catch (fn [_err] nil))) ;; user cancelled — ignore
+    ;; Fallback — invisible <a download> click
+    (let [url (.createObjectURL js/URL blob)
+          a   (.createElement js/document "a")]
+      (set! (.-href a) url)
+      (set! (.-download a) filename)
+      (.click a)
+      (.revokeObjectURL js/URL url))))
+
+(defn export-svg!
+  "Exports the phylogenetic tree SVG to a file.
+
+  Grabs the live `<svg>` DOM node by its id, clones it, adds the
+  `xmlns` attribute required for standalone SVG files, serializes
+  it to XML text, and triggers a save dialog."
+  []
+  (when-let [svg-el (js/document.getElementById "phylo-svg")]
+    (let [clone      (.cloneNode svg-el true)
+          _          (.setAttribute clone "xmlns" "http://www.w3.org/2000/svg")
+          serializer (js/XMLSerializer.)
+          svg-str    (.serializeToString serializer clone)
+          blob       (js/Blob. #js [svg-str] #js {:type "image/svg+xml;charset=utf-8"})]
+      (save-blob! blob "phylo-tree.svg"))))
+
 ;; ===== Date Range Filter =====
 
 (defui DateRangeFilter
@@ -144,6 +187,14 @@
                                                     (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
                                                       (set-metadata-rows! data)
                                                       (set-active-cols! headers))))})))
+       ($ :button {:on-click (fn [_] (export-svg!))
+                :style {:font-weight "bold"
+                        :padding "8px 16px"
+                        :cursor "pointer"
+                        :background "#fff"
+                        :border "1px solid #ccc"
+                        :border-radius "4px"}}
+          "⇩ Export SVG")
        ($ :div
           ($ :label {:style {:font-weight "bold"}} "Tree Width: ")
           ($ :input {:type "range"
