@@ -15,7 +15,10 @@
   - [[!show-internal-markers]] - whether to show markers on internal nodes
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
-  - [[!col-spacing]]            - extra horizontal spacing between metadata columns"
+  - [[!col-spacing]]           - extra horizontal spacing between metadata columns
+  - [[!date-filter-col]]       - keyword for the metadata column used for date filtering
+  - [[!date-filter-range]]     - two-element vector of date strings [start end]
+  - [[!highlight-color]]       - CSS color string for highlighted leaf markers"
   (:require [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
@@ -65,6 +68,18 @@
 (defonce !col-spacing
   (atom 0))
 
+;; "Atom holding the keyword of the metadata column selected for date range filtering, or nil."
+(defonce !date-filter-col
+  (atom nil))
+
+;; "Atom holding the date range bounds as [start-date end-date] normalized YYYY-MM-DD strings, or nil."
+(defonce !date-filter-range
+  (atom nil))
+
+;; "Atom holding the CSS color string used to highlight leaf markers within the date range."
+(defonce !highlight-color
+  (atom "#4682B4"))
+
 ;; ===== Context =====
 
 (def app-context
@@ -77,28 +92,7 @@
 
   Subscribes to all state atoms via `uix/use-atom` so that any atom
   change triggers a re-render of consumers. The context value is a
-  map of current values and setter functions:
-
-  | Key                  | Type     | Description                        |
-  |----------------------|----------|------------------------------------|
-  | `:newick-str`        | string   | Current Newick tree string         |
-  | `:set-newick-str!`   | fn       | `(fn [s] ...)` — replace tree      |
-  | `:metadata-rows`     | vector   | Parsed metadata rows               |
-  | `:set-metadata-rows!`| fn       | `(fn [rows] ...)` — replace rows   |
-  | `:active-cols`       | vector   | Column header configs              |
-  | `:set-active-cols!`  | fn       | `(fn [cols] ...)` — replace cols   |
-  | `:x-mult`            | number   | Horizontal zoom multiplier         |
-  | `:set-x-mult!`       | fn       | `(fn [v] ...)` — set zoom          |
-  | `:y-mult`            | number   | Vertical tip spacing               |
-  | `:set-y-mult!`       | fn       | `(fn [v] ...)` — set spacing       |
-  | `:show-internal-markers` | boolean | Show markers on internal nodes  |
-  | `:set-show-internal-markers!` | fn | `(fn [b] ...)` — toggle markers |
-  | `:show-scale-gridlines` | boolean | Show scale gridlines             |
-  | `:set-show-scale-gridlines!` | fn | `(fn [b] ...)` — toggle gridlines|
-  | `:show-pixel-grid`      | boolean | Show pixel coordinate grid       |
-  | `:set-show-pixel-grid!` | fn | `(fn [b] ...)` — toggle pixel grid  |
-  | `:col-spacing`          | number  | Extra spacing between metadata cols |
-  | `:set-col-spacing!`     | fn | `(fn [n] ...)` — set column spacing    |"
+  map of current values and setter functions."
   [{:keys [children]}]
   (let [newick-str     (uix/use-atom !newick-str)
         metadata-rows  (uix/use-atom !metadata-rows)
@@ -108,7 +102,10 @@
         show-internal-markers (uix/use-atom !show-internal-markers)
         show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
         show-pixel-grid       (uix/use-atom !show-pixel-grid)
-        col-spacing           (uix/use-atom !col-spacing)]
+        col-spacing           (uix/use-atom !col-spacing)
+        date-filter-col       (uix/use-atom !date-filter-col)
+        date-filter-range     (uix/use-atom !date-filter-range)
+        highlight-color       (uix/use-atom !highlight-color)]
     ($ app-context {:value {:newick-str       newick-str
                             :set-newick-str!  #(reset! !newick-str %)
                             :metadata-rows    metadata-rows
@@ -126,7 +123,13 @@
                             :show-pixel-grid show-pixel-grid
                             :set-show-pixel-grid! #(reset! !show-pixel-grid %)
                             :col-spacing col-spacing
-                            :set-col-spacing! #(reset! !col-spacing %)}}
+                            :set-col-spacing! #(reset! !col-spacing %)
+                            :date-filter-col date-filter-col
+                            :set-date-filter-col! #(reset! !date-filter-col %)
+                            :date-filter-range date-filter-range
+                            :set-date-filter-range! #(reset! !date-filter-range %)
+                            :highlight-color highlight-color
+                            :set-highlight-color! #(reset! !highlight-color %)}}
        children)))
 
 (defn use-app-state

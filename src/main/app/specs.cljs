@@ -32,9 +32,11 @@
 (s/def ::key keyword?)
 (s/def ::label string?)
 (s/def ::width number?)
+(s/def ::column-type #{:date :numeric :string})
 
 (s/def ::metadata-header
-  (s/keys :req-un [::key ::label ::width]))
+  (s/keys :req-un [::key ::label ::width]
+          :opt-un [::column-type]))
 
 (s/def ::metadata-row
   (s/map-of keyword? string?))
@@ -71,6 +73,15 @@
 (s/def ::col-spacing number?)
 (s/def ::set-col-spacing! fn?)
 
+(s/def ::date-filter-col (s/nilable keyword?))
+(s/def ::set-date-filter-col! fn?)
+
+(s/def ::date-filter-range (s/nilable (s/tuple string? string?)))
+(s/def ::set-date-filter-range! fn?)
+
+(s/def ::highlight-color string?)
+(s/def ::set-highlight-color! fn?)
+
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
@@ -81,7 +92,10 @@
                    ::show-internal-markers ::set-show-internal-markers!
                    ::show-scale-gridlines ::set-show-scale-gridlines!
                    ::show-pixel-grid ::set-show-pixel-grid!
-                   ::col-spacing ::set-col-spacing!]))
+                   ::col-spacing ::set-col-spacing!
+                   ::date-filter-col ::set-date-filter-col!
+                   ::date-filter-range ::set-date-filter-range!
+                   ::highlight-color ::set-highlight-color!]))
 
 ;; ===== Component Props =====
 
@@ -119,8 +133,11 @@
 (s/def ::marker-radius number?)
 (s/def ::marker-fill string?)
 
+(s/def ::highlight-set (s/nilable set?))
+
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]))
+  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]
+          :opt-un [::highlight-set ::highlight-color]))
 
 ;; Toolbar reads from context — no props spec needed.
 ;; PhylogeneticTree receives only layout dimensions.
@@ -135,12 +152,14 @@
                    ::x-mult ::y-mult ::show-internal-markers
                    ::show-scale-gridlines ::show-pixel-grid
                    ::col-spacing
-                   ::width-px ::component-height-px]))
+                   ::width-px ::component-height-px]
+          :opt-un [::highlight-set ::highlight-color]))
 
 (s/def ::phylogenetic-tree-props
   (s/keys :req-un [::tree ::x-scale ::y-scale
                    ::show-internal-markers
-                   ::marker-radius ::marker-fill]))
+                   ::marker-radius ::marker-fill]
+          :opt-un [::highlight-set ::highlight-color]))
 
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
@@ -167,6 +186,14 @@
   :args (s/cat :content string?
                :default-col-width (s/? number?))
   :ret  ::parsed-metadata)
+
+(s/fdef app.csv/parse-date
+  :args (s/cat :s (s/nilable string?))
+  :ret  (s/nilable string?))
+
+(s/fdef app.csv/detect-column-type
+  :args (s/cat :values (s/coll-of string?))
+  :ret  ::column-type)
 
 (s/fdef app.core/count-tips
   :args (s/cat :node ::tree-node)
