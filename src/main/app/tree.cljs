@@ -1,14 +1,16 @@
 (ns app.tree
-  "Pure functions for phylogenetic tree layout and analysis.
+  "Functions for phylogenetic tree layout and analysis.
 
   Provides the pipeline from parsed Newick tree to fully positioned
   tree with enriched leaf metadata:
 
     parsed tree -> y-positioned -> x-positioned -> enriched leaves
 
-  All functions in this namespace are pure (referentially transparent),
-  except for the mutable atom used internally by [[assign-y-coords]]
-  and [[assign-node-ids]] to track traversal state.
+  Most functions in this namespace are pure and operate on immutable data.
+  [[assign-y-coords]] and [[assign-node-ids]] accept a mutable atom to
+  track traversal state; these functions are not referentially transparent
+  unless callers treat the atom as part of the input/output state (e.g. by
+  passing a fresh atom when purity is required).
 
   See [[app.specs]] for function specs."
   (:require [clojure.string :as str]
