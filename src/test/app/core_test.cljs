@@ -2,8 +2,7 @@
   "Tests for tree layout and utility functions in [[app.core]]."
   (:require [cljs.test :refer [deftest testing is]]
             [app.core :as core]
-            [app.newick :as newick]
-            [app.csv :as csv]))
+            [app.newick :as newick]))
 
 ;; ===== Helper: build a positioned tree from a Newick string =====
 
