@@ -396,7 +396,9 @@
           ($ :label {:style {:font-weight "bold"
                               :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers")))))
 
-(defn kebab-case->camelCase [k]
+(defn kebab-case->camelCase
+  "Converts between kebab-case and camelCase"
+  [k]
   (let [words (str/split (name k) #"-")]
     (->> (map str/capitalize (rest words))
          (apply str (first words))
