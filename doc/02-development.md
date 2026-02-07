@@ -63,6 +63,36 @@ The `app.specs` namespace defines specs for all core data structures and key fun
 2. Update the `::metadata-header` spec in `app.specs` if the shape changes
 3. The `PhylogeneticTree` component in `app.core` handles rendering via `MetadataColumn`
 
+
+## TSX Component Development
+
+Pure rendering components are being extracted as TypeScript/TSX alongside the existing UIx implementations. This enables future portability to other React projects and Storybook-based component testing. **The UIx components remain the canonical implementations for now.**
+
+### Building TSX components
+
+```bash
+npm run tsx:build    # One-shot compile
+npm run tsx:watch    # Continuous compile during dev
+```
+
+TSX sources live in `src/tsx/components/` and compile to `src/gen/components/` (gitignored). The compiled JS is on the shadow-cljs classpath and can be imported from ClojureScript.
+
+### Adding a new TSX component
+
+1. Create `src/tsx/components/MyComponent.tsx`
+2. Import shared types from `./types` and sibling components as needed
+3. Define a props interface — all rendering parameters must come via props (no implicit layout/state dependencies)
+4. Export a named function component
+5. Run `npm run tsx:build` to compile
+6. Keep the corresponding UIx component in `app.core` in sync
+
+### Design guidelines
+
+- TSX components should be **pure functions of their props** — the ClojureScript layer remains the single source of truth for layout constants and application state.
+- Shared TypeScript interfaces (e.g. `PositionedNode`) live in `src/tsx/components/types.ts` and mirror the `clojure.spec` definitions in `app.specs`.
+- When passing complex data structures (e.g. tree nodes) from CLJS to TSX, the CLJS layer must convert from ClojureScript maps to plain JS objects (e.g. via `clj->js`).
+- UIx's `$` macro automatically converts kebab-case keys to camelCase for non-UIx (JS) components, so `:parent-x` becomes `parentX`.
+
 ## Modifying Tree Layout
 
 The layout algorithm is a two-pass process:
