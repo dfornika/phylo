@@ -199,39 +199,39 @@
   :args (s/cat :values (s/coll-of (s/nilable string?)))
   :ret  ::column-type)
 
-(s/fdef app.core/count-tips
+(s/fdef app.tree/count-tips
   :args (s/cat :node ::tree-node)
   :ret  pos-int?)
 
-(s/fdef app.core/get-max-x
+(s/fdef app.tree/get-max-x
   :args (s/cat :node ::positioned-node)
   :ret  number?)
 
-(s/fdef app.core/get-leaves
+(s/fdef app.tree/get-leaves
   :args (s/cat :node ::positioned-node)
   :ret  (s/coll-of ::positioned-node))
 
-(s/fdef app.core/calculate-scale-unit
+(s/fdef app.tree/calculate-scale-unit
   :args (s/cat :max-x pos?)
   :ret  pos?)
 
-(s/fdef app.core/assign-node-ids
+(s/fdef app.tree/assign-node-ids
   :args (s/cat :node ::tree-node)
   :ret  ::positioned-node)
 
-(s/fdef app.core/prepare-tree
+(s/fdef app.tree/prepare-tree
   :args (s/cat :newick-str string?
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
 
-(s/fdef app.core/compute-highlight-set
+(s/fdef app.tree/compute-highlight-set
   :args (s/cat :metadata-rows (s/nilable (s/coll-of ::metadata-row))
                :id-key (s/nilable keyword?)
                :date-col (s/nilable keyword?)
                :date-range (s/nilable (s/tuple string? string?)))
   :ret  (s/nilable (s/coll-of string? :kind set?)))
 
-(s/fdef app.core/compute-min-max-dates
+(s/fdef app.tree/compute-min-max-dates
   :args (s/cat :date-strs (s/coll-of (s/nilable string?)))
   :ret  (s/nilable (s/keys :req-un [::min-date ::max-date])))
