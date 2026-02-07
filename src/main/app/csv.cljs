@@ -55,8 +55,9 @@
   "Returns true if `s` is a non-empty string that parses as a finite number."
   [s]
   (and (not (str/blank? s))
-       (not (js/isNaN (js/parseFloat s)))
-       (js/isFinite s)))
+       (let [n (js/Number s)]
+         (and (not (js/isNaN n))
+              (js/isFinite n)))))
 
 (defn detect-column-type
   "Classifies a sequence of string values as `:date`, `:numeric`, or `:string`.
