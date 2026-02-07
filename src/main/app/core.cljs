@@ -404,8 +404,8 @@
     (when (seq dates)
       (reduce (fn [acc date]
                 (-> acc
-                    (update :min-date #(if % (min % date) date))
-                    (update :max-date #(if % (max % date) date))))
+                    (update :min-date #(if % (if (< date %) date %) date))
+                    (update :max-date #(if % (if (> date %) date %) date))))
               {:min-date nil :max-date nil}
               dates))))
 
@@ -428,7 +428,7 @@
                    (fn []
                      (when date-filter-col
                        (compute-min-max-dates
-                        (map #(get % date-filter-col) metadata-rows))))
+                        (mapv #(get % date-filter-col) metadata-rows))))
                    [date-filter-col metadata-rows])
         start-date (first date-filter-range)
         end-date (second date-filter-range)]
@@ -445,7 +445,7 @@
                                         (set-date-filter-range! nil))
                                     (let [col-kw (keyword v)
                                           min-max (compute-min-max-dates
-                                                   (map #(get % col-kw) metadata-rows))]
+                                                   (mapv #(get % col-kw) metadata-rows))]
                                       (set-date-filter-col! col-kw)
                                       (when min-max
                                         (set-date-filter-range! [(:min-date min-max) (:max-date min-max)]))))))}
