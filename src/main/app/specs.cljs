@@ -220,3 +220,10 @@
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
+
+(s/fdef app.core/compute-highlight-set
+  :args (s/cat :metadata-rows (s/coll-of ::metadata-row)
+               :id-key (s/nilable keyword?)
+               :date-col (s/nilable keyword?)
+               :date-range (s/nilable (s/tuple string? string?)))
+  :ret  (s/nilable (s/coll-of string? :kind set?)))

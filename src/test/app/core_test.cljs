@@ -2,7 +2,8 @@
   "Tests for tree layout and utility functions in [[app.core]]."
   (:require [cljs.test :refer [deftest testing is]]
             [app.core :as core]
-            [app.newick :as newick]))
+            [app.newick :as newick]
+            [app.csv :as csv]))
 
 ;; ===== Helper: build a positioned tree from a Newick string =====
 
@@ -207,3 +208,145 @@
       (is (number? (:id result)))
       ;; All children should have IDs
       (is (every? #(number? (:id %)) (:children result))))))
+
+;; ===== compute-highlight-set =====
+
+(deftest compute-highlight-set-nil-date-col
+  (testing "Returns nil when date-col is nil"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows :id nil ["2024-01-01" "2024-12-31"])]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-nil-date-range
+  (testing "Returns nil when date-range is nil"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows :id :date nil)]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-nil-id-key
+  (testing "Returns nil when id-key is nil"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows nil :date ["2024-01-01" "2024-12-31"])]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-blank-start-date
+  (testing "Returns nil when start date is blank"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows :id :date ["" "2024-12-31"])]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-blank-end-date
+  (testing "Returns nil when end date is blank"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" ""])]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-both-dates-blank
+  (testing "Returns nil when both dates are blank"
+    (let [rows [{:id "A" :date "2024-01-15"}]
+          result (core/compute-highlight-set rows :id :date ["" ""])]
+      (is (nil? result)))))
+
+(deftest compute-highlight-set-valid-dates-in-range
+  (testing "Returns IDs of rows with dates in range"
+    (let [rows [{:id "A" :date "2024-01-15"}
+                {:id "B" :date "2024-06-20"}
+                {:id "C" :date "2024-12-25"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "B" "C"} result)))))
+
+(deftest compute-highlight-set-filters-out-of-range
+  (testing "Excludes dates outside the range"
+    (let [rows [{:id "A" :date "2023-12-31"}  ; Before range
+                {:id "B" :date "2024-01-15"}  ; In range
+                {:id "C" :date "2025-01-01"}] ; After range
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"B"} result)))))
+
+(deftest compute-highlight-set-inclusive-start-boundary
+  (testing "Start date is inclusive"
+    (let [rows [{:id "A" :date "2024-01-01"}]  ; Exactly on start
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A"} result)))))
+
+(deftest compute-highlight-set-inclusive-end-boundary
+  (testing "End date is inclusive"
+    (let [rows [{:id "A" :date "2024-12-31"}]  ; Exactly on end
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A"} result)))))
+
+(deftest compute-highlight-set-both-boundaries
+  (testing "Both boundaries are inclusive"
+    (let [rows [{:id "A" :date "2024-01-01"}   ; On start
+                {:id "B" :date "2024-06-15"}   ; Middle
+                {:id "C" :date "2024-12-31"}]  ; On end
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "B" "C"} result)))))
+
+(deftest compute-highlight-set-missing-date-field
+  (testing "Excludes rows with missing date field"
+    (let [rows [{:id "A" :date "2024-01-15"}
+                {:id "B"}                      ; No date field
+                {:id "C" :date "2024-06-20"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "C"} result)))))
+
+(deftest compute-highlight-set-blank-date-values
+  (testing "Excludes rows with blank date values"
+    (let [rows [{:id "A" :date "2024-01-15"}
+                {:id "B" :date ""}             ; Empty string
+                {:id "C" :date "   "}          ; Whitespace only
+                {:id "D" :date "2024-06-20"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "D"} result)))))
+
+(deftest compute-highlight-set-unparseable-dates
+  (testing "Excludes rows with unparseable date values"
+    (let [rows [{:id "A" :date "2024-01-15"}
+                {:id "B" :date "invalid"}      ; Invalid format
+                {:id "C" :date "2024-13-45"}   ; Invalid month/day
+                {:id "D" :date "2024-06-20"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "D"} result)))))
+
+(deftest compute-highlight-set-dmy-format
+  (testing "Handles DD/MM/YYYY format dates"
+    (let [rows [{:id "A" :date "15/01/2024"}
+                {:id "B" :date "20/06/2024"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "B"} result)))))
+
+(deftest compute-highlight-set-mixed-formats
+  (testing "Handles mixed ISO and DMY format dates"
+    (let [rows [{:id "A" :date "2024-01-15"}   ; ISO
+                {:id "B" :date "20/06/2024"}]  ; DMY
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"A" "B"} result)))))
+
+(deftest compute-highlight-set-empty-metadata
+  (testing "Returns empty set for empty metadata"
+    (let [rows []
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (= #{} result)))))
+
+(deftest compute-highlight-set-single-day-range
+  (testing "Handles single-day date range"
+    (let [rows [{:id "A" :date "2024-01-14"}
+                {:id "B" :date "2024-01-15"}
+                {:id "C" :date "2024-01-16"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-15" "2024-01-15"])]
+      (is (= #{"B"} result)))))
+
+(deftest compute-highlight-set-preserves-id-types
+  (testing "Returns IDs as strings regardless of type"
+    (let [rows [{:id "A" :date "2024-01-15"}
+                {:id "B" :date "2024-06-20"}]
+          result (core/compute-highlight-set rows :id :date ["2024-01-01" "2024-12-31"])]
+      (is (every? string? result)))))
+
+(deftest compute-highlight-set-different-id-key
+  (testing "Respects custom id-key parameter"
+    (let [rows [{:taxon "species-A" :collection-date "2024-01-15"}
+                {:taxon "species-B" :collection-date "2024-06-20"}]
+          result (core/compute-highlight-set rows :taxon :collection-date ["2024-01-01" "2024-12-31"])]
+      (is (= #{"species-A" "species-B"} result)))))
