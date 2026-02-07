@@ -213,7 +213,7 @@
     (when (seq dates)
       (reduce (fn [acc date]
                 (-> acc
-                    (update :min-date #(if % (if (< date %) date %) date))
-                    (update :max-date #(if % (if (> date %) date %) date))))
+                    (update :min-date #(if (or (nil? %) (neg? (compare date %))) date %))
+                    (update :max-date #(if (or (nil? %) (pos? (compare date %))) date %))))
               {:min-date nil :max-date nil}
               dates))))
