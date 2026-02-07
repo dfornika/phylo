@@ -22,9 +22,9 @@ while working on TypeScript counterparts. Preserve existing UIx components until
 
 **Components — TSX versions created (not yet wired in):**
 - [x] `Branch` — `src/tsx/components/Branch.tsx`
+- [x] `TreeNode` — recursive SVG node renderer (branch + label + children)
 
 **Components — remaining (pure rendering, no state/context):**
-- [ ] `TreeNode` — recursive SVG node renderer (branch + label + children)
 - [ ] `MetadataColumn` — column of `<text>` SVG elements
 - [ ] `MetadataHeader` — sticky HTML header row
 
