@@ -36,7 +36,7 @@
   [blob filename]
   (if (exists? js/window.showSaveFilePicker)
     ;; Modern Chromium browsers — native Save As dialog
-    (-> (js/window.showSaveFilePicker
+    (-> (.showSaveFilePicker js/window
          (clj->js {:suggestedName filename
                     :types [{:description "SVG Image"
                              :accept {"image/svg+xml" [".svg"]}}]}))
