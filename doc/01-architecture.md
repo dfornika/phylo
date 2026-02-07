@@ -138,6 +138,55 @@ The `LAYOUT` constant in `app.core` centralizes all spacing values:
 - Component prop specs (`::branch-props`, `::tree-node-props`, etc.)
 - `s/fdef` specs for key functions (`newick->map`, `count-tips`, `prepare-tree`, etc.)
 
+## TSX Component Extraction (Work in Progress)
+
+Pure rendering components are being translated from UIx (ClojureScript) into TypeScript/TSX. The rationale is twofold:
+
+1. **Portability** — TSX components can be consumed by any React project, not just ClojureScript apps.
+2. **Storybook testing** — TSX components can be rendered and tested in isolation using [Storybook](https://storybook.js.org).
+
+**This is a work in progress.** The UIx implementations in `app.core` remain the canonical versions. TSX counterparts live in `src/tsx/components/` and are compiled to `src/gen/` (gitignored build artifacts). The two implementations are kept in sync, and the ClojureScript layer can import either version.
+
+### Design Principle
+
+TSX components are **pure functions of their props** — they have no implicit dependencies on layout constants, application state, or context. All rendering parameters are threaded through from the ClojureScript layer, which remains the single source of truth for state management and layout configuration.
+
+### Current Status
+
+| Component | UIx (canonical) | TSX |
+|-----------|:-:|:-:|
+| `Branch` | ✓ | ✓ |
+| `TreeNode` | ✓ | ✓ |
+| `MetadataColumn` | ✓ | — |
+| `MetadataHeader` | ✓ | — |
+| `Toolbar` | ✓ (stateful) | — (stays in CLJS) |
+| `PhylogeneticTree` | ✓ (orchestrator) | — (stays in CLJS) |
+| `TreeContainer` | ✓ (context bridge) | — (stays in CLJS) |
+
+### Build Pipeline
+
+```
+src/tsx/          TSX source files (version-controlled)
+    └── components/
+        ├── types.ts        Shared interfaces (PositionedNode, etc.)
+        ├── Branch.tsx      SVG branch lines
+        └── TreeNode.tsx    Recursive tree node renderer
+        ↓ npm run tsx:build (tsc)
+src/gen/          Compiled JS + .d.ts (gitignored)
+    └── components/
+        ├── Branch.js
+        ├── TreeNode.js
+        └── ...
+```
+
+shadow-cljs picks up the compiled JS from `src/gen/` (on the classpath). To import from ClojureScript:
+
+```clojure
+(:require ["/components/Branch" :refer (Branch)])
+```
+
+UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx components, so `:parent-x` becomes `parentX` — matching the TSX interfaces.
+
 ## Namespaces
 
 | Namespace | Purpose |
