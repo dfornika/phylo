@@ -164,9 +164,12 @@
                  assign-node-ids)
         leaves (get-leaves root)
         id-key (-> active-cols first :key)
-        metadata-index (into {} (map (fn [r] [(get r id-key) r]) metadata-rows))
-        enriched-leaves (mapv #(assoc % :metadata (get metadata-index (:name %)))
-                              leaves)]
+        metadata-index (when (and id-key (seq metadata-rows))
+                         (into {} (map (fn [r] [(get r id-key) r]) metadata-rows)))
+        enriched-leaves (if metadata-index
+                          (mapv #(assoc % :metadata (get metadata-index (:name %)))
+                                leaves)
+                          leaves)]
     {:tree root
      :tips enriched-leaves
      :max-depth (get-max-x root)}))
