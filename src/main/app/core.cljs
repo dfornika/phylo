@@ -237,7 +237,7 @@
                    :font-size "12px"
                    :font-weight "bold"}}
      ;; Spacer pushes headers to align with metadata columns
-     ($ :div {:style {:width (str (- start-offset (* 2 (:svg-padding-x LAYOUT))) "px") :flex-shrink 0}}
+     ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px") :flex-shrink 0}}
         "Phylogeny")
 
      (for [{:keys [key label width]} columns]
@@ -256,10 +256,12 @@
   - `:y-scale`      - vertical spacing multiplier
   - `:column-key`   - keyword identifying which metadata field to display
   - `:column-label` - display label for the column header
-  - `:cell-height`  - height of each cell (typically = y-scale)"
-  [{:keys [tips x-offset y-scale column-key column-label cell-height]}]
-  (let [col-width (:default-col-width LAYOUT)
-        header-y  (- (:svg-padding-y LAYOUT) 16)]
+  - `:cell-height`  - height of each cell (typically = y-scale)
+  - `:col-width`    - total width for this column (including spacing)"
+  [{:keys [tips x-offset y-scale column-key column-label cell-height col-width]}]
+  (let [header-y   (- (:svg-padding-y LAYOUT) 20)
+        rect-x     x-offset
+        rect-w     col-width]
     ($ :g
        ;; In-SVG column header
        ($ :text {:x x-offset
@@ -274,14 +276,10 @@
        (for [tip tips]
          (let [cy (+ (* (:y tip) y-scale) (:svg-padding-y LAYOUT))]
            ($ :g {:key (str column-key "-" (:name tip))}
-              ;; Cell border
-              ($ :rect {:x (- x-offset 4)
-                        :y (- cy (/ cell-height 2))
-                        :width (+ col-width 8)
-                        :height cell-height
-                        :stroke "#e0e0e0"
-                        :stroke-width 0.5
-                        :fill "none"})
+              ;; Horizontal cell border (bottom edge only)
+              ($ :line {:x1 rect-x :y1 (+ cy (/ cell-height 2))
+                        :x2 (+ rect-x rect-w) :y2 (+ cy (/ cell-height 2))
+                        :stroke "#e0e0e0" :stroke-width 0.5})
               ;; Cell text
               ($ :text {:x x-offset
                         :y cy
@@ -574,7 +572,8 @@
                              :y-scale y-scale
                              :column-key (:key col)
                              :column-label (:label col)
-                             :cell-height y-scale}))
+                             :cell-height y-scale
+                             :col-width (+ (:width col) col-spacing)}))
         active-cols))))
 
 (defn kebab-case->camelCase

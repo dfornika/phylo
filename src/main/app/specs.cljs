@@ -100,8 +100,10 @@
 (s/def ::y-scale number?)
 (s/def ::column-key keyword?)
 
+(s/def ::col-width number?)
+
 (s/def ::metadata-column-props
-  (s/keys :req-un [::tips ::x-offset ::y-scale ::column-key ::column-label ::cell-height]))
+  (s/keys :req-un [::tips ::x-offset ::y-scale ::column-key ::column-label ::cell-height ::col-width]))
 
 (s/def ::parent-x number?)
 (s/def ::parent-y number?)
