@@ -14,7 +14,8 @@
   - [[!y-mult]]         - vertical tip spacing (pixels)
   - [[!show-internal-markers]] - whether to show markers on internal nodes
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
-  - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid"
+  - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
+  - [[!col-spacing]]            - extra horizontal spacing between metadata columns"
   (:require [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
@@ -60,6 +61,10 @@
 (defonce !show-pixel-grid
   (atom false))
 
+;; "Atom holding extra horizontal spacing (in pixels) between metadata columns."
+(defonce !col-spacing
+  (atom 0))
+
 ;; ===== Context =====
 
 (def app-context
@@ -91,7 +96,9 @@
   | `:show-scale-gridlines` | boolean | Show scale gridlines             |
   | `:set-show-scale-gridlines!` | fn | `(fn [b] ...)` — toggle gridlines|
   | `:show-pixel-grid`      | boolean | Show pixel coordinate grid       |
-  | `:set-show-pixel-grid!` | fn | `(fn [b] ...)` — toggle pixel grid  |"
+  | `:set-show-pixel-grid!` | fn | `(fn [b] ...)` — toggle pixel grid  |
+  | `:col-spacing`          | number  | Extra spacing between metadata cols |
+  | `:set-col-spacing!`     | fn | `(fn [n] ...)` — set column spacing    |"
   [{:keys [children]}]
   (let [newick-str     (uix/use-atom !newick-str)
         metadata-rows  (uix/use-atom !metadata-rows)
@@ -100,7 +107,8 @@
         y-mult         (uix/use-atom !y-mult)
         show-internal-markers (uix/use-atom !show-internal-markers)
         show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
-        show-pixel-grid       (uix/use-atom !show-pixel-grid)]
+        show-pixel-grid       (uix/use-atom !show-pixel-grid)
+        col-spacing           (uix/use-atom !col-spacing)]
     ($ app-context {:value {:newick-str       newick-str
                             :set-newick-str!  #(reset! !newick-str %)
                             :metadata-rows    metadata-rows
@@ -116,7 +124,9 @@
                             :show-scale-gridlines show-scale-gridlines
                             :set-show-scale-gridlines! #(reset! !show-scale-gridlines %)
                             :show-pixel-grid show-pixel-grid
-                            :set-show-pixel-grid! #(reset! !show-pixel-grid %)}}
+                            :set-show-pixel-grid! #(reset! !show-pixel-grid %)
+                            :col-spacing col-spacing
+                            :set-col-spacing! #(reset! !col-spacing %)}}
        children)))
 
 (defn use-app-state
