@@ -208,6 +208,52 @@
       ;; All children should have IDs
       (is (every? #(number? (:id %)) (:children result))))))
 
+;; ===== compute-min-max-dates =====
+
+(deftest compute-min-max-dates-empty-collection
+  (testing "Returns nil for empty collection"
+    (is (nil? (core/compute-min-max-dates [])))))
+
+(deftest compute-min-max-dates-all-nil
+  (testing "Returns nil when all values are nil"
+    (is (nil? (core/compute-min-max-dates [nil nil nil])))))
+
+(deftest compute-min-max-dates-single-valid-date
+  (testing "Returns same date for min and max with single date"
+    (let [result (core/compute-min-max-dates ["2024-01-15"])]
+      (is (= "2024-01-15" (:min-date result)))
+      (is (= "2024-01-15" (:max-date result))))))
+
+(deftest compute-min-max-dates-multiple-dates
+  (testing "Computes correct min and max from multiple dates"
+    (let [result (core/compute-min-max-dates ["2024-03-15" "2024-01-01" "2024-12-31" "2024-06-15"])]
+      (is (= "2024-01-01" (:min-date result)))
+      (is (= "2024-12-31" (:max-date result))))))
+
+(deftest compute-min-max-dates-with-nils
+  (testing "Ignores nil values when computing min/max"
+    (let [result (core/compute-min-max-dates [nil "2024-03-15" nil "2024-01-01" "2024-12-31" nil])]
+      (is (= "2024-01-01" (:min-date result)))
+      (is (= "2024-12-31" (:max-date result))))))
+
+(deftest compute-min-max-dates-with-invalid-dates
+  (testing "Ignores unparseable date strings"
+    (let [result (core/compute-min-max-dates ["invalid" "2024-03-15" "not-a-date" "2024-01-01"])]
+      (is (= "2024-01-01" (:min-date result)))
+      (is (= "2024-03-15" (:max-date result))))))
+
+(deftest compute-min-max-dates-dmy-format
+  (testing "Handles DMY format dates"
+    (let [result (core/compute-min-max-dates ["15/03/2024" "01/01/2024" "31/12/2024"])]
+      (is (= "2024-01-01" (:min-date result)))
+      (is (= "2024-12-31" (:max-date result))))))
+
+(deftest compute-min-max-dates-mixed-formats
+  (testing "Handles mixed ISO and DMY formats"
+    (let [result (core/compute-min-max-dates ["2024-03-15" "01/01/2024" "31/12/2024"])]
+      (is (= "2024-01-01" (:min-date result)))
+      (is (= "2024-12-31" (:max-date result))))))
+
 ;; ===== compute-highlight-set =====
 
 (deftest compute-highlight-set-nil-date-col

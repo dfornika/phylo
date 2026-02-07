@@ -387,6 +387,28 @@
                       :highlight-set highlight-set
                       :highlight-color highlight-color})))))
 
+(defn compute-min-max-dates
+  "Computes minimum and maximum dates from a collection of date strings.
+  
+  Takes a collection of strings and returns a map with `:min-date` and 
+  `:max-date` keys, or nil if no valid dates are found. Uses a single-pass
+  reduce for O(n) performance instead of sorting.
+  
+  Args:
+  - `date-strs` - collection of date strings to parse
+  
+  Returns:
+  - `{:min-date \"YYYY-MM-DD\" :max-date \"YYYY-MM-DD\"}` or `nil`"
+  [date-strs]
+  (let [dates (keep csv/parse-date date-strs)]
+    (when (seq dates)
+      (reduce (fn [acc date]
+                (-> acc
+                    (update :min-date #(if % (min % date) date))
+                    (update :max-date #(if % (max % date) date))))
+              {:min-date nil :max-date nil}
+              dates))))
+
 (defui DateRangeFilter
   "Renders a date range filter control group in the toolbar.
 
@@ -401,16 +423,12 @@
                 date-filter-range set-date-filter-range!
                 highlight-color set-highlight-color!]} (state/use-app-state)
         date-cols (filterv #(= :date (:type %)) active-cols)
-        ;; Compute min/max dates from the selected column
+        ;; Compute min/max dates from the selected column in O(n) time
         col-dates (uix/use-memo
                    (fn []
                      (when date-filter-col
-                       (let [dates (->> metadata-rows
-                                        (keep #(csv/parse-date (get % date-filter-col)))
-                                        sort)]
-                         (when (seq dates)
-                           {:min-date (first dates)
-                            :max-date (last dates)}))))
+                       (compute-min-max-dates
+                        (map #(get % date-filter-col) metadata-rows))))
                    [date-filter-col metadata-rows])
         start-date (first date-filter-range)
         end-date (second date-filter-range)]
@@ -426,12 +444,11 @@
                                     (do (set-date-filter-col! nil)
                                         (set-date-filter-range! nil))
                                     (let [col-kw (keyword v)
-                                          dates (->> metadata-rows
-                                                     (keep #(csv/parse-date (get % col-kw)))
-                                                     sort)]
+                                          min-max (compute-min-max-dates
+                                                   (map #(get % col-kw) metadata-rows))]
                                       (set-date-filter-col! col-kw)
-                                      (when (seq dates)
-                                        (set-date-filter-range! [(first dates) (last dates)]))))))}
+                                      (when min-max
+                                        (set-date-filter-range! [(:min-date min-max) (:max-date min-max)]))))))}
           ($ :option {:value ""} "Select column...")
           (for [col date-cols]
             ($ :option {:key (:key col) :value (name (:key col))} (:label col))))
