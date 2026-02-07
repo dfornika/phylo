@@ -61,7 +61,7 @@ The `app.specs` namespace defines specs for all core data structures and key fun
 
 1. If you need new column behavior, add it to `csv/parse-metadata` in `app.csv`
 2. Update the `::metadata-header` spec in `app.specs` if the shape changes
-3. The `PhylogeneticTree` component in `app.core` handles rendering via `MetadataColumn`
+3. The `MetadataColumn` component in `app.components.metadata` handles rendering; `MetadataTable` manages column layout
 
 
 ## TSX Component Development
@@ -84,7 +84,7 @@ TSX sources live in `src/tsx/components/` and compile to `src/gen/components/` (
 3. Define a props interface — all rendering parameters must come via props (no implicit layout/state dependencies)
 4. Export a named function component
 5. Run `npm run tsx:build` to compile
-6. Keep the corresponding UIx component in `app.core` in sync
+6. Keep the corresponding UIx component in its `app.components.*` namespace in sync
 
 ### Design guidelines
 
@@ -100,4 +100,4 @@ The layout algorithm is a two-pass process:
 1. `assign-y-coords` — depth-first traversal assigning sequential y values to leaves
 2. `assign-x-coords` — depth-first traversal accumulating branch lengths as x values
 
-To change spacing, modify the `LAYOUT` constant in `app.core`. To change the algorithm itself, modify the `assign-*` functions and update corresponding tests in `app.core-test`.
+To change spacing, modify the `LAYOUT` constant in `app.layout`. To change the algorithm itself, modify the `assign-*` functions in `app.tree` and update corresponding tests in `app.tree-test`.
