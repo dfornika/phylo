@@ -400,7 +400,7 @@
   Returns:
   - `{:min-date \"YYYY-MM-DD\" :max-date \"YYYY-MM-DD\"}` or `nil`"
   [date-strs]
-  (let [dates (keep csv/parse-date date-strs)]
+  (let [dates (into [] (keep csv/parse-date date-strs))]
     (when (seq dates)
       (reduce (fn [acc date]
                 (-> acc
