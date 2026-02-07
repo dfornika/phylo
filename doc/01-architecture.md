@@ -76,6 +76,9 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!show-scale-gridlines` | boolean | `true` | Show evolutionary distance gridlines |
 | `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
 | `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
+| `!date-filter-col` | keyword or nil | `nil` | Which metadata column to use for date filtering |
+| `!date-filter-range` | tuple or nil | `nil` | Selected date range as `[start end]` (YYYY-MM-DD strings) |
+| `!highlight-color` | string | `"#4682B4"` | CSS color for highlighted leaf markers |
 
 ### Context Architecture
 
@@ -102,7 +105,10 @@ app
  :show-internal-markers   false  :set-show-internal-markers!   fn
  :show-scale-gridlines    true   :set-show-scale-gridlines!    fn
  :show-pixel-grid         false  :set-show-pixel-grid!         fn
- :col-spacing             0      :set-col-spacing!             fn}
+ :col-spacing             0      :set-col-spacing!             fn
+ :date-filter-col         nil    :set-date-filter-col!         fn
+ :date-filter-range       nil    :set-date-filter-range!       fn
+ :highlight-color         "..."  :set-highlight-color!         fn}
 ```
 
 Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
@@ -110,6 +116,8 @@ Components that need shared state call `(state/use-app-state)` to get this map. 
 ### Derived State
 
 The `prepare-tree` function (in `app.core`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
+
+`TreeContainer` also derives a `highlight-set` (set of leaf names matching the active date filter) via `compute-highlight-set`, memoized on the date filter state. This set is threaded as a prop through `TreeViewer` → `PhylogeneticTree` → `TreeNode`, where matching leaf markers are rendered in `highlight-color`.
 
 ### Fast Refresh
 
@@ -208,5 +216,5 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.state` | Shared state atoms, React context provider, `use-app-state` hook |
 | `app.core` | UI components, layout algorithms, app entry point |
 | `app.newick` | Recursive descent Newick parser |
-| `app.csv` | CSV/TSV parsing with column metadata |
+| `app.csv` | CSV/TSV parsing with column metadata and data type detection |
 | `app.specs` | Spec definitions for data structures & functions |
