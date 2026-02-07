@@ -508,16 +508,28 @@
   - `:x-scale`     - horizontal scaling factor (pixels per branch-length unit)
   - `:tree-height` - total height in pixels to span"
   [{:keys [max-depth x-scale tree-height]}]
-  (let [unit  (calculate-scale-unit (/ max-depth 5))
-        ticks (get-ticks max-depth unit)]
-    ($ :g
-       (for [t ticks]
-         ($ :line {:key (str "grid-" t)
-                   :x1 (* t x-scale) :y1 0
-                   :x2 (* t x-scale) :y2 tree-height
-                   :stroke "#eee"
-                   :stroke-dasharray "4 4"
-                   :stroke-width 1})))))
+  (if (pos? max-depth)
+    (let [unit  (calculate-scale-unit (/ max-depth 5))
+          ticks (get-ticks max-depth unit)]
+      ($ :g
+         (for [t ticks]
+           ($ :line {:key (str "grid-" t)
+                     :x1 (* t x-scale) :y1 0
+                     :x2 (* t x-scale) :y2 tree-height
+                     :stroke "#eee"
+                     :stroke-dasharray "4 4"
+                     :stroke-width 1}))))
+    ;; For non-positive max-depth, avoid calling `calculate-scale-unit`.
+    ;; Render a single tick at 0 so the origin is still visible.
+    (let [ticks [0]]
+      ($ :g
+         (for [t ticks]
+           ($ :line {:key (str "grid-" t)
+                     :x1 (* t x-scale) :y1 0
+                     :x2 (* t x-scale) :y2 tree-height
+                     :stroke "#eee"
+                     :stroke-dasharray "4 4"
+                     :stroke-width 1}))))))
 
 (defui PhylogeneticTree
   "Renders the phylogenetic tree as a positioned SVG group.
