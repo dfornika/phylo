@@ -9,7 +9,10 @@
   - `highlights` — persistent map of `{leaf-name -> color-string}` for
     color-assigned nodes (filled circle in the assigned color)
   - `selected-ids` — transient set of leaf names currently checked in
-    the AG-Grid (shown with a selection ring stroke)"
+    the AG-Grid (shown with a selection ring stroke)
+
+  Clicking a leaf node toggles its membership in `selected-ids`,
+  which is reflected in both the tree and the AG-Grid table."
   (:require [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]))
 
@@ -36,11 +39,14 @@
   text label and circle marker for leaf nodes, optionally renders
   circle markers on internal nodes, and recurses into children.
 
+  Clicking a leaf's marker or label toggles its selection state
+  via the `:on-toggle-selection` callback.
+
   Rendering priority for leaf markers:
   1. **Highlighted** (in `highlights` map) — filled circle in the
      node's assigned color, enlarged radius
-  2. **Selected** (in `selected-ids` set, but not highlighted) —
-     default fill with a dashed selection ring stroke
+  2. **Selected** (in `selected-ids` set) — shown with a dashed
+     selection ring stroke
   3. **Default** — standard marker fill and radius
 
   Props (see `::app.specs/tree-node-props`):
@@ -53,9 +59,10 @@
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - default fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
-  - `:selected-ids`           - set of leaf names currently selected in the grid"
+  - `:selected-ids`           - set of leaf names currently selected in the grid
+  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers
-           marker-radius marker-fill highlights selected-ids]}]
+           marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
@@ -67,26 +74,33 @@
         highlight-color (when (and is-leaf? highlights) (get highlights node-name))
         selected? (and is-leaf? selected-ids (contains? selected-ids node-name))
         fill (if highlight-color highlight-color marker-fill)
-        radius (if highlight-color (+ marker-radius 1.5) marker-radius)]
+        radius (if highlight-color (+ marker-radius 1.5) marker-radius)
+        on-click (when (and is-leaf? on-toggle-selection)
+                   (fn [_e] (on-toggle-selection node-name)))]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
        ;; Node marker — always on leaves, optionally on internal nodes
        (when (or is-leaf? show-internal-markers)
-         ($ :circle {:cx scaled-x :cy scaled-y :r radius :fill fill}))
+         ($ :circle {:cx scaled-x :cy scaled-y :r radius :fill fill
+                     :style (when on-click {:cursor "pointer"})
+                     :on-click on-click}))
 
-       ;; Selection ring for selected-but-not-highlighted leaves
+       ;; Selection ring for selected leaves
        (when selected?
          ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 3)
                      :fill "none" :stroke "#666" :stroke-width 1.5
-                     :stroke-dasharray "3 2"}))
+                     :stroke-dasharray "3 2"
+                     :style {:pointer-events "none"}}))
 
        ;; Tip label
        (when is-leaf?
          ($ :text {:x (+ scaled-x 8)
                    :y scaled-y
                    :dominant-baseline "central"
-                   :style {:font-family "monospace" :font-size "12px" :font-weight "bold"}}
+                   :style {:font-family "monospace" :font-size "12px" :font-weight "bold"
+                           :cursor (when on-click "pointer")}
+                   :on-click on-click}
             node-name))
 
        ;; Recurse into children
@@ -101,7 +115,8 @@
                       :marker-radius marker-radius
                       :marker-fill marker-fill
                       :highlights highlights
-                      :selected-ids selected-ids})))))
+                      :selected-ids selected-ids
+                      :on-toggle-selection on-toggle-selection})))))
 
 (defui PhylogeneticTree
   "Renders the phylogenetic tree as a positioned SVG group.
@@ -117,9 +132,10 @@
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
-  - `:selected-ids`           - set of leaf names currently selected in the grid"
+  - `:selected-ids`           - set of leaf names currently selected in the grid
+  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
   [{:keys [tree x-scale y-scale show-internal-markers marker-radius marker-fill
-           highlights selected-ids]}]
+           highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -130,4 +146,5 @@
                   :marker-radius marker-radius
                   :marker-fill marker-fill
                   :highlights highlights
-                  :selected-ids selected-ids})))
+                  :selected-ids selected-ids
+                  :on-toggle-selection on-toggle-selection})))

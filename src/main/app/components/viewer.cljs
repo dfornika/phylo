@@ -134,7 +134,18 @@
                            (reduce + 0 (map :width active-cols))
                            (* col-spacing (max 0 (dec (count active-cols))))
                            100)
-        svg-height      (+ tree-height 100)]
+        svg-height      (+ tree-height 100)
+
+        ;; Toggle a single leaf in/out of selected-ids
+        toggle-selection (uix/use-callback
+                          (fn [leaf-name]
+                            (set-selected-ids!
+                             (fn [ids]
+                               (let [ids (or ids #{})]
+                                 (if (contains? ids leaf-name)
+                                   (disj ids leaf-name)
+                                   (conj ids leaf-name))))))
+                          [set-selected-ids!])]
 
     ($ :div {:style {:display "flex" :flex-direction "column" :height "100vh" :padding-bottom "20px" :box-sizing "border-box"}}
 
@@ -166,7 +177,8 @@
                                   :marker-radius (:node-marker-radius LAYOUT)
                                   :marker-fill (:node-marker-fill LAYOUT)
                                   :highlights highlights
-                                  :selected-ids selected-ids})
+                                  :selected-ids selected-ids
+                                  :on-toggle-selection toggle-selection})
 
              ;; Metadata columns
              (when (seq active-cols)
@@ -188,6 +200,7 @@
             ($ MetadataGrid {:metadata-rows metadata-rows
                              :active-cols active-cols
                              :tips tips
+                             :selected-ids selected-ids
                              :on-cols-reordered set-active-cols!
                              :on-selection-changed set-selected-ids!}))))))
 

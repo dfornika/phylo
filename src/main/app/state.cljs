@@ -127,7 +127,7 @@
                             :highlight-color highlight-color
                             :set-highlight-color! #(reset! !highlight-color %)
                             :selected-ids selected-ids
-                            :set-selected-ids! #(reset! !selected-ids %)
+                            :set-selected-ids! #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %))
                             :highlights highlights
                             :set-highlights! #(reset! !highlights %)}}
        children)))

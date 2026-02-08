@@ -14,8 +14,8 @@
   Reordering columns in the grid (via drag-and-drop) updates
   `active-cols`, which in turn reorders the SVG metadata columns.
 
-  Row selection (via checkboxes) updates `selected-ids`, enabling the
-  select-then-assign-color workflow for multi-color highlighting."
+  Row selection is bidirectional: clicking tree leaves updates grid
+  checkboxes, and clicking grid checkboxes updates tree markers."
   (:require [uix.core :as uix :refer [defui $]]
             [ag-grid-community :refer [ModuleRegistry AllCommunityModule themeBalham]]
             [ag-grid-react :refer [AgGridReact]]))
@@ -102,12 +102,14 @@
 
 (defn- sync-selection!
   "Reads the selected rows from the AG-Grid API and updates
-  selected-ids. Called on the `onSelectionChanged` event."
-  [id-field on-selection-changed params]
-  (let [api (.-api params)
-        selected-rows (.getSelectedRows api)
-        ids (into #{} (map #(aget % id-field)) selected-rows)]
-    (on-selection-changed ids)))
+  selected-ids. Called on the `onSelectionChanged` event.
+  Skips the update when `syncing-ref` is true (programmatic sync)."
+  [id-field on-selection-changed syncing-ref params]
+  (when-not @syncing-ref
+    (let [api (.-api params)
+          selected-rows (.getSelectedRows api)
+          ids (into #{} (map #(aget % id-field)) selected-rows)]
+      (on-selection-changed ids))))
 
 (defui MetadataGrid
   "Renders an AG-Grid table from metadata rows and column configs.
@@ -122,9 +124,10 @@
   - Numeric columns get greater-than/less-than/range filters
   - Date columns get a date picker with range filtering
 
-  Row selection is enabled with checkboxes on every row and a
-  select-all checkbox in the header. Selected row IDs are reported
-  via the `:on-selection-changed` callback.
+  Row selection is bidirectional:
+  - Clicking grid checkboxes updates `selected-ids` in app state
+  - External changes to `selected-ids` (e.g. from tree clicks)
+    are reflected by programmatically selecting/deselecting rows
 
   Dragging columns in the grid reorders the SVG metadata columns
   to match via the `:on-cols-reordered` callback.
@@ -133,9 +136,11 @@
   - `:metadata-rows`          - vector of maps (keyword keys -> string values)
   - `:active-cols`            - vector of column config maps from CSV parser
   - `:tips`                   - enriched leaf nodes in tree display order
+  - `:selected-ids`           - current set of selected ID strings (for sync)
   - `:on-cols-reordered`      - callback receiving reordered active-cols vector
   - `:on-selection-changed`   - callback receiving set of selected ID strings"
-  [{:keys [metadata-rows active-cols tips on-cols-reordered on-selection-changed]}]
+  [{:keys [metadata-rows active-cols tips selected-ids
+           on-cols-reordered on-selection-changed]}]
   (let [id-key (-> active-cols first :key)
         id-field (some-> id-key name)
         ordered-rows (uix/use-memo
@@ -151,7 +156,33 @@
                        (fn [] (clj->js {:mode "multiRow"
                                         :checkboxes true
                                         :headerCheckbox true}))
-                       [])]
+                       [])
+        ;; Ref to the AG-Grid API (set on onGridReady)
+        grid-api-ref (uix/use-ref nil)
+        ;; Guard ref to prevent circular updates:
+        ;; true while we're programmatically syncing selection -> grid
+        syncing-ref (uix/use-ref false)]
+
+    ;; Sync selected-ids -> grid row selection when selected-ids
+    ;; changes externally (e.g. from tree clicks)
+    (uix/use-effect
+     (fn []
+       (when-let [api @grid-api-ref]
+         (when id-field
+           (reset! syncing-ref true)
+           (let [ids (or selected-ids #{})]
+             (.forEachNode api
+                           (fn [^js node]
+                             (when-let [data (.-data node)]
+                               (let [row-id (aget data id-field)
+                                     should-select (contains? ids row-id)
+                                     currently-selected (.isSelected node)]
+                                 (when (not= should-select currently-selected)
+                                   (.setSelected node should-select)))))))
+           ;; Clear the guard after the event loop settles
+           (js/setTimeout (fn [] (reset! syncing-ref false)) 0))))
+     [selected-ids id-field])
+
     (when (seq active-cols)
       ($ :div {:style {:width "100%"
                        :height "100%"
@@ -161,10 +192,12 @@
              :columnDefs col-defs
              :theme themeBalham
              :rowSelection row-selection
+             :onGridReady (fn [params]
+                            (reset! grid-api-ref (.-api params)))
              :onFirstDataRendered (fn [params]
                                     (-> params .-api .sizeColumnsToFit))
              :onDragStopped (fn [params]
                               (sync-col-order! active-cols on-cols-reordered params))
              :onSelectionChanged (fn [params]
                                    (when (and id-field on-selection-changed)
-                                     (sync-selection! id-field on-selection-changed params)))})))))
+                                     (sync-selection! id-field on-selection-changed syncing-ref params)))})))))
