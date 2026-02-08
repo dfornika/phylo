@@ -15,13 +15,13 @@
     "@types/react": "^19.2.13",
     "@types/react-dom": "^19.2.3",
     "process": "^0.11.10",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0",
     "react-refresh": "^0.18.0",
     "shadow-cljs": "3.3.5",
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
     "ag-grid-community": "^35.0.1",
     "ag-grid-react": "^35.0.1"
   }
