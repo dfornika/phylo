@@ -155,7 +155,7 @@
         row-selection (uix/use-memo
                        (fn [] (clj->js {:mode "multiRow"
                                         :checkboxes true
-                                        :headerCheckbox true}))
+                                        :headerCheckbox true :selectAll "filtered"}))
                        [])
         ;; Ref to the AG-Grid API (set on onGridReady)
         grid-api-ref (uix/use-ref nil)

@@ -28,10 +28,10 @@
         button-style {:font-size "11px" :padding "3px 10px"
                       :cursor "pointer" :border "1px solid #bbb"
                       :border-radius "3px" :background "#fff"}]
-    ($ :div {:style {:display "flex" :gap "10px" :padding "6px 12px"
+    ($ :div {:style {:display "flex" :gap "10px" :padding "4px 8px"
                      :background "#e8f0fe" :border-bottom "1px solid #ccd"
                      :align-items "center" :flex-wrap "wrap"
-                     :min-height "32px"}}
+                     :min-height "24px"}}
        ;; Selection count
        ($ :span {:style {:font-size "12px" :font-weight "bold" :min-width "110px"}}
           (str n-selected " row" (when (not= n-selected 1) "s") " selected"))
