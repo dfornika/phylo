@@ -19,8 +19,7 @@
   descendants can access shared state via context."
   []
   ($ state/AppStateProvider
-     ($ TreeContainer {:width-px 1200
-                       :component-height-px 800})))
+     ($ TreeContainer {:width-px 1200})))
 
 (defonce root
   (when (exists? js/document)
