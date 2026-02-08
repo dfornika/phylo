@@ -147,7 +147,13 @@
                                    (conj ids leaf-name))))))
                           [set-selected-ids!])]
 
-    ($ :div {:style {:display "flex" :flex-direction "column" :height "100vh" :padding-bottom "20px" :box-sizing "border-box"}}
+    ($ :div {:style {:display "flex"
+                     :flex-direction "column"
+                     :height (if component-height-px
+                               (str component-height-px "px")
+                               "100vh")
+                     :padding-bottom "20px"
+                     :box-sizing "border-box"}}
 
        ;; Toolbar
        ($ Toolbar)
