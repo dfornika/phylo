@@ -2,8 +2,8 @@
   "A bottom-anchored panel with a draggable top edge for resizing.
 
   Wraps arbitrary children in a container whose height is controlled
-  by dragging a handle bar. The panel can be collapsed to zero height
-  and expanded back."
+  by dragging a handle bar. The panel can be collapsed down to its
+  configured `:min-height` (which may be set to 0) and expanded back."
   (:require [uix.core :as uix :refer [defui $]]))
 
 (def ^:private handle-height
