@@ -246,7 +246,7 @@
        ;; Scrollable viewport
        ($ :div {:style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
           (when (seq active-cols)
-            ($ StickyHeader {:columns active-cols :start-offset metadata-start-x}))
+            ($ StickyHeader {:columns active-cols :start-offset metadata-start-x :col-spacing col-spacing}))
 
           ($ :svg {:id "phylo-svg"
                    :ref svg-ref

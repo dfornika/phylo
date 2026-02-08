@@ -13,8 +13,9 @@
 
   Props (see `::app.specs/sticky-header-props`):
   - `:columns`      - seq of column config maps with `:key`, `:label`, `:width`
-  - `:start-offset` - pixel offset where metadata columns begin"
-  [{:keys [columns start-offset]}]
+  - `:start-offset` - pixel offset where metadata columns begin
+  - `:col-spacing`   - extra horizontal gap between columns (default 0)"
+  [{:keys [columns start-offset col-spacing]}]
   ($ :div {:style {:position "sticky"
                    :top 0
                    :z-index 10
@@ -32,7 +33,7 @@
         "Phylogeny")
 
      (for [{:keys [key label width]} columns]
-       ($ :div {:key key :style {:width (str width "px") :flex-shrink 0}}
+       ($ :div {:key key :style {:width (str (+ width (or col-spacing 0)) "px") :flex-shrink 0}}
           label))))
 
 (defui MetadataColumn
