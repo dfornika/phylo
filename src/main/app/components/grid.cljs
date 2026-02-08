@@ -3,11 +3,19 @@
 
   Renders an interactive data grid below the tree visualization,
   populated from the same metadata loaded via the toolbar.
-  Provides sorting and column-level filtering out of the box.
+  Provides sorting, column-level filtering, and row selection
+  out of the box.
+
   Rows default to tree traversal order (matching the SVG tip order).
 
   Column types detected by [[app.csv/detect-column-type]] are mapped
-  to AG-Grid filter types for type-appropriate filtering and sorting."
+  to AG-Grid filter types for type-appropriate filtering and sorting.
+
+  Reordering columns in the grid (via drag-and-drop) updates
+  `active-cols`, which in turn reorders the SVG metadata columns.
+
+  Row selection (via checkboxes) updates `selected-ids`, enabling the
+  select-then-assign-color workflow for multi-color highlighting."
   (:require [uix.core :as uix :refer [defui $]]
             [ag-grid-community :refer [ModuleRegistry AllCommunityModule themeBalham]]
             [ag-grid-react :refer [AgGridReact]]))
@@ -34,9 +42,9 @@
 (defn- col-def-for-type
   "Returns AG-Grid columnDef properties appropriate for the detected column type.
 
-  - `:string`  → text filter
-  - `:numeric` → number filter with numeric valueGetter for correct sorting
-  - `:date`    → date filter with a YYYY-MM-DD comparator"
+  - `:string`  -> text filter
+  - `:numeric` -> number filter with numeric valueGetter for correct sorting
+  - `:date`    -> date filter with a YYYY-MM-DD comparator"
   [col-type field-name]
   (case col-type
     :numeric {:filter "agNumberColumnFilter"
@@ -78,6 +86,29 @@
       (into [] (keep (fn [tip] (get row-index (:name tip)))) tips))
     metadata-rows))
 
+(defn- sync-col-order!
+  "Reads the current column order from the AG-Grid API and updates
+  active-cols to match. Called on the `onDragStopped` event so the
+  SVG metadata columns mirror the grid column arrangement."
+  [active-cols on-cols-reordered params]
+  (let [api (.-api params)
+        col-state (.getColumnState api)
+        field-order (mapv #(.-colId %) col-state)
+        col-index (into {} (map (fn [col] [(name (:key col)) col]) active-cols))
+        reordered (into [] (keep #(get col-index %)) field-order)]
+    (when (and (seq reordered)
+               (not= (mapv :key reordered) (mapv :key active-cols)))
+      (on-cols-reordered reordered))))
+
+(defn- sync-selection!
+  "Reads the selected rows from the AG-Grid API and updates
+  selected-ids. Called on the `onSelectionChanged` event."
+  [id-field on-selection-changed params]
+  (let [api (.-api params)
+        selected-rows (.getSelectedRows api)
+        ids (into #{} (map #(aget % id-field)) selected-rows)]
+    (on-selection-changed ids)))
+
 (defui MetadataGrid
   "Renders an AG-Grid table from metadata rows and column configs.
 
@@ -91,12 +122,22 @@
   - Numeric columns get greater-than/less-than/range filters
   - Date columns get a date picker with range filtering
 
+  Row selection is enabled with checkboxes on every row and a
+  select-all checkbox in the header. Selected row IDs are reported
+  via the `:on-selection-changed` callback.
+
+  Dragging columns in the grid reorders the SVG metadata columns
+  to match via the `:on-cols-reordered` callback.
+
   Props:
-  - `:metadata-rows` - vector of maps (keyword keys -> string values)
-  - `:active-cols`   - vector of column config maps from CSV parser
-  - `:tips`          - enriched leaf nodes in tree display order"
-  [{:keys [metadata-rows active-cols tips]}]
+  - `:metadata-rows`          - vector of maps (keyword keys -> string values)
+  - `:active-cols`            - vector of column config maps from CSV parser
+  - `:tips`                   - enriched leaf nodes in tree display order
+  - `:on-cols-reordered`      - callback receiving reordered active-cols vector
+  - `:on-selection-changed`   - callback receiving set of selected ID strings"
+  [{:keys [metadata-rows active-cols tips on-cols-reordered on-selection-changed]}]
   (let [id-key (-> active-cols first :key)
+        id-field (some-> id-key name)
         ordered-rows (uix/use-memo
                       (fn [] (tree-ordered-rows tips metadata-rows id-key))
                       [tips metadata-rows id-key])
@@ -105,7 +146,12 @@
                   [active-cols])
         row-data (uix/use-memo
                   (fn [] (clj->js ordered-rows))
-                  [ordered-rows])]
+                  [ordered-rows])
+        row-selection (uix/use-memo
+                       (fn [] (clj->js {:mode "multiRow"
+                                        :checkboxes true
+                                        :headerCheckbox true}))
+                       [])]
     (when (seq active-cols)
       ($ :div {:style {:width "100%"
                        :height "100%"
@@ -114,5 +160,11 @@
             {:rowData row-data
              :columnDefs col-defs
              :theme themeBalham
+             :rowSelection row-selection
              :onFirstDataRendered (fn [params]
-                                    (-> params .-api .sizeColumnsToFit))})))))
+                                    (-> params .-api .sizeColumnsToFit))
+             :onDragStopped (fn [params]
+                              (sync-col-order! active-cols on-cols-reordered params))
+             :onSelectionChanged (fn [params]
+                                   (when (and id-field on-selection-changed)
+                                     (sync-selection! id-field on-selection-changed params)))})))))

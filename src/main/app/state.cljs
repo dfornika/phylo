@@ -16,16 +16,16 @@
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
   - [[!col-spacing]]           - extra horizontal spacing between metadata columns
-  - [[!date-filter-col]]       - keyword for the metadata column used for date filtering
-  - [[!date-filter-range]]     - two-element vector of date strings [start end]
-  - [[!highlight-color]]       - CSS color string for highlighted leaf markers"
+  - [[!highlight-color]]       - CSS color string used as the current brush color
+  - [[!selected-ids]]          - set of leaf IDs selected in the AG-Grid
+  - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights"
   (:require [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
 
 (def default-tree
   "A small demo Newick tree shown on initial load.
-  Four leaves (A–D) with branch lengths, providing a minimal
+  Four leaves (A-D) with branch lengths, providing a minimal
   but visually meaningful example."
   "((A:0.2,B:0.3):0.4,(C:0.5,D:0.1):0.3);")
 
@@ -68,17 +68,17 @@
 (defonce !col-spacing
   (atom 0))
 
-;; "Atom holding the keyword of the metadata column selected for date range filtering, or nil."
-(defonce !date-filter-col
-  (atom nil))
-
-;; "Atom holding the date range bounds as [start-date end-date] normalized YYYY-MM-DD strings, or nil."
-(defonce !date-filter-range
-  (atom nil))
-
-;; "Atom holding the CSS color string used to highlight leaf markers within the date range."
+;; "Atom holding the CSS color string used as the current brush color when assigning highlights."
 (defonce !highlight-color
   (atom "#4682B4"))
+
+;; "Atom holding the set of leaf IDs currently selected in the AG-Grid."
+(defonce !selected-ids
+  (atom #{}))
+
+;; "Atom holding persistent per-leaf highlight colors as {id-string -> color-string}."
+(defonce !highlights
+  (atom {}))
 
 ;; ===== Context =====
 
@@ -103,9 +103,9 @@
         show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
         show-pixel-grid       (uix/use-atom !show-pixel-grid)
         col-spacing           (uix/use-atom !col-spacing)
-        date-filter-col       (uix/use-atom !date-filter-col)
-        date-filter-range     (uix/use-atom !date-filter-range)
-        highlight-color       (uix/use-atom !highlight-color)]
+        highlight-color       (uix/use-atom !highlight-color)
+        selected-ids          (uix/use-atom !selected-ids)
+        highlights            (uix/use-atom !highlights)]
     ($ app-context {:value {:newick-str       newick-str
                             :set-newick-str!  #(reset! !newick-str %)
                             :metadata-rows    metadata-rows
@@ -124,12 +124,12 @@
                             :set-show-pixel-grid! #(reset! !show-pixel-grid %)
                             :col-spacing col-spacing
                             :set-col-spacing! #(reset! !col-spacing %)
-                            :date-filter-col date-filter-col
-                            :set-date-filter-col! #(reset! !date-filter-col %)
-                            :date-filter-range date-filter-range
-                            :set-date-filter-range! #(reset! !date-filter-range %)
                             :highlight-color highlight-color
-                            :set-highlight-color! #(reset! !highlight-color %)}}
+                            :set-highlight-color! #(reset! !highlight-color %)
+                            :selected-ids selected-ids
+                            :set-selected-ids! #(reset! !selected-ids %)
+                            :highlights highlights
+                            :set-highlights! #(reset! !highlights %)}}
        children)))
 
 (defn use-app-state

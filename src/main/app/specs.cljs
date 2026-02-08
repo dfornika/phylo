@@ -47,10 +47,6 @@
 (s/def ::parsed-metadata
   (s/keys :req-un [::headers ::data]))
 
-;; Date range specs
-(s/def ::min-date string?)
-(s/def ::max-date string?)
-
 ;; ===== App State Context =====
 
 (s/def ::newick-str string?)
@@ -77,14 +73,14 @@
 (s/def ::col-spacing number?)
 (s/def ::set-col-spacing! fn?)
 
-(s/def ::date-filter-col (s/nilable keyword?))
-(s/def ::set-date-filter-col! fn?)
-
-(s/def ::date-filter-range (s/nilable (s/tuple string? string?)))
-(s/def ::set-date-filter-range! fn?)
-
 (s/def ::highlight-color string?)
 (s/def ::set-highlight-color! fn?)
+
+(s/def ::selected-ids (s/nilable set?))
+(s/def ::set-selected-ids! fn?)
+
+(s/def ::highlights (s/nilable (s/map-of string? string?)))
+(s/def ::set-highlights! fn?)
 
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
@@ -97,9 +93,9 @@
                    ::show-scale-gridlines ::set-show-scale-gridlines!
                    ::show-pixel-grid ::set-show-pixel-grid!
                    ::col-spacing ::set-col-spacing!
-                   ::date-filter-col ::set-date-filter-col!
-                   ::date-filter-range ::set-date-filter-range!
-                   ::highlight-color ::set-highlight-color!]))
+                   ::highlight-color ::set-highlight-color!
+                   ::selected-ids ::set-selected-ids!
+                   ::highlights ::set-highlights!]))
 
 ;; ===== Component Props =====
 
@@ -137,11 +133,9 @@
 (s/def ::marker-radius number?)
 (s/def ::marker-fill string?)
 
-(s/def ::highlight-set (s/nilable set?))
-
 (s/def ::tree-node-props
   (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]
-          :opt-un [::highlight-set ::highlight-color]))
+          :opt-un [::highlights ::selected-ids]))
 
 ;; Toolbar reads from context — no props spec needed.
 ;; PhylogeneticTree receives only layout dimensions.
@@ -157,13 +151,13 @@
                    ::show-scale-gridlines ::show-pixel-grid
                    ::col-spacing
                    ::width-px ::component-height-px]
-          :opt-un [::highlight-set ::highlight-color]))
+          :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
   (s/keys :req-un [::tree ::x-scale ::y-scale
                    ::show-internal-markers
                    ::marker-radius ::marker-fill]
-          :opt-un [::highlight-set ::highlight-color]))
+          :opt-un [::highlights ::selected-ids]))
 
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
@@ -224,14 +218,3 @@
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
-
-(s/fdef app.tree/compute-highlight-set
-  :args (s/cat :metadata-rows (s/nilable (s/coll-of ::metadata-row))
-               :id-key (s/nilable keyword?)
-               :date-col (s/nilable keyword?)
-               :date-range (s/nilable (s/tuple string? string?)))
-  :ret  (s/nilable (s/coll-of string? :kind set?)))
-
-(s/fdef app.tree/compute-min-max-dates
-  :args (s/cat :date-strs (s/coll-of (s/nilable string?)))
-  :ret  (s/nilable (s/keys :req-un [::min-date ::max-date])))

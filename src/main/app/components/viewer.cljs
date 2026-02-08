@@ -13,7 +13,8 @@
             [app.components.metadata :refer [MetadataHeader MetadataTable]]
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
-            [app.components.resizable-panel :refer [ResizablePanel]]))
+            [app.components.resizable-panel :refer [ResizablePanel]]
+            [app.components.selection-bar :refer [SelectionBar]]))
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -85,8 +86,6 @@
                      :stroke "#eee"
                      :stroke-dasharray "4 4"
                      :stroke-width 1}))))
-    ;; For non-positive max-depth, avoid calling `calculate-scale-unit`.
-    ;; Render a single tick at 0 so the origin is still visible.
     (let [ticks [0]]
       ($ :g
          (for [t ticks]
@@ -115,12 +114,13 @@
   - `:col-spacing`             - extra horizontal spacing between metadata columns
   - `:width-px`                - total available width in pixels
   - `:component-height-px`     - total available height in pixels
-  - `:highlight-set`           - (optional) set of leaf names to highlight
-  - `:highlight-color`         - (optional) CSS color for highlighted markers"
+  - `:highlights`              - map of {leaf-name -> color} for persistent highlights
+  - `:selected-ids`            - set of leaf names currently selected in the grid"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
-           highlight-set highlight-color metadata-rows]}]
+           highlights selected-ids metadata-rows
+           set-active-cols! set-selected-ids!]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -151,7 +151,7 @@
              (when show-pixel-grid
                ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
-             ;; Scale gridlines (sibling — spans full SVG height)
+             ;; Scale gridlines
              (when show-scale-gridlines
                ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
                   ($ ScaleGridlines {:max-depth max-depth
@@ -165,8 +165,8 @@
                                   :show-internal-markers show-internal-markers
                                   :marker-radius (:node-marker-radius LAYOUT)
                                   :marker-fill (:node-marker-fill LAYOUT)
-                                  :highlight-set highlight-set
-                                  :highlight-color highlight-color})
+                                  :highlights highlights
+                                  :selected-ids selected-ids})
 
              ;; Metadata columns
              (when (seq active-cols)
@@ -176,6 +176,10 @@
                                  :y-scale y-mult
                                  :col-spacing col-spacing}))))
 
+       ;; Selection bar (above the grid)
+       (when (seq active-cols)
+         ($ SelectionBar))
+
        ;; Metadata grid (AG-Grid) in resizable bottom panel
        (when (seq active-cols)
          ($ ResizablePanel {:initial-height 250
@@ -183,32 +187,26 @@
                             :max-height 600}
             ($ MetadataGrid {:metadata-rows metadata-rows
                              :active-cols active-cols
-                             :tips tips}))))))
+                             :tips tips
+                             :on-cols-reordered set-active-cols!
+                             :on-selection-changed set-selected-ids!}))))))
 
 (defui TreeContainer
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
-  the positioned tree via [[tree/prepare-tree]] (memoized), computes the
-  highlight set from date filter state, and passes everything as
-  props to [[TreeViewer]]."
+  the positioned tree via [[tree/prepare-tree]] (memoized), and passes
+  everything as props to [[TreeViewer]]."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers
                 show-scale-gridlines show-pixel-grid
-                col-spacing
-                date-filter-col date-filter-range
-                highlight-color]} (state/use-app-state)
+                col-spacing highlights selected-ids
+                set-active-cols! set-selected-ids!]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
                                        (fn [] (tree/prepare-tree newick-str metadata-rows active-cols))
-                                       [newick-str metadata-rows active-cols])
-
-        id-key (-> active-cols first :key)
-
-        highlight-set (uix/use-memo
-                       (fn [] (tree/compute-highlight-set metadata-rows id-key date-filter-col date-filter-range))
-                       [metadata-rows id-key date-filter-col date-filter-range])]
+                                       [newick-str metadata-rows active-cols])]
     ($ TreeViewer {:tree tree
                    :tips tips
                    :max-depth max-depth
@@ -219,8 +217,10 @@
                    :show-scale-gridlines show-scale-gridlines
                    :show-pixel-grid show-pixel-grid
                    :col-spacing col-spacing
-                   :highlight-set highlight-set
-                   :highlight-color highlight-color
+                   :highlights highlights
+                   :selected-ids selected-ids
                    :width-px width-px
                    :metadata-rows metadata-rows
+                   :set-active-cols! set-active-cols!
+                   :set-selected-ids! set-selected-ids!
                    :component-height-px component-height-px})))
