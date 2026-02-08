@@ -13,9 +13,7 @@
   passing a fresh atom when purity is required).
 
   See [[app.specs]] for function specs."
-  (:require [clojure.string :as str]
-            [app.newick :as newick]
-            [app.csv :as csv]))
+  (:require [app.newick :as newick]))
 
 ;; ===== Tree Layout Functions =====
 
@@ -112,7 +110,7 @@
     (<= max-x 0) [0]
     (<= unit 0)  []
     :else        (take-while #(<= % max-x)
-                              (iterate #(+ % unit) 0))))
+                             (iterate #(+ % unit) 0))))
 
 ;; ===== Tree Traversal Helpers =====
 
@@ -173,50 +171,3 @@
     {:tree root
      :tips enriched-leaves
      :max-depth (get-max-x root)}))
-
-;; ===== Date Filtering =====
-
-(defn compute-highlight-set
-  "Computes the set of leaf names whose metadata date values fall within
-  the given date range.
-
-  `metadata-rows` is the vector of row maps. `id-key` is the keyword
-  for the ID column (first column). `date-col` is the keyword for the
-  date column to filter on. `date-range` is `[start end]` of normalized
-  YYYY-MM-DD strings.
-
-  Returns a set of ID strings (leaf names) that are within range, or
-  nil if inputs are incomplete."
-  [metadata-rows id-key date-col date-range]
-  (when (and date-col date-range id-key)
-    (let [[start end] date-range]
-      (when (and (not (str/blank? start)) (not (str/blank? end)))
-        (into #{}
-              (keep (fn [row]
-                      (when-let [normalized (csv/parse-date (get row date-col))]
-                        (when (and (>= (compare normalized start) 0)
-                                   (<= (compare normalized end) 0))
-                          (get row id-key)))))
-              metadata-rows)))))
-
-(defn compute-min-max-dates
-  "Computes minimum and maximum dates from a collection of date strings.
-  
-  Takes a collection of strings and returns a map with `:min-date` and 
-  `:max-date` keys, or nil if no valid dates are found. Uses a single-pass
-  reduce for O(n) performance instead of sorting.
-  
-  Args:
-  - `date-strs` - collection of date strings to parse
-  
-  Returns:
-  - `{:min-date \"YYYY-MM-DD\" :max-date \"YYYY-MM-DD\"}` or `nil`"
-  [date-strs]
-  (let [dates (into [] (keep csv/parse-date date-strs))]
-    (when (seq dates)
-      (reduce (fn [acc date]
-                (-> acc
-                    (update :min-date #(if (or (nil? %) (neg? (compare date %))) date %))
-                    (update :max-date #(if (or (nil? %) (pos? (compare date %))) date %))))
-              {:min-date nil :max-date nil}
-              dates))))

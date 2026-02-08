@@ -47,10 +47,6 @@
 (s/def ::parsed-metadata
   (s/keys :req-un [::headers ::data]))
 
-;; Date range specs
-(s/def ::min-date string?)
-(s/def ::max-date string?)
-
 ;; ===== App State Context =====
 
 (s/def ::newick-str string?)
@@ -77,14 +73,14 @@
 (s/def ::col-spacing number?)
 (s/def ::set-col-spacing! fn?)
 
-(s/def ::date-filter-col (s/nilable keyword?))
-(s/def ::set-date-filter-col! fn?)
-
-(s/def ::date-filter-range (s/nilable (s/tuple string? string?)))
-(s/def ::set-date-filter-range! fn?)
-
 (s/def ::highlight-color string?)
 (s/def ::set-highlight-color! fn?)
+
+(s/def ::selected-ids (s/nilable set?))
+(s/def ::set-selected-ids! fn?)
+
+(s/def ::highlights (s/nilable (s/map-of string? string?)))
+(s/def ::set-highlights! fn?)
 
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
@@ -97,9 +93,9 @@
                    ::show-scale-gridlines ::set-show-scale-gridlines!
                    ::show-pixel-grid ::set-show-pixel-grid!
                    ::col-spacing ::set-col-spacing!
-                   ::date-filter-col ::set-date-filter-col!
-                   ::date-filter-range ::set-date-filter-range!
-                   ::highlight-color ::set-highlight-color!]))
+                   ::highlight-color ::set-highlight-color!
+                   ::selected-ids ::set-selected-ids!
+                   ::highlights ::set-highlights!]))
 
 ;; ===== Component Props =====
 
@@ -136,15 +132,14 @@
 
 (s/def ::marker-radius number?)
 (s/def ::marker-fill string?)
-
-(s/def ::highlight-set (s/nilable set?))
+(s/def ::on-toggle-selection (s/nilable fn?))
 
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]
-          :opt-un [::highlight-set ::highlight-color]))
+  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale
+                   ::show-internal-markers ::marker-radius ::marker-fill]
+          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
 
-;; Toolbar reads from context — no props spec needed.
-;; PhylogeneticTree receives only layout dimensions.
+;; Toolbar and SelectionBar read from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
@@ -155,15 +150,16 @@
   (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
                    ::x-mult ::y-mult ::show-internal-markers
                    ::show-scale-gridlines ::show-pixel-grid
-                   ::col-spacing
-                   ::width-px ::component-height-px]
-          :opt-un [::highlight-set ::highlight-color]))
+                   ::col-spacing ::metadata-rows
+                   ::width-px ::component-height-px
+                   ::set-active-cols! ::set-selected-ids! ::set-metadata-rows!]
+          :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
   (s/keys :req-un [::tree ::x-scale ::y-scale
                    ::show-internal-markers
                    ::marker-radius ::marker-fill]
-          :opt-un [::highlight-set ::highlight-color]))
+          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
 
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
@@ -175,6 +171,26 @@
 
 (s/def ::tree-container-props
   (s/keys :req-un [::width-px ::component-height-px]))
+
+;; MetadataGrid — AG-Grid table with bidirectional selection sync.
+
+(s/def ::on-cell-edited fn?)
+(s/def ::on-cols-reordered fn?)
+(s/def ::on-selection-changed fn?)
+
+(s/def ::metadata-grid-props
+  (s/keys :req-un [::metadata-rows ::active-cols ::tips
+                   ::on-cols-reordered ::on-selection-changed]
+          :opt-un [::selected-ids ::on-cell-edited]))
+
+;; ResizablePanel — wrapper with draggable resize handle.
+
+(s/def ::initial-height number?)
+(s/def ::min-height number?)
+(s/def ::max-height number?)
+
+(s/def ::resizable-panel-props
+  (s/keys :req-un [::initial-height ::min-height ::max-height]))
 
 ;; ===== Function Specs =====
 
@@ -224,14 +240,3 @@
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
-
-(s/fdef app.tree/compute-highlight-set
-  :args (s/cat :metadata-rows (s/nilable (s/coll-of ::metadata-row))
-               :id-key (s/nilable keyword?)
-               :date-col (s/nilable keyword?)
-               :date-range (s/nilable (s/tuple string? string?)))
-  :ret  (s/nilable (s/coll-of string? :kind set?)))
-
-(s/fdef app.tree/compute-min-max-dates
-  :args (s/cat :date-strs (s/coll-of (s/nilable string?)))
-  :ret  (s/nilable (s/keys :req-un [::min-date ::max-date])))
