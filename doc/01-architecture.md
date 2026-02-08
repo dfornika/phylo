@@ -31,6 +31,7 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 ┌─────────────────┐
 │ SVG + HTML      │  PhylogeneticTree → TreeNode (branches/labels)
 │                 │  MetadataTable → MetadataColumn (values)
+│                 │  MetadataGrid (AG-Grid table)
 └─────────────────┘
 ```
 
@@ -43,17 +44,20 @@ app                               (app.core)
         └── TreeViewer            (app.components.viewer) Layout shell — toolbar, viewport, SVG canvas
             ├── Toolbar           (app.components.toolbar) File loaders, sliders, toggles (reads from context)
             ├── MetadataHeader    (app.components.metadata) Sticky HTML column header labels
-            └── <svg>
-                ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
-                ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
-                ├── PhylogeneticTree  (app.components.tree) Thin wrapper — SVG group with padding transform
-                │   └── TreeNode      (app.components.tree) Recursive tree rendering
-                │       ├── Branch    (app.components.tree) Horizontal + vertical line segments
-                │       ├── <circle>  Node marker (always on leaves, optional on internals)
-                │       ├── <text>    Tip label (leaves only)
-                │       └── TreeNode... Child nodes (recursive)
-                └── MetadataTable     (app.components.metadata) Computes column offsets, wraps columns
-                    └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
+            ├── <svg>
+            │   ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
+            │   ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
+            │   ├── PhylogeneticTree  (app.components.tree) Thin wrapper — SVG group with padding transform
+            │   │   └── TreeNode      (app.components.tree) Recursive tree rendering
+            │   │       ├── Branch    (app.components.tree) Horizontal + vertical line segments
+            │   │       ├── <circle>  Node marker (clickable on leaves to toggle selection)
+            │   │       ├── <text>    Tip label (leaves only, clickable to toggle selection)
+            │   │       └── TreeNode... Child nodes (recursive)
+            │   └── MetadataTable     (app.components.metadata) Computes column offsets, wraps columns
+            │       └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
+            ├── SelectionBar      (app.components.selection_bar) Highlight color picker + assign/clear buttons
+            └── ResizablePanel    (app.components.resizable_panel) Draggable resize handle wrapper
+                └── MetadataGrid  (app.components.grid) AG-Grid table with bidirectional selection sync
 ```
 
 ## State Management
@@ -76,9 +80,9 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!show-scale-gridlines` | boolean | `true` | Show evolutionary distance gridlines |
 | `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
 | `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
-| `!date-filter-col` | keyword or nil | `nil` | Which metadata column to use for date filtering |
-| `!date-filter-range` | tuple or nil | `nil` | Selected date range as `[start end]` (YYYY-MM-DD strings) |
-| `!highlight-color` | string | `"#4682B4"` | CSS color for highlighted leaf markers |
+| `!highlight-color` | string | `"#4682B4"` | Brush color for painting highlights onto selected leaves |
+| `!selected-ids` | set | `#{}` | Set of leaf names currently selected (transient, checkbox-driven) |
+| `!highlights` | map | `{}` | Persistent highlight assignments `{leaf-name → CSS color}` |
 
 ### Context Architecture
 
@@ -90,6 +94,7 @@ app
     └── TreeContainer         Consumes context, calls prepare-tree
         └── TreeViewer        Layout shell — all data via props
             ├── Toolbar       Consumes context via use-app-state
+            ├── SelectionBar  Consumes context via use-app-state
             └── ...           (leaf components receive computed
                                values as props — no context needed)
 ```
@@ -106,18 +111,28 @@ app
  :show-scale-gridlines    true   :set-show-scale-gridlines!    fn
  :show-pixel-grid         false  :set-show-pixel-grid!         fn
  :col-spacing             0      :set-col-spacing!             fn
- :date-filter-col         nil    :set-date-filter-col!         fn
- :date-filter-range       nil    :set-date-filter-range!       fn
- :highlight-color         "..."  :set-highlight-color!         fn}
+ :highlight-color         "..."  :set-highlight-color!         fn
+ :selected-ids            #{}    :set-selected-ids!            fn
+ :highlights              {}     :set-highlights!              fn}
 ```
 
 Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
 
+**Note:** `set-selected-ids!` accepts both a direct value (`reset!`) and an updater function (`swap!`). This supports both the grid's `onSelectionChanged` (which passes a full replacement set) and the tree's `toggle-selection` (which passes a function that adds/removes a single leaf).
+
+### Highlight Model
+
+Phylo uses a two-tier highlight model:
+
+1. **`selected-ids`** — a transient `#{set}` of leaf names currently selected via AG-Grid row checkboxes or tree leaf clicks. Selection is bidirectional: clicking a leaf toggles it in `selected-ids`, and a `use-effect` in `MetadataGrid` programmatically syncs AG-Grid checkboxes to match. A `syncing-ref` guard prevents circular updates.
+
+2. **`highlights`** — a persistent `{leaf-name → CSS-color}` map representing committed highlight assignments. Users select leaves, pick a brush color via `SelectionBar`, and click "Assign" to stamp the current `highlight-color` onto every leaf in `selected-ids`.
+
+Tree nodes render a colored circle for highlighted leaves and a dashed selection ring for selected leaves. Both can be active simultaneously.
+
 ### Derived State
 
 The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
-
-`TreeContainer` also derives a `highlight-set` (set of leaf names matching the active date filter) via `compute-highlight-set`, memoized on the date filter state. This set is threaded as a prop through `TreeViewer` → `PhylogeneticTree` → `TreeNode`, where matching leaf markers are rendered in `highlight-color`.
 
 ### Fast Refresh
 
@@ -153,7 +168,7 @@ The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 - `::positioned-node` — node with `:x` and `:y` coordinates
 - `::parsed-metadata` — result of `csv/parse-metadata`
 - `::app-state` — shape of the context map from `AppStateProvider`
-- Component prop specs (`::branch-props`, `::tree-node-props`, etc.)
+- Component prop specs (`::branch-props`, `::tree-node-props`, `::metadata-grid-props`, `::resizable-panel-props`, etc.)
 - `s/fdef` specs for key functions (`newick->map`, `count-tips`, `prepare-tree`, etc.)
 
 ## TSX Component Extraction (Work in Progress)
@@ -181,8 +196,10 @@ TSX components are **pure functions of their props** — they have no implicit d
 | `MetadataColumn` | ✓ | `app.components.metadata` | — |
 | `MetadataTable` | ✓ | `app.components.metadata` | — |
 | `MetadataHeader` | ✓ | `app.components.metadata` | — |
-| `DateRangeFilter` | ✓ (stateful) | `app.components.toolbar` | — (stays in CLJS) |
 | `Toolbar` | ✓ (stateful) | `app.components.toolbar` | — (stays in CLJS) |
+| `SelectionBar` | ✓ (stateful) | `app.components.selection_bar` | — (stays in CLJS) |
+| `MetadataGrid` | ✓ (stateful) | `app.components.grid` | — (stays in CLJS) |
+| `ResizablePanel` | ✓ (stateful) | `app.components.resizable_panel` | — (stays in CLJS) |
 | `TreeViewer` | ✓ (layout shell) | `app.components.viewer` | — (stays in CLJS) |
 | `TreeContainer` | ✓ (context bridge) | `app.components.viewer` | — (stays in CLJS) |
 
@@ -217,11 +234,14 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.core` | Thin app shell — mounts root component, provides `init` / `re-render` entry points |
 | `app.state` | Shared state atoms, React context provider, `use-app-state` hook |
 | `app.layout` | `LAYOUT` constant — spacing, padding, marker sizes used across all component namespaces |
-| `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `prepare-tree`, `compute-highlight-set`, etc.) |
+| `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `prepare-tree`, `get-leaves`, etc.) |
 | `app.newick` | Recursive descent Newick parser |
 | `app.csv` | CSV/TSV parsing with column metadata and data type detection |
 | `app.specs` | Spec definitions for data structures & functions |
 | `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
-| `app.components.metadata` | `MetadataHeader`, `MetadataColumn`, `MetadataTable` — metadata overlay |
-| `app.components.toolbar` | `Toolbar`, `DateRangeFilter`, `read-file!` — user controls |
+| `app.components.metadata` | `MetadataHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |
+| `app.components.toolbar` | `Toolbar`, `read-file!` — user controls |
 | `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `PixelGrid` — top-level composition |
+| `app.components.grid` | `MetadataGrid` — AG-Grid table with bidirectional selection sync |
+| `app.components.selection_bar` | `SelectionBar` — highlight color picker and assign/clear actions |
+| `app.components.resizable_panel` | `ResizablePanel` — draggable-resize wrapper for bottom panel |

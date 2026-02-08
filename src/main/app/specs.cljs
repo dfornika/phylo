@@ -132,13 +132,14 @@
 
 (s/def ::marker-radius number?)
 (s/def ::marker-fill string?)
+(s/def ::on-toggle-selection (s/nilable fn?))
 
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale ::show-internal-markers ::marker-radius ::marker-fill]
-          :opt-un [::highlights ::selected-ids]))
+  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale
+                   ::show-internal-markers ::marker-radius ::marker-fill]
+          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
 
-;; Toolbar reads from context — no props spec needed.
-;; PhylogeneticTree receives only layout dimensions.
+;; Toolbar and SelectionBar read from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
@@ -149,15 +150,16 @@
   (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
                    ::x-mult ::y-mult ::show-internal-markers
                    ::show-scale-gridlines ::show-pixel-grid
-                   ::col-spacing
-                   ::width-px ::component-height-px]
+                   ::col-spacing ::metadata-rows
+                   ::width-px ::component-height-px
+                   ::set-active-cols! ::set-selected-ids!]
           :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
   (s/keys :req-un [::tree ::x-scale ::y-scale
                    ::show-internal-markers
                    ::marker-radius ::marker-fill]
-          :opt-un [::highlights ::selected-ids]))
+          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
 
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
@@ -169,6 +171,25 @@
 
 (s/def ::tree-container-props
   (s/keys :req-un [::width-px ::component-height-px]))
+
+;; MetadataGrid — AG-Grid table with bidirectional selection sync.
+
+(s/def ::on-cols-reordered fn?)
+(s/def ::on-selection-changed fn?)
+
+(s/def ::metadata-grid-props
+  (s/keys :req-un [::metadata-rows ::active-cols ::tips
+                   ::on-cols-reordered ::on-selection-changed]
+          :opt-un [::selected-ids]))
+
+;; ResizablePanel — wrapper with draggable resize handle.
+
+(s/def ::initial-height number?)
+(s/def ::min-height number?)
+(s/def ::max-height number?)
+
+(s/def ::resizable-panel-props
+  (s/keys :req-un [::initial-height ::min-height ::max-height]))
 
 ;; ===== Function Specs =====
 
