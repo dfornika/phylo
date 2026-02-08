@@ -20,5 +20,9 @@
     "react-refresh": "^0.18.0",
     "shadow-cljs": "3.3.5",
     "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "ag-grid-community": "^35.0.1",
+    "ag-grid-react": "^35.0.1"
   }
 }

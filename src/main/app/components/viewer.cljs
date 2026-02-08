@@ -11,7 +11,9 @@
             [app.tree :as tree]
             [app.components.tree :refer [PhylogeneticTree]]
             [app.components.metadata :refer [MetadataHeader MetadataTable]]
-            [app.components.toolbar :refer [Toolbar]]))
+            [app.components.toolbar :refer [Toolbar]]
+            [app.components.grid :refer [MetadataGrid]]
+            [app.components.resizable-panel :refer [ResizablePanel]]))
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -118,7 +120,7 @@
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
-           highlight-set highlight-color]}]
+           highlight-set highlight-color metadata-rows]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -134,7 +136,7 @@
                            100)
         svg-height      (+ tree-height 100)]
 
-    ($ :div {:style {:display "flex" :flex-direction "column" :height (str component-height-px "px")}}
+    ($ :div {:style {:display "flex" :flex-direction "column" :height "100vh" :padding-bottom "20px" :box-sizing "border-box"}}
 
        ;; Toolbar
        ($ Toolbar)
@@ -172,7 +174,16 @@
                                  :tips tips
                                  :start-offset metadata-start-x
                                  :y-scale y-mult
-                                 :col-spacing col-spacing})))))))
+                                 :col-spacing col-spacing}))))
+
+       ;; Metadata grid (AG-Grid) in resizable bottom panel
+       (when (seq active-cols)
+         ($ ResizablePanel {:initial-height 250
+                            :min-height 50
+                            :max-height 600}
+            ($ MetadataGrid {:metadata-rows metadata-rows
+                             :active-cols active-cols
+                             :tips tips}))))))
 
 (defui TreeContainer
   "Intermediate component that bridges state context and pure rendering.
@@ -211,4 +222,5 @@
                    :highlight-set highlight-set
                    :highlight-color highlight-color
                    :width-px width-px
+                   :metadata-rows metadata-rows
                    :component-height-px component-height-px})))
