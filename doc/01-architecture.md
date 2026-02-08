@@ -43,7 +43,7 @@ app                               (app.core)
     └── TreeContainer             (app.components.viewer) Reads context, derives positioned tree
         └── TreeViewer            (app.components.viewer) Layout shell — toolbar, viewport, SVG canvas
             ├── Toolbar           (app.components.toolbar) File loaders, sliders, toggles (reads from context)
-            ├── MetadataHeader    (app.components.metadata) Sticky HTML column header labels
+            ├── StickyHeader      (app.components.metadata) Sticky HTML column header labels
             ├── <svg>             (box-select: drag to lasso leaves)
             │   ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
             │   ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
@@ -116,7 +116,7 @@ app
  :highlights              {}     :set-highlights!              fn}
 ```
 
-Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
+Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `StickyHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
 
 **Note:** `set-selected-ids!` accepts both a direct value (`reset!`) and an updater function (`swap!`). This supports both the grid's `onSelectionChanged` (which passes a full replacement set) and the tree's `toggle-selection` (which passes a function that adds/removes a single leaf).
 
@@ -203,7 +203,7 @@ TSX components are **pure functions of their props** — they have no implicit d
 | `PhylogeneticTree` | ✓ (thin SVG wrapper) | `app.components.tree` | — |
 | `MetadataColumn` | ✓ | `app.components.metadata` | — |
 | `MetadataTable` | ✓ | `app.components.metadata` | — |
-| `MetadataHeader` | ✓ | `app.components.metadata` | — |
+| `StickyHeader` | ✓ | `app.components.metadata` | — |
 | `Toolbar` | ✓ (stateful) | `app.components.toolbar` | — (stays in CLJS) |
 | `SelectionBar` | ✓ (stateful) | `app.components.selection_bar` | — (stays in CLJS) |
 | `MetadataGrid` | ✓ (stateful) | `app.components.grid` | — (stays in CLJS) |
@@ -247,7 +247,7 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.csv` | CSV/TSV parsing with column metadata and data type detection |
 | `app.specs` | Spec definitions for data structures & functions |
 | `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
-| `app.components.metadata` | `MetadataHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |
+| `app.components.metadata` | `StickyHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |
 | `app.components.toolbar` | `Toolbar`, `read-file!` — user controls |
 | `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `PixelGrid` — top-level composition |
 | `app.components.grid` | `MetadataGrid` — AG-Grid table with bidirectional selection sync |

@@ -106,7 +106,7 @@
 (s/def ::tip-count nat-int?)
 (s/def ::tree-height number?)
 
-(s/def ::metadata-header-props
+(s/def ::sticky-header-props
   (s/keys :req-un [::columns ::start-offset]))
 
 (s/def ::tips (s/coll-of ::positioned-node))

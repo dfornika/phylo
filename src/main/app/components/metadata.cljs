@@ -1,17 +1,17 @@
 (ns app.components.metadata
   "SVG rendering components for metadata column overlays.
 
-  Contains [[MetadataHeader]], [[MetadataColumn]], and [[MetadataTable]] —
+  Contains [[StickyHeader]], [[MetadataColumn]], and [[MetadataTable]] —
   the components that render CSV/TSV metadata alongside the phylogenetic
   tree. All data arrives via props; these components do not access
   React context."
   (:require [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]))
 
-(defui MetadataHeader
+(defui StickyHeader
   "Renders a sticky header row displaying metadata column labels.
 
-  Props (see `::app.specs/metadata-header-props`):
+  Props (see `::app.specs/sticky-header-props`):
   - `:columns`      - seq of column config maps with `:key`, `:label`, `:width`
   - `:start-offset` - pixel offset where metadata columns begin"
   [{:keys [columns start-offset]}]

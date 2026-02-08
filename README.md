@@ -40,7 +40,7 @@ src/
       specs.cljs              # clojure.spec definitions for data structures & props
       components/
         tree.cljs             # Branch, TreeNode, PhylogeneticTree — SVG tree rendering
-        metadata.cljs         # MetadataHeader, MetadataColumn, MetadataTable
+        metadata.cljs         # StickyHeader, MetadataColumn, MetadataTable
         toolbar.cljs          # Toolbar, DateRangeFilter — user controls
         viewer.cljs           # TreeContainer, TreeViewer, ScaleGridlines, PixelGrid
   test/

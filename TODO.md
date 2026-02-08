@@ -26,7 +26,7 @@ while working on TypeScript counterparts. Preserve existing UIx components until
 
 **Components — remaining (pure rendering, no state/context):**
 - [ ] `MetadataColumn` — column of `<text>` SVG elements
-- [ ] `MetadataHeader` — sticky HTML header row
+- [ ] `StickyHeader` — sticky HTML header row
 
 **Components that stay in ClojureScript (state wiring, parsing, logic):**
 - `Toolbar`, `PhylogeneticTree`, `TreeContainer`, `app`, `AppStateProvider`

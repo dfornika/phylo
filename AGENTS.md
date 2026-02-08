@@ -65,12 +65,12 @@ doc/
 
 **Component hierarchy:**
 ```
-app → AppStateProvider → TreeContainer → PhylogeneticTree → Toolbar, MetadataHeader, TreeNode, MetadataColumn
+app → AppStateProvider → TreeContainer → PhylogeneticTree → Toolbar, StickyHeader, TreeNode, MetadataColumn
 ```
 
 - `Toolbar` and `TreeContainer` read state from context (no prop drilling)
 - `PhylogeneticTree` is a pure rendering component — all data arrives via props
-- Leaf components (`TreeNode`, `Branch`, `MetadataColumn`, `MetadataHeader`) receive computed data as props
+- Leaf components (`TreeNode`, `Branch`, `MetadataColumn`, `StickyHeader`) receive computed data as props
 
 ## UIx Specifics
 

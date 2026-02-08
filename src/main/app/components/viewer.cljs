@@ -10,7 +10,7 @@
             [app.layout :refer [LAYOUT]]
             [app.tree :as tree]
             [app.components.tree :refer [PhylogeneticTree]]
-            [app.components.metadata :refer [MetadataHeader MetadataTable]]
+            [app.components.metadata :refer [StickyHeader MetadataTable]]
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
@@ -246,7 +246,7 @@
        ;; Scrollable viewport
        ($ :div {:style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
           (when (seq active-cols)
-            ($ MetadataHeader {:columns active-cols :start-offset metadata-start-x}))
+            ($ StickyHeader {:columns active-cols :start-offset metadata-start-x}))
 
           ($ :svg {:id "phylo-svg"
                    :ref svg-ref
