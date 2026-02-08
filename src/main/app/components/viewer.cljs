@@ -14,7 +14,8 @@
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
-            [app.components.selection-bar :refer [SelectionBar]]))
+            [app.components.selection-bar :refer [SelectionBar]]
+            [clojure.string :as str]))
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -314,12 +315,68 @@
                              :on-selection-changed set-selected-ids!
                              :on-cell-edited handle-cell-edited}))))))
 
+(defui EmptyState
+  "Placeholder shown when no tree is loaded.
+  Displays a centered message with the app header and toolbar."
+  [{:keys [component-height-px]}]
+  ($ :div {:style {:display "flex"
+                   :flex-direction "column"
+                   :height (if component-height-px
+                             (str component-height-px "px")
+                             "100vh")
+                   :box-sizing "border-box"}}
+     ;; Header
+     ($ :header {:style {:height "48px"
+                         :display "flex"
+                         :align-items "center"
+                         :padding "0 20px"
+                         :background "#ffffff"
+                         :color "#003366"
+                         :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                         :flex-shrink "0"}}
+        ($ :h1 {:style {:font-size "18px"
+                        :font-weight 600
+                        :margin 0
+                        :letter-spacing "0.5px"}}
+           "Phylo Viewer"))
+     ;; Toolbar
+     ($ Toolbar)
+     ;; Empty-state message
+     ($ :div {:style {:flex "1"
+                      :display "flex"
+                      :flex-direction "column"
+                      :align-items "center"
+                      :justify-content "center"
+                      :color "#8893a2"
+                      :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"}}
+        ($ :svg {:width 80 :height 80 :viewBox "0 0 24 24"
+                 :fill "none" :stroke "#c0c8d4" :stroke-width 1.2
+                 :stroke-linecap "round" :stroke-linejoin "round"
+                 :style {:margin-bottom "16px"}}
+           ;; Simple tree/branch icon
+           ($ :line {:x1 12 :y1 20 :x2 12 :y2 10})
+           ($ :line {:x1 12 :y1 10 :x2 6  :y2 4})
+           ($ :line {:x1 12 :y1 10 :x2 18 :y2 4})
+           ($ :line {:x1 6  :y1 4  :x2 3  :y2 1})
+           ($ :line {:x1 6  :y1 4  :x2 9  :y2 1})
+           ($ :line {:x1 18 :y1 4  :x2 15 :y2 1})
+           ($ :line {:x1 18 :y1 4  :x2 21 :y2 1}))
+        ($ :p {:style {:font-size "16px"
+                       :font-weight 500
+                       :margin "0 0 6px"
+                       :color "#5a6577"}}
+           "No tree loaded")
+        ($ :p {:style {:font-size "13px"
+                       :margin 0}}
+           "Load a Newick file using the toolbar above."))))
+
 (defui TreeContainer
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
   the positioned tree via [[tree/prepare-tree]] (memoized), and passes
-  everything as props to [[TreeViewer]]."
+  everything as props to [[TreeViewer]].
+  When no Newick string is loaded, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers
@@ -328,23 +385,27 @@
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
-                                       (fn [] (tree/prepare-tree newick-str metadata-rows active-cols))
+                                       (fn [] (when (and (string? newick-str)
+                                                         (not (str/blank? newick-str)))
+                                                (tree/prepare-tree newick-str metadata-rows active-cols)))
                                        [newick-str metadata-rows active-cols])]
-    ($ TreeViewer {:tree tree
-                   :tips tips
-                   :max-depth max-depth
-                   :active-cols active-cols
-                   :x-mult x-mult
-                   :y-mult y-mult
-                   :show-internal-markers show-internal-markers
-                   :show-scale-gridlines show-scale-gridlines
-                   :show-pixel-grid show-pixel-grid
-                   :col-spacing col-spacing
-                   :highlights highlights
-                   :selected-ids selected-ids
-                   :width-px width-px
-                   :metadata-rows metadata-rows
-                   :set-active-cols! set-active-cols!
-                   :set-selected-ids! set-selected-ids!
-                   :set-metadata-rows! set-metadata-rows!
-                   :component-height-px component-height-px})))
+    (if tree
+      ($ TreeViewer {:tree tree
+                     :tips tips
+                     :max-depth max-depth
+                     :active-cols active-cols
+                     :x-mult x-mult
+                     :y-mult y-mult
+                     :show-internal-markers show-internal-markers
+                     :show-scale-gridlines show-scale-gridlines
+                     :show-pixel-grid show-pixel-grid
+                     :col-spacing col-spacing
+                     :highlights highlights
+                     :selected-ids selected-ids
+                     :width-px width-px
+                     :metadata-rows metadata-rows
+                     :set-active-cols! set-active-cols!
+                     :set-selected-ids! set-selected-ids!
+                     :set-metadata-rows! set-metadata-rows!
+                     :component-height-px component-height-px})
+      ($ EmptyState {:component-height-px component-height-px}))))

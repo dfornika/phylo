@@ -24,10 +24,9 @@
 ;; ===== Default Data =====
 
 (def default-tree
-  "A small demo Newick tree shown on initial load.
-  Four leaves (A-D) with branch lengths, providing a minimal
-  but visually meaningful example."
-  "((A:0.2,B:0.3):0.4,(C:0.5,D:0.1):0.3);")
+  "Initial value for the Newick tree string.
+  nil means no tree loaded; the UI shows a placeholder."
+  nil)
 
 ;; ===== State Atoms =====
 ;; `defonce` ensures these survive shadow-cljs hot reloads.
