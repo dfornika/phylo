@@ -152,7 +152,7 @@
                    ::show-scale-gridlines ::show-pixel-grid
                    ::col-spacing ::metadata-rows
                    ::width-px ::component-height-px
-                   ::set-active-cols! ::set-selected-ids!]
+                   ::set-active-cols! ::set-selected-ids! ::set-metadata-rows!]
           :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
@@ -174,13 +174,14 @@
 
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
+(s/def ::on-cell-edited fn?)
 (s/def ::on-cols-reordered fn?)
 (s/def ::on-selection-changed fn?)
 
 (s/def ::metadata-grid-props
   (s/keys :req-un [::metadata-rows ::active-cols ::tips
                    ::on-cols-reordered ::on-selection-changed]
-          :opt-un [::selected-ids]))
+          :opt-un [::selected-ids ::on-cell-edited]))
 
 ;; ResizablePanel — wrapper with draggable resize handle.
 

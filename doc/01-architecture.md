@@ -44,7 +44,7 @@ app                               (app.core)
         └── TreeViewer            (app.components.viewer) Layout shell — toolbar, viewport, SVG canvas
             ├── Toolbar           (app.components.toolbar) File loaders, sliders, toggles (reads from context)
             ├── MetadataHeader    (app.components.metadata) Sticky HTML column header labels
-            ├── <svg>
+            ├── <svg>             (box-select: drag to lasso leaves)
             │   ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
             │   ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
             │   ├── PhylogeneticTree  (app.components.tree) Thin wrapper — SVG group with padding transform
@@ -57,7 +57,7 @@ app                               (app.core)
             │       └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
             ├── SelectionBar      (app.components.selection_bar) Highlight color picker + assign/clear buttons
             └── ResizablePanel    (app.components.resizable_panel) Draggable resize handle wrapper
-                └── MetadataGrid  (app.components.grid) AG-Grid table with bidirectional selection sync
+                └── MetadataGrid  (app.components.grid) AG-Grid table with editing, selection sync
 ```
 
 ## State Management
@@ -129,6 +129,14 @@ Phylo uses a two-tier highlight model:
 2. **`highlights`** — a persistent `{leaf-name → CSS-color}` map representing committed highlight assignments. Users select leaves, pick a brush color via `SelectionBar`, and click "Assign" to stamp the current `highlight-color` onto every leaf in `selected-ids`.
 
 Tree nodes render a colored circle for highlighted leaves and a dashed selection ring for selected leaves. Both can be active simultaneously.
+
+### Cell Editing
+
+All metadata columns except the ID (first) column support inline editing in the AG-Grid table. Double-click a cell to enter edit mode; press Enter to commit or Escape to cancel. Edits flow back through `set-metadata-rows!`, which triggers `prepare-tree` to recompute enriched tips. Both the grid and the SVG metadata overlay update in sync.
+
+### Box Selection
+
+Users can click and drag on the SVG background to draw a selection rectangle (lasso). Leaf nodes whose marker positions fall inside the box are added to `selected-ids`. Hold Shift to add to the existing selection instead of replacing it. The selection rectangle uses `DOMPoint.matrixTransform(getScreenCTM().inverse())` for accurate SVG coordinate conversion even when the viewport is scrolled.
 
 ### Derived State
 

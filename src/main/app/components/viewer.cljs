@@ -96,6 +96,23 @@
                      :stroke-dasharray "4 4"
                      :stroke-width 1}))))))
 
+;; ---- Helpers for SVG coordinate conversion ----
+
+(defn- client->svg
+  "Convert client (screen) coordinates to SVG user-space coordinates.
+  Returns [svg-x svg-y] or nil if the SVG's CTM is unavailable."
+  [^js svg client-x client-y]
+  (when-let [^js ctm (.getScreenCTM svg)]
+    (let [^js pt (.matrixTransform
+                  (js/DOMPoint. client-x client-y)
+                  (.inverse ctm))]
+      [(.-x pt) (.-y pt)])))
+
+(def ^:private drag-threshold
+  "Minimum manhattan-distance (px) before a mousedown→move is treated as
+  a box-select rather than an accidental click."
+  5)
+
 (defui TreeViewer
   "Top-level visualization shell that combines toolbar, metadata header,
   and a scrollable SVG viewport containing the tree, gridlines, and
@@ -120,7 +137,7 @@
            show-internal-markers width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
            highlights selected-ids metadata-rows
-           set-active-cols! set-selected-ids!]}]
+           set-active-cols! set-selected-ids! set-metadata-rows!]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -145,7 +162,60 @@
                                  (if (contains? ids leaf-name)
                                    (disj ids leaf-name)
                                    (conj ids leaf-name))))))
-                          [set-selected-ids!])]
+                          [set-selected-ids!])
+
+        ;; Update a single cell in metadata-rows when the grid is edited
+        handle-cell-edited (uix/use-callback
+                            (fn [id-value field-kw new-value]
+                              (set-metadata-rows!
+                               (mapv (fn [row]
+                                       (if (= (get row (-> active-cols first :key)) id-value)
+                                         (assoc row field-kw new-value)
+                                         row))
+                                     metadata-rows)))
+                            [metadata-rows active-cols set-metadata-rows!])
+
+        ;; ---- Box (lasso) selection state ----
+        svg-ref                (uix/use-ref nil)
+        [drag-rect set-drag-rect!] (uix/use-state nil) ;; {:x1 :y1 :x2 :y2} during drag
+
+        handle-svg-mousedown
+        (fn [^js e]
+          (when (and (zero? (.-button e))
+                     ;; Don't hijack clicks on interactive leaf elements
+                     (not (#{"circle" "text"} (.-tagName (.-target e)))))
+            (when-let [^js svg @svg-ref]
+              (when-let [[sx sy] (client->svg svg (.-clientX e) (.-clientY e))]
+                (let [shift?  (.-shiftKey e)
+                      on-move (fn [^js me]
+                                (when-let [[mx my] (client->svg svg (.-clientX me) (.-clientY me))]
+                                  (set-drag-rect! {:x1 sx :y1 sy :x2 mx :y2 my})))
+                      on-up   (fn on-up-fn [^js ue]
+                                (when-let [[ex ey] (client->svg svg (.-clientX ue) (.-clientY ue))]
+                                  (let [dx (- ex sx)
+                                        dy (- ey sy)]
+                                    (when (> (+ (js/Math.abs dx) (js/Math.abs dy)) drag-threshold)
+                                      (let [min-x  (min sx ex) max-x (max sx ex)
+                                            min-y  (min sy ey) max-y (max sy ey)
+                                            pad-x  (:svg-padding-x LAYOUT)
+                                            pad-y  (:svg-padding-y LAYOUT)
+                                            hit-ids (into #{}
+                                                     (comp
+                                                      (filter (fn [tip]
+                                                                (let [lx (+ pad-x (* (:x tip) current-x-scale))
+                                                                      ly (+ pad-y (* (:y tip) y-mult))]
+                                                                  (and (<= min-x lx max-x)
+                                                                       (<= min-y ly max-y)))))
+                                                      (map :name))
+                                                     tips)]
+                                        (if shift?
+                                          (set-selected-ids! (fn [ids] (into (or ids #{}) hit-ids)))
+                                          (set-selected-ids! hit-ids))))))
+                                (set-drag-rect! nil)
+                                (.removeEventListener js/document "mousemove" on-move)
+                                (.removeEventListener js/document "mouseup" on-up-fn))]
+                  (.addEventListener js/document "mousemove" on-move)
+                  (.addEventListener js/document "mouseup" on-up))))))]
 
     ($ :div {:style {:display "flex"
                      :flex-direction "column"
@@ -163,7 +233,12 @@
           (when (seq active-cols)
             ($ MetadataHeader {:columns active-cols :start-offset metadata-start-x}))
 
-          ($ :svg {:id "phylo-svg" :width svg-width :height svg-height}
+          ($ :svg {:id "phylo-svg"
+                   :ref svg-ref
+                   :width svg-width
+                   :height svg-height
+                   :on-mouse-down handle-svg-mousedown
+                   :style {:cursor (when drag-rect "crosshair")}}
              ;; Debugging pixel grid
              (when show-pixel-grid
                ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
@@ -192,7 +267,20 @@
                                  :tips tips
                                  :start-offset metadata-start-x
                                  :y-scale y-mult
-                                 :col-spacing col-spacing}))))
+                                 :col-spacing col-spacing}))
+
+             ;; Drag-select rectangle overlay
+             (when drag-rect
+               (let [{:keys [x1 y1 x2 y2]} drag-rect]
+                 ($ :rect {:x (min x1 x2)
+                           :y (min y1 y2)
+                           :width  (js/Math.abs (- x2 x1))
+                           :height (js/Math.abs (- y2 y1))
+                           :fill "rgba(70, 130, 180, 0.15)"
+                           :stroke "rgba(70, 130, 180, 0.6)"
+                           :stroke-width 1
+                           :stroke-dasharray "4 2"
+                           :pointer-events "none"})))))
 
        ;; Selection bar (above the grid)
        (when (seq active-cols)
@@ -208,7 +296,8 @@
                              :tips tips
                              :selected-ids selected-ids
                              :on-cols-reordered set-active-cols!
-                             :on-selection-changed set-selected-ids!}))))))
+                             :on-selection-changed set-selected-ids!
+                             :on-cell-edited handle-cell-edited}))))))
 
 (defui TreeContainer
   "Intermediate component that bridges state context and pure rendering.
@@ -221,7 +310,7 @@
                 x-mult y-mult show-internal-markers
                 show-scale-gridlines show-pixel-grid
                 col-spacing highlights selected-ids
-                set-active-cols! set-selected-ids!]} (state/use-app-state)
+                set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
                                        (fn [] (tree/prepare-tree newick-str metadata-rows active-cols))
@@ -242,4 +331,5 @@
                    :metadata-rows metadata-rows
                    :set-active-cols! set-active-cols!
                    :set-selected-ids! set-selected-ids!
+                   :set-metadata-rows! set-metadata-rows!
                    :component-height-px component-height-px})))

@@ -3,8 +3,8 @@
 
   Renders an interactive data grid below the tree visualization,
   populated from the same metadata loaded via the toolbar.
-  Provides sorting, column-level filtering, and row selection
-  out of the box.
+  Provides sorting, column-level filtering, row selection,
+  and inline cell editing out of the box.
 
   Rows default to tree traversal order (matching the SVG tip order).
 
@@ -15,7 +15,12 @@
   `active-cols`, which in turn reorders the SVG metadata columns.
 
   Row selection is bidirectional: clicking tree leaves updates grid
-  checkboxes, and clicking grid checkboxes updates tree markers."
+  checkboxes, and clicking grid checkboxes updates tree markers.
+
+  All data columns (except the ID column) are editable. Edits are
+  propagated back to `metadata-rows` via the `:on-cell-edited`
+  callback, which causes both the grid and the SVG metadata overlay
+  to update in sync."
   (:require [uix.core :as uix :refer [defui $]]
             [ag-grid-community :refer [ModuleRegistry AllCommunityModule themeBalham]]
             [ag-grid-react :refer [AgGridReact]]))
@@ -62,16 +67,19 @@
   into AG-Grid columnDefs format.
 
   Maps the detected column type to the appropriate AG-Grid filter
-  and value handling. Enables sorting on every column."
+  and value handling. Enables sorting on every column. All columns
+  except the first (ID) column are editable."
   [active-cols]
-  (mapv (fn [{:keys [key label type]}]
-          (let [field-name (name key)]
-            (merge {:field field-name
-                    :headerName label
-                    :sortable true
-                    :resizable true}
-                   (col-def-for-type type field-name))))
-        active-cols))
+  (let [id-field (some-> active-cols first :key name)]
+    (mapv (fn [{:keys [key label type]}]
+            (let [field-name (name key)]
+              (merge {:field field-name
+                      :headerName label
+                      :sortable true
+                      :resizable true
+                      :editable (not= field-name id-field)}
+                     (col-def-for-type type field-name))))
+          active-cols)))
 
 (defn- tree-ordered-rows
   "Reorders metadata-rows to match the tree tip traversal order.
@@ -111,6 +119,18 @@
           ids (into #{} (map #(aget % id-field)) selected-rows)]
       (on-selection-changed ids))))
 
+(defn- handle-cell-value-changed
+  "Propagates an AG-Grid cell edit to the `on-cell-edited` callback.
+  Extracts the row ID, field keyword, and new string value from the
+  AG-Grid event params."
+  [id-field on-cell-edited ^js params]
+  (let [data (.-data params)
+        field (.. params -colDef -field)
+        new-value (.-newValue params)
+        id-value (aget data id-field)]
+    (when (and on-cell-edited id-value field)
+      (on-cell-edited id-value (keyword field) (str (or new-value ""))))))
+
 (defui MetadataGrid
   "Renders an AG-Grid table from metadata rows and column configs.
 
@@ -123,6 +143,11 @@
   - Text columns get text contains/equals filters
   - Numeric columns get greater-than/less-than/range filters
   - Date columns get a date picker with range filtering
+
+  All data columns (except the ID/first column) support inline editing.
+  Double-click a cell to edit; press Enter to commit or Escape to cancel.
+  Edits propagate back through `:on-cell-edited` to update both the
+  grid and the SVG metadata overlay.
 
   Row selection is bidirectional:
   - Clicking grid checkboxes updates `selected-ids` in app state
@@ -138,9 +163,10 @@
   - `:tips`                   - enriched leaf nodes in tree display order
   - `:selected-ids`           - current set of selected ID strings (for sync)
   - `:on-cols-reordered`      - callback receiving reordered active-cols vector
-  - `:on-selection-changed`   - callback receiving set of selected ID strings"
+  - `:on-selection-changed`   - callback receiving set of selected ID strings
+  - `:on-cell-edited`         - callback `(fn [id-value field-kw new-value-str])`"
   [{:keys [metadata-rows active-cols tips selected-ids
-           on-cols-reordered on-selection-changed]}]
+           on-cols-reordered on-selection-changed on-cell-edited]}]
   (let [id-key (-> active-cols first :key)
         id-field (some-> id-key name)
         ordered-rows (uix/use-memo
@@ -157,6 +183,13 @@
                                         :checkboxes true
                                         :headerCheckbox true :selectAll "filtered"}))
                        [])
+        ;; Stable row identity so AG-Grid can diff rowData updates
+        ;; without resetting scroll position or edit state.
+        get-row-id (uix/use-callback
+                    (fn [^js params]
+                      (when id-field
+                        (aget (.-data params) id-field)))
+                    [id-field])
         ;; Ref to the AG-Grid API (set on onGridReady)
         grid-api-ref (uix/use-ref nil)
         ;; Guard ref to prevent circular updates:
@@ -192,6 +225,7 @@
              :columnDefs col-defs
              :theme themeBalham
              :rowSelection row-selection
+             :getRowId get-row-id
              :onGridReady (fn [params]
                             (reset! grid-api-ref (.-api params)))
              :onFirstDataRendered (fn [params]
@@ -200,4 +234,7 @@
                               (sync-col-order! active-cols on-cols-reordered params))
              :onSelectionChanged (fn [params]
                                    (when (and id-field on-selection-changed)
-                                     (sync-selection! id-field on-selection-changed syncing-ref params)))})))))
+                                     (sync-selection! id-field on-selection-changed syncing-ref params)))
+             :onCellValueChanged (fn [params]
+                                   (when (and id-field on-cell-edited)
+                                     (handle-cell-value-changed id-field on-cell-edited params)))})))))
