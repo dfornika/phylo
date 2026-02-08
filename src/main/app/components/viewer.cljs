@@ -225,6 +225,21 @@
                      :padding-bottom "20px"
                      :box-sizing "border-box"}}
 
+       ;; Header
+       ($ :header {:style {:height "48px"
+                           :display "flex"
+                           :align-items "center"
+                           :padding "0 20px"
+                           :background "#ffffff"
+                           :color "#003366"
+                           :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+                           :flex-shrink "0"}}
+          ($ :h1 {:style {:font-size "18px"
+                          :font-weight 600
+                          :margin 0
+                          :letter-spacing "0.5px"}}
+             "Phylo Viewer"))
+
        ;; Toolbar
        ($ Toolbar)
 

@@ -80,6 +80,30 @@
           blob       (js/Blob. #js [svg-str] #js {:type "image/svg+xml;charset=utf-8"})]
       (save-blob! blob "phylo-tree.svg"))))
 
+;; ===== Style constants =====
+
+(def ^:private toolbar-font
+  "System sans-serif font stack for the toolbar."
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif")
+
+(def ^:private navy "#003366")
+
+(def ^:private label-style
+  {:font-family toolbar-font
+   :font-size "13px"
+   :font-weight 600
+   :color navy
+   :white-space "nowrap"})
+
+(def ^:private section-style
+  "Shared style for visually grouped toolbar sections."
+  {:display "flex"
+   :align-items "center"
+   :gap "8px"
+   :padding "6px 12px"
+   :background "#f0f2f5"
+   :border-radius "6px"})
+
 ;; ===== Main Toolbar =====
 
 (defui Toolbar
@@ -96,77 +120,91 @@
                 show-pixel-grid set-show-pixel-grid!
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
-    ($ :div {:style {:padding "12px"
-                     :background "#f8f9fa"
-                     :border-bottom "1px solid #ddd"
+    ($ :div {:style {:padding "10px 16px"
+                     :background "#ffffff"
+                     :border-bottom "2px solid #e2e6ea"
                      :display "flex"
-                     :gap (str (:toolbar-gap LAYOUT) "px")
+                     :gap "12px"
                      :align-items "center"
-                     :flex-wrap "wrap"}}
-       ($ :div {:style {:display "flex" :gap "10px" :padding "10px" :background "#eee" :border-radius "4px"}}
-          ($ :div
-             ($ :label {:style {:font-weight "bold"}} "Load Tree (Newick): ")
+                     :flex-wrap "wrap"
+                     :font-family toolbar-font
+                     :color navy}}
+
+       ;; ── File loaders ──
+       ($ :div {:style (merge section-style {:gap "16px"})}
+          ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+             ($ :label {:style label-style} "Tree")
              ($ :input {:type "file"
                         :accept ".nwk,.newick,.tree,.txt"
+                        :style {:font-family toolbar-font :font-size "12px" :color navy}
                         :on-change #(read-file! % (fn [content]
                                                     (set-newick-str! (.trim content))))}))
-          ($ :div
-             ($ :label {:style {:font-weight "bold"}} "Load Metadata (CSV/TSV): ")
+          ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+             ($ :label {:style label-style} "Metadata")
              ($ :input {:type "file"
                         :accept ".csv,.tsv,.txt"
+                        :style {:font-family toolbar-font :font-size "12px" :color navy}
                         :on-change #(read-file! % (fn [content]
                                                     (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
                                                       (set-metadata-rows! data)
                                                       (set-active-cols! headers))))})))
-       ($ :button {:on-click (fn [_] (export-svg!))
-                   :style {:font-weight "bold"
-                           :padding "8px 16px"
-                           :cursor "pointer"
-                           :background "#fff"
-                           :border "1px solid #ccc"
-                           :border-radius "4px"}}
-          "\u21E9 Export SVG")
-       ($ :div
-          ($ :label {:style {:font-weight "bold"}} "Tree Width: ")
+
+       ;; ── Sliders ──
+       ($ :div {:style section-style}
+          ($ :label {:style label-style} "Tree Width")
           ($ :input {:type "range"
-                     :min 0.05
-                     :max 1.5
-                     :step 0.01
+                     :min 0.05 :max 1.5 :step 0.01
                      :value x-mult
+                     :style {:width "90px" :accent-color navy}
                      :on-change #(set-x-mult! (js/parseFloat (.. % -target -value)))}))
-       ($ :div
-          ($ :label {:style {:font-weight "bold"}} "Tree Height: ")
+
+       ($ :div {:style section-style}
+          ($ :label {:style label-style} "Tree Height")
           ($ :input {:type "range"
-                     :min 10
-                     :max 100
+                     :min 10 :max 100
                      :value y-mult
+                     :style {:width "90px" :accent-color navy}
                      :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
-       ($ :div
-          ($ :label {:style {:font-weight "bold"}} "Column Spacing: ")
+
+       ($ :div {:style section-style}
+          ($ :label {:style label-style} "Metadata Column Gap")
           ($ :input {:type "range"
-                     :min 0
-                     :max 50
-                     :step 1
+                     :min 0 :max 50 :step 1
                      :value col-spacing
+                     :style {:width "70px" :accent-color navy}
                      :on-change #(set-col-spacing! (js/parseInt (.. % -target -value) 10))}))
-       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
-          ($ :input {:type "checkbox"
-                     :id "show-internal-markers-checkbox"
-                     :checked show-internal-markers
-                     :on-change #(set-show-internal-markers! (not show-internal-markers))})
-          ($ :label {:style {:font-weight "bold"
-                             :htmlFor "show-internal-markers-checkbox"}} "Show internal node markers"))
-       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
-          ($ :input {:type "checkbox"
-                     :id "show-scale-gridlines-checkbox"
-                     :checked show-scale-gridlines
-                     :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
-          ($ :label {:style {:font-weight "bold"
-                             :htmlFor "show-scale-gridlines-checkbox"}} "Show scale gridlines"))
-       ($ :div {:style {:display "flex" :align-items "center" :gap "5px"}}
-          ($ :input {:type "checkbox"
-                     :id "show-pixel-grid-checkbox"
-                     :checked show-pixel-grid
-                     :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
-          ($ :label {:style {:font-weight "bold"
-                             :htmlFor "show-pixel-grid-checkbox"}} "Show pixel grid")))))
+
+       ;; ── Toggles ──
+       ($ :div {:style (merge section-style {:gap "14px"})}
+          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+             ($ :input {:type "checkbox"
+                        :checked show-internal-markers
+                        :style {:accent-color navy}
+                        :on-change #(set-show-internal-markers! (not show-internal-markers))})
+             "Internal Node Markers")
+          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+             ($ :input {:type "checkbox"
+                        :checked show-scale-gridlines
+                        :style {:accent-color navy}
+                        :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
+             "Scale Gridlines")
+          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+             ($ :input {:type "checkbox"
+                        :checked show-pixel-grid
+                        :style {:accent-color navy}
+                        :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
+             "Pixel Grid"))
+       ;; ── Export ──
+       ($ :button {:on-click (fn [_] (export-svg!))
+                   :style {:font-family toolbar-font
+                           :font-size "13px"
+                           :font-weight 600
+                           :color navy
+                           :padding "6px 14px"
+                           :cursor "pointer"
+                           :background "#f0f2f5"
+                           :border (str "1px solid " navy)
+                           :border-radius "6px"
+                           :transition "background 0.15s"
+                           :margin-left "auto"}}
+          "\u21E9 Export SVG"))))
