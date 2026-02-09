@@ -23,7 +23,7 @@
   - `:max-height`     - maximum panel height (default 600)
   - `:children`       - child elements to render inside the panel"
   [{:keys [initial-height min-height max-height children]
-    :or {initial-height 250 min-height 100 max-height 600}}]
+    :or {initial-height 250 min-height 100 max-height 800}}]
   (let [[panel-height set-panel-height!] (uix/use-state initial-height)
         dragging-ref (uix/use-ref false)
         start-y-ref (uix/use-ref 0)

@@ -230,6 +230,7 @@
        ($ :header {:style {:height "48px"
                            :display "flex"
                            :align-items "center"
+                           :justify-content "space-between"
                            :padding "0 20px"
                            :background "#ffffff"
                            :color "#003366"
@@ -239,7 +240,9 @@
                           :font-weight 600
                           :margin 0
                           :letter-spacing "0.5px"}}
-             "Phylo Viewer"))
+             "Phylo Viewer")
+          ($ :img {:src "images/logo.svg" :height "32px"})
+          )
 
        ;; Toolbar
        ($ Toolbar)
@@ -305,8 +308,8 @@
        ;; Metadata grid (AG-Grid) in resizable bottom panel
        (when (seq active-cols)
          ($ ResizablePanel {:initial-height 250
-                            :min-height 50
-                            :max-height 600}
+                            :min-height 0
+                            :max-height 1200}
             ($ MetadataGrid {:metadata-rows metadata-rows
                              :active-cols active-cols
                              :tips tips
@@ -319,6 +322,7 @@
   "Placeholder shown when no tree is loaded.
   Displays a centered message with the app header and toolbar."
   [{:keys [component-height-px]}]
+  ;; TODO: eliminate redundancy between this component and the normal UI
   ($ :div {:style {:display "flex"
                    :flex-direction "column"
                    :height (if component-height-px
@@ -329,6 +333,7 @@
      ($ :header {:style {:height "48px"
                          :display "flex"
                          :align-items "center"
+                         :justify-content "space-between"
                          :padding "0 20px"
                          :background "#ffffff"
                          :color "#003366"
@@ -338,7 +343,8 @@
                         :font-weight 600
                         :margin 0
                         :letter-spacing "0.5px"}}
-           "Phylo Viewer"))
+           "Phylo Viewer")
+        ($ :img {:src "images/logo.svg" :height "32px"}))
      ;; Toolbar
      ($ Toolbar)
      ;; Empty-state message
@@ -349,6 +355,8 @@
                       :justify-content "center"
                       :color "#8893a2"
                       :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"}}
+        
+        ;; TODO: factor this out into a component
         ($ :svg {:width 80 :height 80 :viewBox "0 0 24 24"
                  :fill "none" :stroke "#c0c8d4" :stroke-width 1.2
                  :stroke-linecap "round" :stroke-linejoin "round"
