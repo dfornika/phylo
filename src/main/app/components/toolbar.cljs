@@ -98,7 +98,9 @@
                            :accept ".nwk,.newick,.tree,.txt"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
                            :on-change #(read-file! % (fn [content]
-                                                       (set-newick-str! (.trim content))))}))
+                                                       (set-newick-str! (.trim content))
+                                                       (set-metadata-rows! [])
+                                                       (set-active-cols! [])))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Metadata")
                 ($ :input {:type "file"
@@ -118,10 +120,13 @@
                                                        (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
                                                          (when newick-str
                                                            (set-newick-str! (str/trim newick-str)))
-                                                         (when metadata-raw
+                                                         (if metadata-raw
                                                            (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
                                                              (set-metadata-rows! data)
-                                                             (set-active-cols! headers))))))}))
+                                                             (set-active-cols! headers))
+                                                           (do
+                                                             (set-metadata-rows! [])
+                                                             (set-active-cols! []))))))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Nextstrain JSON")
                 ($ :input {:type "file"
@@ -130,7 +135,9 @@
                            :on-change #(read-file! % (fn [content]
                                                        (let [{:keys [newick-str]} (nextstrain/parse-nextstrain-json content)]
                                                          (when newick-str
-                                                           (set-newick-str! (str/trim newick-str))))))}))))
+                                                           (set-newick-str! (str/trim newick-str))
+                                                           (set-metadata-rows! [])
+                                                           (set-active-cols! [])))))}))))
 
        ;; ── Controls ──
        ($ :div {:style group-style}
