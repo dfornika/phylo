@@ -191,7 +191,7 @@ The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 | `:svg-padding-y` | 40px | Vertical SVG padding |
 | `:header-height` | 36px | Metadata header bar height |
 | `:label-buffer` | 150px | Space for tip labels |
-| `:metadata-gap` | 40px | Gap between labels and metadata |
+| `:metadata-gap` | 20px | Gap between labels and metadata |
 | `:default-col-width` | 120px | Default metadata column width |
 | `:toolbar-gap` | 20px | Toolbar control spacing |
 | `:node-marker-radius` | 3px | Radius of circular SVG node markers |
