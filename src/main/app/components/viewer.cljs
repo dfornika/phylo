@@ -243,7 +243,7 @@
                    current-panel-height (if collapsed? 0 (or current-height 0))
                    next-max (max 0 (+ current-panel-height (- viewport-height sticky-height)))]
                (set-panel-max-height! next-max))))
-         [set-panel-max-height!])
+         [])
 
         ;; Register resize listener once on mount
         _panel-max-effect
@@ -254,7 +254,7 @@
              (.addEventListener js/window "resize" on-resize)
              (fn []
                (.removeEventListener js/window "resize" on-resize))))
-         [])
+         [update-panel-max-height])
 
         ;; Re-calculate when active-cols changes (affects layout)
         _recalc-on-cols-change
