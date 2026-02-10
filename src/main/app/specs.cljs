@@ -50,15 +50,18 @@
 ;; ===== App State Context =====
 
 (s/def ::newick-str (s/nilable string?))
-(s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
-(s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
-(s/def ::x-mult number?)
-(s/def ::y-mult number?)
-
 (s/def ::set-newick-str! fn?)
+
+(s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
 (s/def ::set-metadata-rows! fn?)
+
+(s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
 (s/def ::set-active-cols! fn?)
+
+(s/def ::x-mult number?)
 (s/def ::set-x-mult! fn?)
+
+(s/def ::y-mult number?)
 (s/def ::set-y-mult! fn?)
 
 (s/def ::show-internal-markers boolean?)
@@ -88,6 +91,15 @@
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
 
+(s/def ::metadata-panel-collapsed boolean?)
+(s/def ::set-metadata-panel-collapsed! fn?)
+
+(s/def ::metadata-panel-height number?)
+(s/def ::set-metadata-panel-height! fn?)
+
+(s/def ::metadata-panel-last-drag-height number?)
+(s/def ::set-metadata-panel-last-drag-height! fn?)
+
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
@@ -103,7 +115,10 @@
                    ::col-spacing ::set-col-spacing!
                    ::highlight-color ::set-highlight-color!
                    ::selected-ids ::set-selected-ids!
-                   ::highlights ::set-highlights!]))
+                   ::highlights ::set-highlights!
+                   ::metadata-panel-collapsed ::set-metadata-panel-collapsed!
+                   ::metadata-panel-height ::set-metadata-panel-height!
+                   ::metadata-panel-last-drag-height ::set-metadata-panel-last-drag-height!]))
 
 ;; ===== Component Props =====
 
