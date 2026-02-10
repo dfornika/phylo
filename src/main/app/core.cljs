@@ -52,7 +52,7 @@
     (uix.dom/render-root ($ app) root)))
 
 (defn ^:export init
-  "Exported entry point called by shadow-cljs on page load." 
+  "Exported entry point called by shadow-cljs on page load."
   []
   (apply-embedded-export!)
   (render))
