@@ -78,7 +78,8 @@
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-newick-str!
-                set-metadata-rows! set-active-cols!]} (state/use-app-state)]
+                set-metadata-rows! set-active-cols!
+                set-selected-ids! set-highlights!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
@@ -100,7 +101,9 @@
                            :on-change #(read-file! % (fn [content]
                                                        (set-newick-str! (.trim content))
                                                        (set-metadata-rows! [])
-                                                       (set-active-cols! [])))}))
+                                                       (set-active-cols! [])
+                                                       (set-selected-ids! #{})
+                                                       (set-highlights! {})))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Metadata")
                 ($ :input {:type "file"
@@ -126,7 +129,9 @@
                                                              (set-active-cols! headers))
                                                            (do
                                                              (set-metadata-rows! [])
-                                                             (set-active-cols! []))))))}))
+                                                             (set-active-cols! [])))
+                                                         (set-selected-ids! #{})
+                                                         (set-highlights! {}))))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Nextstrain JSON")
                 ($ :input {:type "file"
@@ -137,7 +142,9 @@
                                                          (when newick-str
                                                            (set-newick-str! (str/trim newick-str))
                                                            (set-metadata-rows! [])
-                                                           (set-active-cols! [])))))}))))
+                                                           (set-active-cols! [])
+                                                           (set-selected-ids! #{})
+                                                           (set-highlights! {})))))}))))
 
        ;; ── Controls ──
        ($ :div {:style group-style}
