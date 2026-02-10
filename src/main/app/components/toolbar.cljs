@@ -76,7 +76,7 @@
                 show-pixel-grid set-show-pixel-grid!
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
-    ($ :div {:style {:padding "8px 12px"
+    ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
                      :display "flex"
