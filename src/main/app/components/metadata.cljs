@@ -22,7 +22,8 @@
   [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin]}]
   (let [scale-width (max 0 (- start-offset (:svg-padding-x LAYOUT)))
         {:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
-                                                              :x-scale x-scale})]
+                                                              :x-scale x-scale
+                                                              :origin scale-origin})]
     ($ :div {:style {:position "sticky"
                      :top 0
                      :z-index 10

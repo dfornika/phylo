@@ -68,7 +68,8 @@
   "Renders a solid scale bar with tick marks and labels."
   [{:keys [max-depth x-scale scale-origin]}]
   (let [{:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
-                                                              :x-scale x-scale})]
+                                                              :x-scale x-scale
+                                                              :origin scale-origin})]
     ($ :g
        ($ :line {:x1 0 :y1 -18
                  :x2 (* max-depth x-scale) :y2 -18
@@ -99,30 +100,23 @@
   metadata in the SVG, inside the translated coordinate group.
 
   Props (see `::app.specs/scale-gridlines-props`):
-  - `:max-depth`   - maximum x-coordinate in the tree
-  - `:x-scale`     - horizontal scaling factor (pixels per branch-length unit)
-  - `:tree-height` - total height in pixels to span"
-  [{:keys [max-depth x-scale tree-height]}]
-  (if (pos? max-depth)
-    (let [unit  (tree/calculate-scale-unit (/ max-depth 5))
-          ticks (tree/get-ticks max-depth unit)]
-      ($ :g
-         (for [t ticks]
-           ($ :line {:key (str "grid-" t)
-                     :x1 (* t x-scale) :y1 0
-                     :x2 (* t x-scale) :y2 tree-height
-                     :stroke "#eee"
-                     :stroke-dasharray "4 4"
-                     :stroke-width 1}))))
-    (let [ticks [0]]
-      ($ :g
-         (for [t ticks]
-           ($ :line {:key (str "grid-" t)
-                     :x1 (* t x-scale) :y1 0
-                     :x2 (* t x-scale) :y2 tree-height
-                     :stroke "#eee"
-                     :stroke-dasharray "4 4"
-                     :stroke-width 1}))))))
+  - `:max-depth`    - maximum x-coordinate in the tree
+  - `:x-scale`      - horizontal scaling factor (pixels per branch-length unit)
+  - `:tree-height`  - total height in pixels to span
+  - `:scale-origin` - `:tips` or `:root` for tick placement"
+  [{:keys [max-depth x-scale tree-height scale-origin]}]
+  (let [{:keys [base-ticks]} (scale/scale-ticks {:max-depth max-depth
+                                                 :x-scale x-scale
+                                                 :origin scale-origin})
+        ticks (or (seq base-ticks) [0])]
+    ($ :g
+       (for [t ticks]
+         ($ :line {:key (str "grid-" t)
+                   :x1 (* t x-scale) :y1 0
+                   :x2 (* t x-scale) :y2 tree-height
+                   :stroke "#eee"
+                   :stroke-dasharray "4 4"
+                   :stroke-width 1})))))
 
 (defn- asset-src
   "Returns a data URL for bundled assets when present, falling back to the path."
@@ -312,7 +306,8 @@
                ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
                   ($ ScaleGridlines {:max-depth max-depth
                                      :x-scale current-x-scale
-                                     :tree-height tree-height})))
+                                     :tree-height tree-height
+                                     :scale-origin scale-origin})))
 
              ;; The tree itself
              ($ PhylogeneticTree {:tree tree
