@@ -34,7 +34,11 @@
     (when-let [el (js/document.getElementById "phylo-export-state")]
       (let [raw (.-textContent el)]
         (when (and raw (not= raw ""))
-          (reader/read-string raw))))))
+          (try
+            (reader/read-string raw)
+            (catch :default err
+              (js/console.error "Failed to parse embedded export state EDN:" err)
+              nil)))))))
 
 (defn- apply-embedded-export!
   "Applies an embedded export payload into app state, if found." 
