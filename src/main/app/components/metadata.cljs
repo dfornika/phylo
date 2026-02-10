@@ -38,7 +38,7 @@
                      :font-weight "bold"}}
        ($ :svg {:style {:position "absolute"
                         :left (str (:svg-padding-x LAYOUT) "px")
-                        :top "4px"
+                        :top "10px"
                         :height "16px"
                         :width (str scale-width "px")
                         :pointer-events "none"}}
