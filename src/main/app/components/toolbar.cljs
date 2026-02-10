@@ -116,16 +116,7 @@
                                                          (when newick-str
                                                            (set-newick-str! (str/trim newick-str)))
                                                          (when metadata-raw
-                                                           (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))
-                                                                 id-key (-> headers first :key)
-                                                                 data (if id-key
-                                                                        (mapv (fn [row]
-                                                                                (let [v (get row id-key)]
-                                                                                  (if (string? v)
-                                                                                    (assoc row id-key (str/trim v))
-                                                                                    row)))
-                                                                              data)
-                                                                        data)]
+                                                           (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
                                                              (set-metadata-rows! data)
                                                              (set-active-cols! headers))))))}))))
 
