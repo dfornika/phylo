@@ -165,7 +165,10 @@
                    ::y-scale
                    ::show-internal-markers 
                    ::marker-radius 
-                   ::marker-fill]
+                   ::marker-fill
+                   ::show-branch-lengths 
+                   ::scale-origin 
+                   ::max-depth]
           :opt-un [::highlights 
                    ::selected-ids 
                    ::on-toggle-selection]))
@@ -201,7 +204,10 @@
                    ::y-scale
                    ::show-internal-markers
                    ::marker-radius 
-                   ::marker-fill]
+                   ::marker-fill
+                   ::show-branch-lengths 
+                   ::scale-origin
+                   ::max-depth]
           :opt-un [::highlights 
                    ::selected-ids 
                    ::on-toggle-selection]))
