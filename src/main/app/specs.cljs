@@ -115,7 +115,11 @@
 (s/def ::tree-height number?)
 
 (s/def ::sticky-header-props
-  (s/keys :req-un [::columns ::start-offset]))
+  (s/keys :req-un [::columns 
+                   ::start-offset
+                   ::max-depth
+                   ::x-scale 
+                   ::scale-origin]))
 
 (s/def ::tips (s/coll-of ::positioned-node))
 (s/def ::x-offset number?)
