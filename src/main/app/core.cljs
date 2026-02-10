@@ -28,7 +28,7 @@
       (uix.dom/create-root el))))
 
 (defn- read-embedded-export
-  "Reads EDN-encoded export payload from a script tag, if present." 
+  "Reads EDN-encoded export payload from a script tag, if present."
   []
   (when (exists? js/document)
     (when-let [el (js/document.getElementById "phylo-export-state")]
@@ -41,7 +41,7 @@
               nil)))))))
 
 (defn- apply-embedded-export!
-  "Applies an embedded export payload into app state, if found." 
+  "Applies an embedded export payload into app state, if found."
   []
   (when-let [payload (read-embedded-export)]
     (try
