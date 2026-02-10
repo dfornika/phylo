@@ -125,7 +125,13 @@
 (s/def ::col-width number?)
 
 (s/def ::metadata-column-props
-  (s/keys :req-un [::tips ::x-offset ::y-scale ::column-key ::column-label ::cell-height ::col-width]))
+  (s/keys :req-un [::tips 
+                   ::x-offset 
+                   ::y-scale 
+                   ::column-key 
+                   ::column-label 
+                   ::cell-height 
+                   ::col-width]))
 
 (s/def ::parent-x number?)
 (s/def ::parent-y number?)
@@ -133,7 +139,12 @@
 (s/def ::line-width number?)
 
 (s/def ::branch-props
-  (s/keys :req-un [::x ::y ::parent-x ::parent-y ::line-color ::line-width]))
+  (s/keys :req-un [::x 
+                   ::y 
+                   ::parent-x 
+                   ::parent-y 
+                   ::line-color 
+                   ::line-width]))
 
 (s/def ::node ::positioned-node)
 (s/def ::x-scale number?)
@@ -143,9 +154,17 @@
 (s/def ::on-toggle-selection (s/nilable fn?))
 
 (s/def ::tree-node-props
-  (s/keys :req-un [::node ::parent-x ::parent-y ::x-scale ::y-scale
-                   ::show-internal-markers ::marker-radius ::marker-fill]
-          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
+  (s/keys :req-un [::node 
+                   ::parent-x 
+                   ::parent-y 
+                   ::x-scale 
+                   ::y-scale
+                   ::show-internal-markers 
+                   ::marker-radius 
+                   ::marker-fill]
+          :opt-un [::highlights 
+                   ::selected-ids 
+                   ::on-toggle-selection]))
 
 ;; Toolbar and SelectionBar read from context — no props spec needed.
 
@@ -155,30 +174,51 @@
 (s/def ::component-height-px number?)
 
 (s/def ::tree-viewer-props
-  (s/keys :req-un [::tree ::tips ::max-depth ::active-cols
-                   ::x-mult ::y-mult ::show-internal-markers
-                   ::show-scale-gridlines ::show-pixel-grid
-                   ::col-spacing ::metadata-rows
-                   ::width-px ::component-height-px
-                   ::set-active-cols! ::set-selected-ids! ::set-metadata-rows!]
+  (s/keys :req-un [::tree 
+                   ::tips 
+                   ::max-depth 
+                   ::x-mult ::y-mult 
+                   ::show-internal-markers
+                   ::show-scale-gridlines 
+                   ::show-pixel-grid
+                   ::show-branch-lengths
+                   ::scale-origin
+                   ::col-spacing 
+                   ::width-px
+                   ::component-height-px
+                   ::active-cols ::set-active-cols!
+                   ::metadata-rows ::set-metadata-rows!
+                   ::set-selected-ids! ]
           :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
-  (s/keys :req-un [::tree ::x-scale ::y-scale
+  (s/keys :req-un [::tree 
+                   ::x-scale 
+                   ::y-scale
                    ::show-internal-markers
-                   ::marker-radius ::marker-fill]
-          :opt-un [::highlights ::selected-ids ::on-toggle-selection]))
+                   ::marker-radius 
+                   ::marker-fill]
+          :opt-un [::highlights 
+                   ::selected-ids 
+                   ::on-toggle-selection]))
 
 (s/def ::scale-gridlines-props
-  (s/keys :req-un [::max-depth ::x-scale ::tree-height]))
+  (s/keys :req-un [::max-depth 
+                   ::x-scale 
+                   ::tree-height]))
 
 (s/def ::metadata-table-props
-  (s/keys :req-un [::active-cols ::tips ::start-offset ::y-scale ::col-spacing]))
+  (s/keys :req-un [::active-cols 
+                   ::tips 
+                   ::start-offset 
+                   ::y-scale 
+                   ::col-spacing]))
 
 ;; TreeContainer receives only layout dimensions.
 
 (s/def ::tree-container-props
-  (s/keys :req-un [::width-px ::component-height-px]))
+  (s/keys :req-un [::width-px 
+                   ::component-height-px]))
 
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
@@ -187,9 +227,13 @@
 (s/def ::on-selection-changed fn?)
 
 (s/def ::metadata-grid-props
-  (s/keys :req-un [::metadata-rows ::active-cols ::tips
-                   ::on-cols-reordered ::on-selection-changed]
-          :opt-un [::selected-ids ::on-cell-edited]))
+  (s/keys :req-un [::metadata-rows 
+                   ::active-cols 
+                   ::tips
+                   ::on-cols-reordered 
+                   ::on-selection-changed]
+          :opt-un [::selected-ids 
+                   ::on-cell-edited]))
 
 ;; ResizablePanel — wrapper with draggable resize handle.
 
@@ -198,7 +242,9 @@
 (s/def ::max-height number?)
 
 (s/def ::resizable-panel-props
-  (s/keys :req-un [::initial-height ::min-height ::max-height]))
+  (s/keys :req-un [::initial-height 
+                   ::min-height 
+                   ::max-height]))
 
 ;; ===== Function Specs =====
 
