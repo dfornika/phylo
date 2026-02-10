@@ -424,7 +424,7 @@
                         :margin 0
                         :letter-spacing "0.5px"}}
            "Phylo Viewer")
-        ($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
+        #_($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
      ;; Toolbar
      ($ Toolbar)
      ;; Empty-state message
