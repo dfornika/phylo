@@ -18,16 +18,26 @@
   clamped between `min-height` and `max-height`.
 
   Props:
+  - `:height`         - controlled height in pixels (optional)
   - `:initial-height` - starting height in pixels (default 250)
   - `:min-height`     - minimum panel height (default 100)
   - `:max-height`     - maximum panel height (default 600)
+  - `:on-height-change` - callback fired on drag with the new height
   - `:children`       - child elements to render inside the panel"
-  [{:keys [initial-height min-height max-height children]
+  [{:keys [height initial-height min-height max-height on-height-change children]
     :or {initial-height 250 min-height 100 max-height 800}}]
-  (let [[panel-height set-panel-height!] (uix/use-state initial-height)
+  (let [[panel-height set-panel-height!] (uix/use-state (or height initial-height))
         dragging-ref (uix/use-ref false)
         start-y-ref (uix/use-ref 0)
         start-h-ref (uix/use-ref 0)]
+
+    ;; Sync controlled height when provided
+    (uix/use-effect
+     (fn []
+       (when (some? height)
+         (set-panel-height! height))
+       js/undefined)
+     [height])
 
     ;; Global mousemove/mouseup listeners for drag
     (uix/use-effect
@@ -39,7 +49,9 @@
                                new-h (-> (+ @start-h-ref dy)
                                          (max min-height)
                                          (min max-height))]
-                           (set-panel-height! new-h))))
+                           (set-panel-height! new-h)
+                           (when on-height-change
+                             (on-height-change new-h)))))
              on-up (fn [_e]
                      (reset! dragging-ref false))]
          (.addEventListener js/document "mousemove" on-move)
@@ -47,7 +59,7 @@
          (fn []
            (.removeEventListener js/document "mousemove" on-move)
            (.removeEventListener js/document "mouseup" on-up))))
-     [min-height max-height])
+     [on-height-change min-height max-height])
 
     ($ :div {:style {:height (str panel-height "px")
                      :display "flex"

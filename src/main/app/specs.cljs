@@ -173,12 +173,17 @@
                    ::selected-ids 
                    ::on-toggle-selection]))
 
-;; Toolbar and SelectionBar read from context — no props spec needed.
+;; Toolbar reads from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
 (s/def ::width-px number?)
 (s/def ::component-height-px number?)
+(s/def ::metadata-panel-collapsed boolean?)
+(s/def ::metadata-panel-height number?)
+(s/def ::metadata-panel-last-drag-height number?)
+(s/def ::set-metadata-panel-height! fn?)
+(s/def ::set-metadata-panel-last-drag-height! fn?)
 
 (s/def ::tree-viewer-props
   (s/keys :req-un [::tree 
@@ -195,7 +200,12 @@
                    ::component-height-px
                    ::active-cols ::set-active-cols!
                    ::metadata-rows ::set-metadata-rows!
-                   ::set-selected-ids! ]
+                   ::set-selected-ids!
+                   ::metadata-panel-collapsed
+                   ::metadata-panel-height
+                   ::metadata-panel-last-drag-height
+                   ::set-metadata-panel-height!
+                   ::set-metadata-panel-last-drag-height! ]
           :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
@@ -251,11 +261,14 @@
 (s/def ::initial-height number?)
 (s/def ::min-height number?)
 (s/def ::max-height number?)
+(s/def ::height number?)
+(s/def ::on-height-change fn?)
 
 (s/def ::resizable-panel-props
   (s/keys :req-un [::initial-height 
                    ::min-height 
-                   ::max-height]))
+                   ::max-height]
+          :opt-un [::height ::on-height-change]))
 
 ;; ===== Function Specs =====
 

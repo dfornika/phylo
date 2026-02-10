@@ -18,6 +18,9 @@
   - [[!scale-origin]]          - scale origin for labels (:tips or :root)
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
   - [[!col-spacing]]           - extra horizontal spacing between metadata columns
+  - [[!metadata-panel-collapsed]] - whether the metadata grid panel is collapsed
+  - [[!metadata-panel-height]] - current height of the metadata grid panel
+  - [[!metadata-panel-last-drag-height]] - last height set via drag
   - [[!highlight-color]]       - CSS color string used as the current brush color
   - [[!selected-ids]]          - set of leaf IDs selected in the AG-Grid
   - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights"
@@ -77,6 +80,18 @@
 (defonce !col-spacing
   (atom 0))
 
+;; "Atom holding whether the metadata grid panel is collapsed."
+(defonce !metadata-panel-collapsed
+  (atom true))
+
+;; "Atom holding the current height of the metadata grid panel."
+(defonce !metadata-panel-height
+  (atom 250))
+
+;; "Atom holding the last height set by dragging the panel."
+(defonce !metadata-panel-last-drag-height
+  (atom 250))
+
 ;; "Atom holding the CSS color string used as the current brush color when assigning highlights."
 (defonce !highlight-color
   (atom "#4682B4"))
@@ -107,6 +122,9 @@
    :scale-origin :tips
    :show-pixel-grid false
    :col-spacing 0
+   :metadata-panel-collapsed true
+   :metadata-panel-height 250
+   :metadata-panel-last-drag-height 250
    :highlight-color "#4682B4"
    :selected-ids #{}
    :highlights {}})
@@ -128,6 +146,9 @@
            :scale-origin @!scale-origin
            :show-pixel-grid @!show-pixel-grid
            :col-spacing @!col-spacing
+           :metadata-panel-collapsed @!metadata-panel-collapsed
+           :metadata-panel-height @!metadata-panel-height
+           :metadata-panel-last-drag-height @!metadata-panel-last-drag-height
            :highlight-color @!highlight-color
            :selected-ids @!selected-ids
            :highlights @!highlights}})
@@ -171,6 +192,9 @@
       (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
       (reset! !col-spacing (:col-spacing merged))
+      (reset! !metadata-panel-collapsed (:metadata-panel-collapsed merged))
+      (reset! !metadata-panel-height (:metadata-panel-height merged))
+      (reset! !metadata-panel-last-drag-height (:metadata-panel-last-drag-height merged))
       (reset! !highlight-color (:highlight-color merged))
       (reset! !selected-ids (coerce-set (:selected-ids merged)))
       (reset! !highlights (if (map? (:highlights merged))
@@ -202,6 +226,9 @@
         scale-origin          (uix/use-atom !scale-origin)
         show-pixel-grid       (uix/use-atom !show-pixel-grid)
         col-spacing           (uix/use-atom !col-spacing)
+        metadata-panel-collapsed (uix/use-atom !metadata-panel-collapsed)
+        metadata-panel-height (uix/use-atom !metadata-panel-height)
+        metadata-panel-last-drag-height (uix/use-atom !metadata-panel-last-drag-height)
         highlight-color       (uix/use-atom !highlight-color)
         selected-ids          (uix/use-atom !selected-ids)
         highlights            (uix/use-atom !highlights)]
@@ -227,6 +254,12 @@
                             :set-show-pixel-grid! #(reset! !show-pixel-grid %)
                             :col-spacing col-spacing
                             :set-col-spacing! #(reset! !col-spacing %)
+                            :metadata-panel-collapsed metadata-panel-collapsed
+                            :set-metadata-panel-collapsed! #(reset! !metadata-panel-collapsed %)
+                            :metadata-panel-height metadata-panel-height
+                            :set-metadata-panel-height! #(reset! !metadata-panel-height %)
+                            :metadata-panel-last-drag-height metadata-panel-last-drag-height
+                            :set-metadata-panel-last-drag-height! #(reset! !metadata-panel-last-drag-height %)
                             :highlight-color highlight-color
                             :set-highlight-color! #(reset! !highlight-color %)
                             :selected-ids selected-ids
