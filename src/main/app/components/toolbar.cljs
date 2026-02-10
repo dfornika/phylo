@@ -47,7 +47,7 @@
   {:display "flex"
    :align-items "center"
    :gap "8px"
-   :padding "6px 10px"
+   :padding "4px 8px"
    :background "#f0f2f5"
    :border-radius "6px"})
 
@@ -55,7 +55,7 @@
   {:display "flex"
    :align-items "center"
    :gap "10px"
-   :padding "6px 8px"
+   :padding "4px 6px"
    :border "1px solid #dee2e6"
    :border-radius "8px"
    :background "#ffffff"})

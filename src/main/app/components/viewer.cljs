@@ -234,7 +234,7 @@
                      :box-sizing "border-box"}}
 
        ;; Header
-       ($ :header {:style {:height "48px"
+       ($ :header {:style {:height "24px"
                            :display "flex"
                            :align-items "center"
                            :justify-content "space-between"
@@ -248,7 +248,7 @@
                           :margin 0
                           :letter-spacing "0.5px"}}
              "Phylo Viewer")
-          ($ :img {:src (asset-src "images/logo.svg") :height "32px"})
+          #_($ :img {:src (asset-src "images/logo.svg") :height "32px"})
           )
 
        ;; Toolbar
