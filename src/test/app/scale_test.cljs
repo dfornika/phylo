@@ -3,7 +3,7 @@
   (:require [cljs.test :refer [deftest testing is]]
             [app.components.scale :as scale]
             [app.tree :as tree]
-            [clojure.string]))
+            [clojure.string :as str]))
 
 ;; ===== tick-position =====
 
@@ -370,7 +370,7 @@
           decimals (scale/label-decimals max-depth)
           formatted (scale/format-label :root max-depth tick)]
       ;; Count decimal places in formatted string
-      (let [parts (clojure.string/split formatted #"\.")
+      (let [parts (str/split formatted #"\.")
             actual-decimals (if (> (count parts) 1)
                               (count (second parts))
                               0)]
