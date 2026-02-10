@@ -49,7 +49,7 @@
 
 ;; ===== App State Context =====
 
-(s/def ::newick-str string?)
+(s/def ::newick-str (s/nilable string?))
 (s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
 (s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
 (s/def ::x-mult number?)

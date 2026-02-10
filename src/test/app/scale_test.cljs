@@ -153,7 +153,7 @@
       (is (= (:base-ticks result) (sort (:base-ticks result)))))))
 
 (deftest scale-ticks-tips-vs-root-ordering
-  (testing "Ticks for :tips origin are reversed compared to :root"
+  (testing "Ordering of ticks are the same whether origin is :root or :tips"
     (let [max-depth 10
           result-root (scale/scale-ticks {:max-depth max-depth
                                           :x-scale 100
