@@ -40,9 +40,12 @@
     (uix/use-effect
      (fn []
        (when (some? height)
-         (set-panel-height! height))
+         (let [clamped-height (-> height
+                                  (max min-height)
+                                  (min max-height))]
+           (set-panel-height! clamped-height)))
        js/undefined)
-     [height])
+     [height min-height max-height])
 
     ;; Global mousemove/mouseup listeners for drag
     (uix/use-effect
