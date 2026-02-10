@@ -243,7 +243,7 @@
                    current-panel-height (if collapsed? 0 (or current-height 0))
                    next-max (max 0 (+ current-panel-height (- viewport-height sticky-height)))]
                (set-panel-max-height! next-max))))
-         [])
+         [set-panel-max-height!])
 
         ;; Register resize listener once on mount
         _panel-max-effect
@@ -260,7 +260,7 @@
         _recalc-on-cols-change
         (uix/use-effect
          (fn [] (update-panel-max-height))
-         [active-cols])
+         [update-panel-max-height active-cols])
 
         ;; ---- Box (lasso) selection state ----
         svg-ref                (uix/use-ref nil)
