@@ -209,5 +209,4 @@
                               :border (str "1px solid " navy)
                               :border-radius "6px"
                               :transition "background 0.15s"}}
-             "\u21E9 HTML"))
-    )))
+             "\u21E9 HTML")))))
