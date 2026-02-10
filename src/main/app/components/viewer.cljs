@@ -11,6 +11,7 @@
             [app.tree :as tree]
             [app.components.tree :refer [PhylogeneticTree]]
             [app.components.metadata :refer [StickyHeader MetadataTable]]
+            [app.components.scale :as scale]
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
@@ -63,6 +64,33 @@
                    :style {:font-family "monospace" :font-size "8px" :fill label-color}}
             (str y))))))
 
+(defui ScaleBar
+  "Renders a solid scale bar with tick marks and labels."
+  [{:keys [max-depth x-scale scale-origin]}]
+  (let [{:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
+                                                              :x-scale x-scale
+                                                              :origin scale-origin})]
+    ($ :g
+       ($ :line {:x1 0 :y1 -18
+                 :x2 (* max-depth x-scale) :y2 -18
+                 :stroke "#111" :stroke-width 1})
+       (for [t minor-ticks]
+         ($ :line {:key (str "scale-minor-" t)
+                   :x1 (* t x-scale) :y1 -20
+                   :x2 (* t x-scale) :y2 -18
+                   :stroke "#111" :stroke-width 1}))
+       (for [t major-ticks]
+         ($ :g {:key (str "scale-tick-" t)}
+            ($ :line {:x1 (* t x-scale) :y1 -22
+                      :x2 (* t x-scale) :y2 -18
+                      :stroke "#111" :stroke-width 1})
+            ($ :text {:x (* t x-scale) :y -26
+                      :text-anchor "middle"
+                      :style {:font-family "monospace"
+                              :font-size "10px"
+                              :fill "#111"}}
+               (.toFixed (js/Number (scale/label-value scale-origin max-depth t)) 1)))))))
+
 (defui ScaleGridlines
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
 
@@ -72,31 +100,23 @@
   metadata in the SVG, inside the translated coordinate group.
 
   Props (see `::app.specs/scale-gridlines-props`):
-  - `:max-depth`   - maximum x-coordinate in the tree
-  - `:x-scale`     - horizontal scaling factor (pixels per branch-length unit)
-  - `:tree-height` - total height in pixels to span"
-  [{:keys [max-depth x-scale tree-height]}]
-  (if (pos? max-depth)
-    (let [unit  (tree/calculate-scale-unit (/ max-depth 5))
-          ticks (tree/get-ticks max-depth unit)]
-      ($ :g
-         (for [t ticks]
-           ($ :line {:key (str "grid-" t)
-                     :x1 (* t x-scale) :y1 0
-                     :x2 (* t x-scale) :y2 tree-height
-                     :stroke "#eee"
-                     :stroke-dasharray "4 4"
-                     :stroke-width 1}))))
-    (let [ticks [0]]
-      ($ :g
-         (for [t ticks]
-           ($ :line {:key (str "grid-" t)
-                     :x1 (* t x-scale) :y1 0
-                     :x2 (* t x-scale) :y2 tree-height
-                     :stroke "#eee"
-                     :stroke-dasharray "4 4"
-                     :stroke-width 1}))))))
-
+  - `:max-depth`    - maximum x-coordinate in the tree
+  - `:x-scale`      - horizontal scaling factor (pixels per branch-length unit)
+  - `:tree-height`  - total height in pixels to span
+  - `:scale-origin` - `:tips` or `:root` for tick placement"
+  [{:keys [max-depth x-scale tree-height scale-origin]}]
+  (let [{:keys [major-ticks]} (scale/scale-ticks {:max-depth max-depth
+                                                 :x-scale x-scale
+                                                 :origin scale-origin})
+        ticks (or (seq major-ticks) [0])]
+    ($ :g
+       (for [t ticks]
+         ($ :line {:key (str "grid-" t)
+                   :x1 (* t x-scale) :y1 0
+                   :x2 (* t x-scale) :y2 tree-height
+                   :stroke "#eee"
+                   :stroke-dasharray "4 4"
+                   :stroke-width 1})))))
 
 (defn- asset-src
   "Returns a data URL for bundled assets when present, falling back to the path."
@@ -135,6 +155,8 @@
   - `:y-mult`                  - vertical tip spacing
   - `:show-internal-markers`   - whether to show circles on internal nodes
   - `:show-scale-gridlines`    - whether to show evolutionary distance gridlines
+  - `:scale-origin`            - `:tips` or `:root` for scale labeling
+  - `:show-distance-from-origin`     - whether to show internal node distances from origin
   - `:show-pixel-grid`         - whether to show pixel coordinate debug grid
   - `:col-spacing`             - extra horizontal spacing between metadata columns
   - `:width-px`                - total available width in pixels
@@ -142,7 +164,7 @@
   - `:highlights`              - map of {leaf-name -> color} for persistent highlights
   - `:selected-ids`            - set of leaf names currently selected in the grid"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
-           show-internal-markers width-px component-height-px
+           show-internal-markers show-distance-from-origin scale-origin width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
            highlights selected-ids metadata-rows
            set-active-cols! set-selected-ids! set-metadata-rows!]}]
@@ -208,14 +230,14 @@
                                             pad-x  (:svg-padding-x LAYOUT)
                                             pad-y  (:svg-padding-y LAYOUT)
                                             hit-ids (into #{}
-                                                     (comp
-                                                      (filter (fn [tip]
-                                                                (let [lx (+ pad-x (* (:x tip) current-x-scale))
-                                                                      ly (+ pad-y (* (:y tip) y-mult))]
-                                                                  (and (<= min-x lx max-x)
-                                                                       (<= min-y ly max-y)))))
-                                                      (map :name))
-                                                     tips)]
+                                                          (comp
+                                                           (filter (fn [tip]
+                                                                     (let [lx (+ pad-x (* (:x tip) current-x-scale))
+                                                                           ly (+ pad-y (* (:y tip) y-mult))]
+                                                                       (and (<= min-x lx max-x)
+                                                                            (<= min-y ly max-y)))))
+                                                           (map :name))
+                                                          tips)]
                                         (if shift?
                                           (set-selected-ids! (fn [ids] (into (or ids #{}) hit-ids)))
                                           (set-selected-ids! hit-ids))))))
@@ -248,16 +270,20 @@
                           :margin 0
                           :letter-spacing "0.5px"}}
              "Phylo Viewer")
-          #_($ :img {:src (asset-src "images/logo.svg") :height "32px"})
-          )
+          #_($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
 
-       ;; Toolbar
+;; Toolbar
        ($ Toolbar)
 
        ;; Scrollable viewport
        ($ :div {:style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
           (when (seq active-cols)
-            ($ StickyHeader {:columns active-cols :start-offset metadata-start-x :col-spacing col-spacing}))
+            ($ StickyHeader {:columns active-cols
+                             :start-offset metadata-start-x
+                             :col-spacing col-spacing
+                             :max-depth max-depth
+                             :x-scale current-x-scale
+                             :scale-origin scale-origin}))
 
           ($ :svg {:id "phylo-svg"
                    :ref svg-ref
@@ -265,6 +291,12 @@
                    :height svg-height
                    :on-mouse-down handle-svg-mousedown
                    :style {:cursor (when drag-rect "crosshair")}}
+             ;; Scale bar
+             ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+                ($ ScaleBar {:max-depth max-depth
+                             :x-scale current-x-scale
+                             :scale-origin scale-origin}))
+
              ;; Debugging pixel grid
              (when show-pixel-grid
                ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
@@ -274,13 +306,17 @@
                ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
                   ($ ScaleGridlines {:max-depth max-depth
                                      :x-scale current-x-scale
-                                     :tree-height tree-height})))
+                                     :tree-height tree-height
+                                     :scale-origin scale-origin})))
 
              ;; The tree itself
              ($ PhylogeneticTree {:tree tree
                                   :x-scale current-x-scale
                                   :y-scale y-mult
                                   :show-internal-markers show-internal-markers
+                                  :show-distance-from-origin show-distance-from-origin
+                                  :scale-origin scale-origin
+                                  :max-depth max-depth
                                   :marker-radius (:node-marker-radius LAYOUT)
                                   :marker-fill (:node-marker-fill LAYOUT)
                                   :highlights highlights
@@ -362,7 +398,7 @@
                       :justify-content "center"
                       :color "#8893a2"
                       :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"}}
-        
+
         ;; TODO: factor this out into a component
         ($ :svg {:width 80 :height 80 :viewBox "0 0 24 24"
                  :fill "none" :stroke "#c0c8d4" :stroke-width 1.2
@@ -394,8 +430,8 @@
   When no Newick string is loaded, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
-                x-mult y-mult show-internal-markers
-                show-scale-gridlines show-pixel-grid
+                x-mult y-mult show-internal-markers show-distance-from-origin
+                scale-origin show-scale-gridlines show-pixel-grid
                 col-spacing highlights selected-ids
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
@@ -412,6 +448,8 @@
                      :x-mult x-mult
                      :y-mult y-mult
                      :show-internal-markers show-internal-markers
+                     :show-distance-from-origin show-distance-from-origin
+                     :scale-origin scale-origin
                      :show-scale-gridlines show-scale-gridlines
                      :show-pixel-grid show-pixel-grid
                      :col-spacing col-spacing

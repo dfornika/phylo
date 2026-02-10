@@ -43,9 +43,10 @@ app                               (app.core)
     └── TreeContainer             (app.components.viewer) Reads context, derives positioned tree
         └── TreeViewer            (app.components.viewer) Layout shell — toolbar, viewport, SVG canvas
             ├── Toolbar           (app.components.toolbar) File loaders, sliders, toggles (reads from context)
-            ├── StickyHeader      (app.components.metadata) Sticky HTML column header labels
+            ├── StickyHeader      (app.components.metadata) Sticky HTML column header labels + scale
             ├── <svg>             (box-select: drag to lasso leaves)
             │   ├── PixelGrid         (app.components.viewer) Debug pixel coordinate grid (conditional)
+            │   ├── ScaleBar          (app.components.viewer) Solid scale bar + tick labels
             │   ├── ScaleGridlines    (app.components.viewer) Evolutionary distance gridlines (conditional)
             │   ├── PhylogeneticTree  (app.components.tree) Thin wrapper — SVG group with padding transform
             │   │   └── TreeNode      (app.components.tree) Recursive tree rendering
@@ -71,13 +72,15 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 
 | Atom | Type | Default | Purpose |
 |------|------|---------|---------|
-| `!newick-str` | string | Small demo tree | Current Newick tree string |
+| `!newick-str` | string | `nil` | Current Newick tree string |
 | `!metadata-rows` | vector of maps | `[]` | Parsed rows from uploaded CSV/TSV |
 | `!active-cols` | vector of header configs | `[]` | Column definitions with `:key`, `:label`, `:width` |
 | `!x-mult` | number | `0.5` | Horizontal zoom multiplier (0.05–1.5) |
 | `!y-mult` | number | `30` | Vertical tip spacing in pixels (10–100) |
 | `!show-internal-markers` | boolean | `false` | Show circle markers on internal nodes |
-| `!show-scale-gridlines` | boolean | `true` | Show evolutionary distance gridlines |
+| `!show-scale-gridlines` | boolean | `false` | Show evolutionary distance gridlines |
+| `!show-distance-from-origin` | boolean | `false` | Show internal node distance labels |
+| `!scale-origin` | keyword | `:tips` | Scale origin for labels (`:tips` or `:root`) |
 | `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
 | `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
 | `!highlight-color` | string | `"#4682B4"` | Brush color for painting highlights onto selected leaves |
@@ -108,7 +111,9 @@ app
  :x-mult                  0.5    :set-x-mult!                  fn
  :y-mult                  30     :set-y-mult!                  fn
  :show-internal-markers   false  :set-show-internal-markers!   fn
- :show-scale-gridlines    true   :set-show-scale-gridlines!    fn
+ :show-scale-gridlines    false  :set-show-scale-gridlines!    fn
+ :show-distance-from-origin     false  :set-show-distance-from-origin!     fn
+ :scale-origin            :tips  :set-scale-origin!            fn
  :show-pixel-grid         false  :set-show-pixel-grid!         fn
  :col-spacing             0      :set-col-spacing!             fn
  :highlight-color         "..."  :set-highlight-color!         fn
@@ -180,6 +185,12 @@ initial render. This allows exported HTML files to restore state immediately.
 `TreeViewer` resolves the logo source using an asset map if present, so the
 exported HTML does not rely on external files.
 
+## ArborView Import
+
+Phylo can ingest ArborView-style HTML exports. The toolbar accepts ArborView
+HTML, extracts the embedded Newick tree and metadata table, and loads them
+using the same parsing pipeline as regular Newick/CSV inputs.
+
 
 ## Layout System
 
@@ -202,6 +213,15 @@ The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 - **Tree coordinates**: Branch lengths determine x-positions; sequential integers determine y-positions for leaves
 - **Scaled coordinates**: Tree coordinates × `current-x-scale` (dynamic) and × `y-mult` (user-controlled)
 - **SVG coordinates**: Scaled coordinates + `svg-padding-x/y` offset
+
+## Scale System
+
+The scale bar, sticky header, and gridlines share the same tick calculation logic.
+Ticks are computed with a minimum pixel spacing for labels and optional minor ticks
+between major labels. Scale labels can be anchored to either the root or tips;
+when anchored to tips, the tick positions are mirrored so the scale starts at 0
+at the leaves, but the tick values stay on "nice" intervals. Internal node labels
+use the same origin-aware mapping so they stay consistent with the scale.
 
 ## Specs
 
@@ -283,8 +303,9 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.specs` | Spec definitions for data structures & functions |
 | `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
 | `app.components.metadata` | `StickyHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |
+| `app.components.scale` | Scale tick helpers and origin-aware label mapping |
 | `app.components.toolbar` | `Toolbar`, `read-file!` — user controls |
-| `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `PixelGrid` — top-level composition |
+| `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `ScaleBar`, `PixelGrid` — top-level composition |
 | `app.components.grid` | `MetadataGrid` — AG-Grid table with bidirectional selection sync |
 | `app.components.selection_bar` | `SelectionBar` — highlight color picker and assign/clear actions |
 | `app.components.resizable_panel` | `ResizablePanel` — draggable-resize wrapper for bottom panel |

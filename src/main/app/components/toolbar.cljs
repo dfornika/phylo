@@ -73,7 +73,9 @@
                 col-spacing set-col-spacing!
                 show-internal-markers set-show-internal-markers!
                 show-scale-gridlines set-show-scale-gridlines!
-                show-pixel-grid set-show-pixel-grid!
+                show-distance-from-origin set-show-distance-from-origin!
+                scale-origin set-scale-origin!
+                show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
@@ -155,13 +157,35 @@
                            :checked show-scale-gridlines
                            :style {:accent-color navy}
                            :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
-                "Scale")
+                "Scale Lines")
+             ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked show-distance-from-origin
+                           :style {:accent-color navy}
+                           :on-change #(set-show-distance-from-origin! (not show-distance-from-origin))})
+                "Distance from Origin")
+             ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+                ($ :label {:style label-style} "Scale Origin")
+                ($ :select {:value (name scale-origin)
+                            :style {:font-family toolbar-font
+                                    :font-size "12px"
+                                    :color navy
+                                    :border "1px solid #cfd6de"
+                                    :border-radius "6px"
+                                    :padding "2px 6px"
+                                    :background "#ffffff"}
+                            :on-change #(set-scale-origin! (keyword (.. % -target -value)))}
+                   ($ :option {:value "tips"} "Tips")
+                   ($ :option {:value "root"} "Root"))))
+             ;; Temporarily disabled this toggle for the PixelGrid.
+             ;; only intended as dev-time troubleshooting tool.
              #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
                 ($ :input {:type "checkbox"
                            :checked show-pixel-grid
                            :style {:accent-color navy}
                            :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
-                "Pixel Grid")))
+                "Pixel Grid")
+             )
 
        ;; ── Export ──
        ($ :div {:style (merge group-style {:margin-left "auto"})}
