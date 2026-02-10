@@ -105,10 +105,10 @@
   - `:tree-height`  - total height in pixels to span
   - `:scale-origin` - `:tips` or `:root` for tick placement"
   [{:keys [max-depth x-scale tree-height scale-origin]}]
-  (let [{:keys [base-ticks]} (scale/scale-ticks {:max-depth max-depth
+  (let [{:keys [major-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                  :x-scale x-scale
                                                  :origin scale-origin})
-        ticks (or (seq base-ticks) [0])]
+        ticks (or (seq major-ticks) [0])]
     ($ :g
        (for [t ticks]
          ($ :line {:key (str "grid-" t)
