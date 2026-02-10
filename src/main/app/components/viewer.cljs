@@ -403,8 +403,7 @@
                            :pointer-events "none"})))))
 
        ;; Selection bar (above the grid)
-       (when (seq active-cols)
-         ($ SelectionBar {:max-panel-height panel-max-height}))
+       ($ SelectionBar {:max-panel-height panel-max-height})
 
        ;; Metadata grid (AG-Grid) in resizable bottom panel
        (when (and (seq active-cols) (not metadata-panel-collapsed))
