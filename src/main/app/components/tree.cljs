@@ -80,10 +80,8 @@
         fill (if highlight-color highlight-color marker-fill)
         radius (if highlight-color (+ marker-radius 1.5) marker-radius)
         node-depth (:x node)
-        label-value (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
-                      (scale/label-value scale-origin max-depth node-depth))
-        distance-label (when (some? label-value)
-                         (.toFixed (js/Number label-value) 1))
+        distance-label (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
+                         (scale/format-label scale-origin max-depth node-depth))
         on-click (when (and is-leaf? on-toggle-selection)
                    (fn [_e] (on-toggle-selection node-name)))]
     ($ :g

@@ -27,6 +27,33 @@
       (- depth tick)
       tick)))
 
+(defn- decimals-for-unit
+  "Returns a display precision based on the unit size."
+  [unit]
+  (if (and (number? unit) (pos? unit))
+    (-> (- (js/Math.log10 unit))
+        (js/Math.ceil)
+        (int)
+        (max 1)
+        (min 4))
+    1))
+
+(defn label-decimals
+  "Returns the number of decimals to show for scale labels."
+  [max-depth]
+  (let [depth (or max-depth 0)
+        unit (if (pos? depth)
+               (tree/calculate-scale-unit (/ depth 5))
+               1)]
+    (decimals-for-unit unit)))
+
+(defn format-label
+  "Formats a scale label with precision based on max-depth."
+  [origin max-depth tick]
+  (let [value (label-value origin max-depth tick)
+        decimals (label-decimals max-depth)]
+    (.toFixed (js/Number value) decimals)))
+
 (defn scale-ticks
   "Computes major and minor ticks for scale bars.
 
