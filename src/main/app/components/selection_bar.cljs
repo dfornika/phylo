@@ -23,12 +23,15 @@
   - **Assign Color** — merges selected IDs into `highlights` with the
     current brush color
   - **Clear Color** — removes selected IDs from `highlights`
-  - **Clear All** — resets all highlights
+  - **Clear All Colors** — resets all highlights
+  - **Select All** — Selects all leaf nodes
+  - **Select None** —  Clears all selections
 
   Reads all state from context. Accepts optional `:max-panel-height` for expand."
   [{:keys [max-panel-height]}]
   (let [{:keys [selected-ids highlights set-highlights!
                 highlight-color set-highlight-color!
+                metadata-rows active-cols set-selected-ids!
                 metadata-panel-collapsed set-metadata-panel-collapsed!
                 metadata-panel-height metadata-panel-last-drag-height
                 set-metadata-panel-height!]} (state/use-app-state)
@@ -51,7 +54,13 @@
                                     (= metadata-panel-height restore-target)))
         maximize-disabled? (or (not (pos? max-panel-height))
                                 (and (not metadata-panel-collapsed)
-                                     (>= metadata-panel-height max-panel-height)))]
+                                     (>= metadata-panel-height max-panel-height)))
+        id-key (-> active-cols first :key)
+        all-ids (if id-key
+                  (into #{} (keep (fn [row] (get row id-key))) metadata-rows)
+                  #{})
+        select-all-disabled? (not (seq all-ids))
+        select-none-disabled? (zero? n-selected)]
     ($ :div {:style {:display "flex" :gap "10px" :padding "4px 8px"
                      :background "#f0f2f5" :border-bottom "1px solid #ccd"
                      :align-items "center" :flex-wrap "wrap"
@@ -69,6 +78,7 @@
                      :on-change (fn [e] (set-highlight-color! (.. e -target -value)))
                      :style {:width "28px" :height "22px" :border "none"
                              :padding "0" :cursor "pointer"}}))
+       
        ;; Assign button
        ($ :button {:style (merge button-style
                                  (when (zero? n-selected)
@@ -98,6 +108,22 @@
                    :disabled (zero? n-highlighted)
                    :on-click (fn [_] (set-highlights! {}))}
           "Clear All Colors")
+       
+       ;; Selection shortcuts
+       ($ :button {:style (merge button-style
+                                 (when select-all-disabled?
+                                   {:opacity "0.5" :cursor "default"}))
+                   :disabled select-all-disabled?
+                   :on-click (fn [_]
+                               (when (seq all-ids)
+                                 (set-selected-ids! all-ids)))}
+          "Select All")
+       ($ :button {:style (merge button-style
+                                 (when select-none-disabled?
+                                   {:opacity "0.5" :cursor "default"}))
+                   :disabled select-none-disabled?
+                   :on-click (fn [_] (set-selected-ids! #{}))}
+          "Select None")
 
        ;; Minimize/restore/maximize controls (far right)
        ($ :div {:style {:margin-left "auto" :display "flex" :gap "6px"}}
