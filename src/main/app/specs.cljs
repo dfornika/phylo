@@ -67,6 +67,12 @@
 (s/def ::show-scale-gridlines boolean?)
 (s/def ::set-show-scale-gridlines! fn?)
 
+(s/def ::show-branch-lengths boolean?)
+(s/def ::set-show-branch-lengths! fn?)
+
+(s/def ::scale-origin #{:tips :root})
+(s/def ::set-scale-origin! fn?)
+
 (s/def ::show-pixel-grid boolean?)
 (s/def ::set-show-pixel-grid! fn?)
 
@@ -91,6 +97,8 @@
                    ::y-mult ::set-y-mult!
                    ::show-internal-markers ::set-show-internal-markers!
                    ::show-scale-gridlines ::set-show-scale-gridlines!
+                   ::show-branch-lengths ::set-show-branch-lengths!
+                   ::scale-origin ::set-scale-origin!
                    ::show-pixel-grid ::set-show-pixel-grid!
                    ::col-spacing ::set-col-spacing!
                    ::highlight-color ::set-highlight-color!
