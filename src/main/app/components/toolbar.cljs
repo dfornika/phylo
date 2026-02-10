@@ -7,6 +7,7 @@
             [app.csv :as csv]
             [clojure.string :as str]
             [app.import.arborview :as arbor]
+            [app.import.nextstrain :as nextstrain]
             [app.state :as state]
             [app.export.html :as export-html]
             [app.export.svg :as export-svg]
@@ -77,7 +78,8 @@
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-newick-str!
-                set-metadata-rows! set-active-cols!]} (state/use-app-state)]
+                set-metadata-rows! set-active-cols!
+                set-selected-ids! set-highlights!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
@@ -97,7 +99,11 @@
                            :accept ".nwk,.newick,.tree,.txt"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
                            :on-change #(read-file! % (fn [content]
-                                                       (set-newick-str! (.trim content))))}))
+                                                       (set-newick-str! (.trim content))
+                                                       (set-metadata-rows! [])
+                                                       (set-active-cols! [])
+                                                       (set-selected-ids! #{})
+                                                       (set-highlights! {})))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Metadata")
                 ($ :input {:type "file"
@@ -117,10 +123,28 @@
                                                        (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
                                                          (when newick-str
                                                            (set-newick-str! (str/trim newick-str)))
-                                                         (when metadata-raw
+                                                         (if metadata-raw
                                                            (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
                                                              (set-metadata-rows! data)
-                                                             (set-active-cols! headers))))))}))))
+                                                             (set-active-cols! headers))
+                                                           (do
+                                                             (set-metadata-rows! [])
+                                                             (set-active-cols! [])))
+                                                         (set-selected-ids! #{})
+                                                         (set-highlights! {}))))}))
+             ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+                ($ :label {:style label-style} "Nextstrain JSON")
+                ($ :input {:type "file"
+                           :accept ".json"
+                           :style {:font-family toolbar-font :font-size "12px" :color navy}
+                           :on-change #(read-file! % (fn [content]
+                                                       (let [{:keys [newick-str]} (nextstrain/parse-nextstrain-json content)]
+                                                         (when newick-str
+                                                           (set-newick-str! (str/trim newick-str))
+                                                           (set-metadata-rows! [])
+                                                           (set-active-cols! [])
+                                                           (set-selected-ids! #{})
+                                                           (set-highlights! {})))))}))))
 
        ;; ── Controls ──
        ($ :div {:style group-style}
@@ -212,4 +236,5 @@
                               :border (str "1px solid " navy)
                               :border-radius "6px"
                               :transition "background 0.15s"}}
-             "\u21E9 HTML")))))
+             "\u21E9 HTML")
+             ))))

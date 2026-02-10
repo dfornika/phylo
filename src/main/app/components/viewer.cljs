@@ -89,7 +89,7 @@
                       :style {:font-family "monospace"
                               :font-size "10px"
                               :fill "#111"}}
-               (.toFixed (js/Number (scale/label-value scale-origin max-depth t)) 1)))))))
+               (scale/format-label scale-origin max-depth t)))))))
 
 (defui ScaleGridlines
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
@@ -335,13 +335,12 @@
        ;; Scrollable viewport
        ($ :div {:ref viewport-ref
                 :style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
-          (when (seq active-cols)
-            ($ StickyHeader {:columns active-cols
-                             :start-offset metadata-start-x
-                             :col-spacing col-spacing
-                             :max-depth max-depth
-                             :x-scale current-x-scale
-                             :scale-origin scale-origin}))
+          ($ StickyHeader {:columns active-cols
+                           :start-offset metadata-start-x
+                           :col-spacing col-spacing
+                           :max-depth max-depth
+                           :x-scale current-x-scale
+                           :scale-origin scale-origin})
 
           ($ :svg {:id "phylo-svg"
                    :ref svg-ref
@@ -403,8 +402,7 @@
                            :pointer-events "none"})))))
 
        ;; Selection bar (above the grid)
-       (when (seq active-cols)
-         ($ SelectionBar {:max-panel-height panel-max-height}))
+       ($ SelectionBar {:max-panel-height panel-max-height})
 
        ;; Metadata grid (AG-Grid) in resizable bottom panel
        (when (and (seq active-cols) (not metadata-panel-collapsed))

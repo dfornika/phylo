@@ -60,7 +60,7 @@
                          :style {:font-family "monospace"
                                  :font-size "10px"
                                  :fill "#111"}}
-                  (.toFixed (js/Number (scale/label-value scale-origin max-depth t)) 1)))))
+                  (scale/format-label scale-origin max-depth t)))))
        ;; Spacer pushes headers to align with metadata columns
        ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px")
                         :flex-shrink 0}})
