@@ -8,6 +8,15 @@ Phylo renders Newick-format trees as interactive SVGs with support for metadata 
 
 ![Screenshot](doc/images/screenshot-01.png)
 
+## Features
+
+- Load Newick trees and CSV/TSV metadata
+- ArborView HTML import (tree + metadata)
+- Adjustable layout (width, height, column spacing)
+- Scale bar with optional gridlines and origin toggle (tips/root)
+- Internal node distance labels and leaf selection/highlighting
+- Export to standalone HTML and SVG
+
 ## Prerequisites
 
 - [Clojure CLI](https://clojure.org/guides/install_clojure) (1.11+)
@@ -41,13 +50,16 @@ src/
       components/
         tree.cljs             # Branch, TreeNode, PhylogeneticTree — SVG tree rendering
         metadata.cljs         # StickyHeader, MetadataColumn, MetadataTable
-        toolbar.cljs          # Toolbar, DateRangeFilter — user controls
-        viewer.cljs           # TreeContainer, TreeViewer, ScaleGridlines, PixelGrid
+        scale.cljs            # Scale tick helpers and origin mapping
+        toolbar.cljs          # Toolbar — user controls
+        viewer.cljs           # TreeContainer, TreeViewer, ScaleGridlines, ScaleBar, PixelGrid
   test/
     app/
       tree_test.cljs          # Tests for tree layout functions
       newick_test.cljs        # Tests for Newick parser
       csv_test.cljs           # Tests for CSV/TSV parser
+      arborview_import_test.cljs  # Tests for ArborView HTML import
+      export_html_test.cljs       # Tests for standalone HTML export
   dev/
     user.clj                  # REPL helper for shadow-cljs
 ```
@@ -62,6 +74,9 @@ Newick string
   → tree/prepare-tree      (enrich leaves with metadata)
   → PhylogeneticTree       (SVG rendering + metadata overlay)
 ```
+
+ArborView HTML imports follow the same pipeline after extracting the embedded
+Newick string and metadata table.
 
 ## Running Tests
 
