@@ -17,12 +17,16 @@
   handle bar up or down adjusts the panel height. The height is
   clamped between `min-height` and `max-height`.
 
+  During drag, only local state is updated for smooth visual feedback.
+  The `on-height-change` callback is fired only when the drag ends
+  (on mouseup), preventing expensive re-renders of parent components.
+
   Props:
   - `:height`         - controlled height in pixels (optional)
   - `:initial-height` - starting height in pixels (default 250)
   - `:min-height`     - minimum panel height (default 100)
   - `:max-height`     - maximum panel height (default 600)
-  - `:on-height-change` - callback fired on drag with the new height
+  - `:on-height-change` - callback fired on drag end with the final height
   - `:children`       - child elements to render inside the panel"
   [{:keys [height initial-height min-height max-height on-height-change children]
     :or {initial-height 250 min-height 100 max-height 800}}]
@@ -49,17 +53,20 @@
                                new-h (-> (+ @start-h-ref dy)
                                          (max min-height)
                                          (min max-height))]
-                           (set-panel-height! new-h)
-                           (when on-height-change
-                             (on-height-change new-h)))))
+                           ;; Update local state immediately for smooth visual feedback
+                           (set-panel-height! new-h))))
              on-up (fn [_e]
+                     (when @dragging-ref
+                       ;; Only commit to global state when drag ends
+                       (when on-height-change
+                         (on-height-change panel-height)))
                      (reset! dragging-ref false))]
          (.addEventListener js/document "mousemove" on-move)
          (.addEventListener js/document "mouseup" on-up)
          (fn []
            (.removeEventListener js/document "mousemove" on-move)
            (.removeEventListener js/document "mouseup" on-up))))
-     [on-height-change min-height max-height])
+     [on-height-change min-height max-height panel-height])
 
     ($ :div {:style {:height (str panel-height "px")
                      :display "flex"
