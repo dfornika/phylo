@@ -320,6 +320,8 @@
                                   :y-scale y-mult
                                   :show-internal-markers show-internal-markers
                                   :show-branch-lengths show-branch-lengths
+                                  :scale-origin scale-origin
+                                  :max-depth max-depth
                                   :marker-radius (:node-marker-radius LAYOUT)
                                   :marker-fill (:node-marker-fill LAYOUT)
                                   :highlights highlights

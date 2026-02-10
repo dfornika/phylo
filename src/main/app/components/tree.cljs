@@ -14,7 +14,8 @@
   Clicking a leaf node toggles its membership in `selected-ids`,
   which is reflected in both the tree and the AG-Grid table."
   (:require [uix.core :refer [defui $]]
-            [app.layout :refer [LAYOUT]]))
+            [app.layout :refer [LAYOUT]]
+            [app.components.scale :as scale]))
 
 (defui Branch
   "Renders a single tree branch as two SVG lines: a horizontal segment
@@ -56,14 +57,16 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical spacing in pixels between adjacent tips
   - `:show-internal-markers`  - boolean, whether to render circles on internal nodes
-  - `:show-branch-lengths`   - boolean, whether to render internal node branch lengths
+  - `:show-branch-lengths`   - boolean, whether to render internal node distances
+  - `:scale-origin`         - `:tips` or `:root` for distance labeling
+  - `:max-depth`            - maximum x-coordinate in the tree
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - default fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-branch-lengths
-           marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
+           scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
@@ -76,10 +79,11 @@
         selected? (and is-leaf? selected-ids (contains? selected-ids node-name))
         fill (if highlight-color highlight-color marker-fill)
         radius (if highlight-color (+ marker-radius 1.5) marker-radius)
-        branch-length (:branch-length node)
-        branch-length-num (when (some? branch-length) (js/parseFloat branch-length))
-        branch-length-label (when (and (not is-leaf?) show-branch-lengths (not (js/isNaN branch-length-num)) (pos? (:x node)))
-                              (.toFixed branch-length-num 1))
+        node-depth (:x node)
+        label-value (when (and (not is-leaf?) show-branch-lengths (number? node-depth) (pos? max-depth))
+                      (scale/label-value scale-origin max-depth node-depth))
+        distance-label (when (some? label-value)
+                         (.toFixed (js/Number label-value) 1))
         on-click (when (and is-leaf? on-toggle-selection)
                    (fn [_e] (on-toggle-selection node-name)))]
     ($ :g
@@ -99,14 +103,14 @@
                      :style {:pointer-events "none"}}))
 
        ;; Internal node branch-length label
-       (when branch-length-label
+       (when distance-label
          ($ :text {:x (- scaled-x 6)
                    :y (- scaled-y 6)
                    :text-anchor "end"
                    :style {:font-family "monospace"
                            :font-size "10px"
                            :fill "#111"}}
-            branch-length-label))
+            distance-label))
        ;; Tip label
        (when is-leaf?
          ($ :text {:x (+ scaled-x 8)
@@ -127,6 +131,8 @@
                       :y-scale y-scale
                       :show-internal-markers show-internal-markers
                       :show-branch-lengths show-branch-lengths
+                      :scale-origin scale-origin
+                      :max-depth max-depth
                       :marker-radius marker-radius
                       :marker-fill marker-fill
                       :highlights highlights
@@ -144,13 +150,13 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical tip spacing
   - `:show-internal-markers`  - whether to render circles on internal nodes
-  - `:show-branch-lengths`   - whether to render internal node branch lengths
+  - `:show-branch-lengths`   - whether to render internal node distances
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
-  [{:keys [tree x-scale y-scale show-internal-markers show-branch-lengths marker-radius marker-fill
+  [{:keys [tree x-scale y-scale show-internal-markers show-branch-lengths scale-origin max-depth marker-radius marker-fill
            highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
@@ -160,6 +166,8 @@
                   :y-scale y-scale
                   :show-internal-markers show-internal-markers
                   :show-branch-lengths show-branch-lengths
+                  :scale-origin scale-origin
+                  :max-depth max-depth
                   :marker-radius marker-radius
                   :marker-fill marker-fill
                   :highlights highlights
