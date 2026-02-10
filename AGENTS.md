@@ -38,16 +38,40 @@ clojure -M:dev:test -m shadow.cljs.devtools.cli compile test
 
 ```
 src/main/app/
-  state.cljs    — defonce atoms, React context provider, use-app-state hook
-  core.cljs     — UI components, layout algorithms, app entry point
-  newick.cljs   — recursive-descent Newick parser (pure functions)
+  core.cljs     — app entry point
   csv.cljs      — CSV/TSV parsing with column metadata (pure functions)
-  specs.cljs    — clojure.spec.alpha specs for all data structures & fns
+  layout.cljs   — Central layout constants for the Phylo tree viewer
+  newick.cljs   — recursive-descent Newick parser (pure functions) 
+  specs.cljs    — clojure.spec.alpha specs for all data structures & fns  
+  state.cljs    — defonce atoms, React context provider, use-app-state hook
+  tree.cljs     — Functions for phylogenetic tree layout and analysis
+
+src/main/app/components/
+  grid.cljs             — AG-Grid-based metadata table component
+  metadata.cljs         — SVG rendering components for metadata column overlay
+  resizable_panel.cljs  — A bottom-anchored panel with a draggable top edge for resizing
+  scale.cljs            — Shared scale tick calculation helpers for viewer and sticky header.
+  selection_bar.cljs    — Selection bar component for assigning highlight colors
+  toolbar.cljs          — Toolbar and control panel components (sliders, checkboxes, import/export)
+  tree.cljs             — SVG rendering components for phylogenetic tree nodes and branches
+  viewer.cljs           — Top-level viewer components that compose the tree visualizatio
+
+src/main/app/export/
+  html.cljs  — Standalone HTML export pipeline
+  svg.cljs   — Standalone SVG export helper.
+
+src/main/app/import/
+  arborview.cljs   — Parsers for ArborView standalone HTML exports
+  nextstrain.cljs  — Parser for Nextstrain JSON exports
 
 src/test/app/
-  core_test.cljs    — layout algorithm tests (assign-y/x-coords, scale, etc.)
-  newick_test.cljs  — parser tests (tokenize, newick->map)
-  csv_test.cljs     — CSV/TSV parsing tests
+  arborview_import_test.cljs  — Import of trees + metadata from ArborView HTML files
+  csv_test.cljs               — Loading data from csv/tsv (comma/tab-separated value) files
+  export_html_test.cljs       — HTML export of full offline app
+  newick_test.cljs            — Newick parser tests (tokenize, newick->map)
+  nextstrain_import_test.cljs — Import of trees from Nextstrain JSON files
+  scale_test.cljs             — Dynamic scale bar major/minor ticks
+  tree_test.cljs              — Manipulation/query of phylogenetic tree
 
 src/dev/
   user.clj      — dev REPL helpers (cljs-repl fn)
