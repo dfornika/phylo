@@ -162,12 +162,19 @@
   - `:width-px`                - total available width in pixels
   - `:component-height-px`     - total available height in pixels
   - `:highlights`              - map of {leaf-name -> color} for persistent highlights
-  - `:selected-ids`            - set of leaf names currently selected in the grid"
+  - `:selected-ids`            - set of leaf names currently selected in the grid
+  - `:metadata-panel-collapsed` - whether the metadata grid panel is collapsed
+  - `:metadata-panel-height`    - current height of the metadata grid panel
+  - `:metadata-panel-last-drag-height` - last height set by dragging
+  - `:set-metadata-panel-height!` - setter for panel height
+  - `:set-metadata-panel-last-drag-height!` - setter for last drag height"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers show-distance-from-origin scale-origin width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
-           highlights selected-ids metadata-rows
-           set-active-cols! set-selected-ids! set-metadata-rows!]}]
+           highlights selected-ids metadata-rows metadata-panel-collapsed
+           metadata-panel-height metadata-panel-last-drag-height
+           set-active-cols! set-selected-ids! set-metadata-rows!
+           set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
         current-x-scale (if (> max-depth 0)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -182,6 +189,25 @@
                            (* col-spacing (max 0 (dec (count active-cols))))
                            100)
         svg-height      (+ tree-height 100)
+
+        ;; Layout refs for sizing the metadata panel
+        viewport-ref         (uix/use-ref nil)
+        [panel-max-height set-panel-max-height!] (uix/use-state 250)
+
+        ;; Refs to access latest values in the resize listener without changing callback identity
+        metadata-panel-collapsed-ref (uix/use-ref metadata-panel-collapsed)
+        metadata-panel-height-ref    (uix/use-ref metadata-panel-height)
+
+        ;; Keep refs in sync with state
+        _sync-collapsed-ref
+        (uix/use-effect
+         (fn [] (reset! metadata-panel-collapsed-ref metadata-panel-collapsed))
+         [metadata-panel-collapsed])
+
+        _sync-height-ref
+        (uix/use-effect
+         (fn [] (reset! metadata-panel-height-ref metadata-panel-height))
+         [metadata-panel-height])
 
         ;; Toggle a single leaf in/out of selected-ids
         toggle-selection (uix/use-callback
@@ -204,6 +230,37 @@
                                          row))
                                      metadata-rows)))
                             [metadata-rows active-cols set-metadata-rows!])
+
+        ;; Stable callback that reads latest values from refs
+        update-panel-max-height
+        (uix/use-callback
+         (fn []
+           (when-let [^js el @viewport-ref]
+             (let [viewport-height (.-height (.getBoundingClientRect el))
+                   sticky-height (:header-height LAYOUT)
+                   collapsed? @metadata-panel-collapsed-ref
+                   current-height @metadata-panel-height-ref
+                   current-panel-height (if collapsed? 0 (or current-height 0))
+                   next-max (max 0 (+ current-panel-height (- viewport-height sticky-height)))]
+               (set-panel-max-height! next-max))))
+         [])
+
+        ;; Register resize listener once on mount
+        _panel-max-effect
+        (uix/use-effect
+         (fn []
+           (update-panel-max-height)
+           (let [on-resize (fn [_] (update-panel-max-height))]
+             (.addEventListener js/window "resize" on-resize)
+             (fn []
+               (.removeEventListener js/window "resize" on-resize))))
+         [update-panel-max-height])
+
+        ;; Re-calculate when active-cols changes (affects layout)
+        _recalc-on-cols-change
+        (uix/use-effect
+         (fn [] (update-panel-max-height))
+         [active-cols update-panel-max-height])
 
         ;; ---- Box (lasso) selection state ----
         svg-ref                (uix/use-ref nil)
@@ -276,7 +333,8 @@
        ($ Toolbar)
 
        ;; Scrollable viewport
-       ($ :div {:style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
+       ($ :div {:ref viewport-ref
+                :style {:flex "1" :overflow "auto" :position "relative" :border-bottom "2px solid #dee2e6"}}
           (when (seq active-cols)
             ($ StickyHeader {:columns active-cols
                              :start-offset metadata-start-x
@@ -346,13 +404,17 @@
 
        ;; Selection bar (above the grid)
        (when (seq active-cols)
-         ($ SelectionBar))
+         ($ SelectionBar {:max-panel-height panel-max-height}))
 
        ;; Metadata grid (AG-Grid) in resizable bottom panel
-       (when (seq active-cols)
-         ($ ResizablePanel {:initial-height 250
+       (when (and (seq active-cols) (not metadata-panel-collapsed))
+         ($ ResizablePanel {:height metadata-panel-height
+                            :initial-height 250
                             :min-height 0
-                            :max-height 1200}
+                            :max-height panel-max-height
+                            :on-height-change (fn [new-h]
+                                                (set-metadata-panel-height! new-h)
+                                                (set-metadata-panel-last-drag-height! new-h))}
             ($ MetadataGrid {:metadata-rows metadata-rows
                              :active-cols active-cols
                              :tips tips
@@ -387,7 +449,7 @@
                         :margin 0
                         :letter-spacing "0.5px"}}
            "Phylo Viewer")
-        ($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
+        #_($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
      ;; Toolbar
      ($ Toolbar)
      ;; Empty-state message
@@ -432,7 +494,9 @@
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers show-distance-from-origin
                 scale-origin show-scale-gridlines show-pixel-grid
-                col-spacing highlights selected-ids
+                col-spacing highlights selected-ids metadata-panel-collapsed
+                metadata-panel-height metadata-panel-last-drag-height
+                set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
         {:keys [tree tips max-depth]} (uix/use-memo
@@ -455,8 +519,13 @@
                      :col-spacing col-spacing
                      :highlights highlights
                      :selected-ids selected-ids
-                     :width-px width-px
                      :metadata-rows metadata-rows
+                     :metadata-panel-collapsed metadata-panel-collapsed
+                     :metadata-panel-height metadata-panel-height
+                     :metadata-panel-last-drag-height metadata-panel-last-drag-height
+                     :set-metadata-panel-height! set-metadata-panel-height!
+                     :set-metadata-panel-last-drag-height! set-metadata-panel-last-drag-height!
+                     :width-px width-px
                      :set-active-cols! set-active-cols!
                      :set-selected-ids! set-selected-ids!
                      :set-metadata-rows! set-metadata-rows!

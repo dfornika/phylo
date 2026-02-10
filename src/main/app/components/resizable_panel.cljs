@@ -17,17 +17,35 @@
   handle bar up or down adjusts the panel height. The height is
   clamped between `min-height` and `max-height`.
 
+  During drag, only local state is updated for smooth visual feedback.
+  The `on-height-change` callback is fired only when the drag ends
+  (on mouseup), preventing expensive re-renders of parent components.
+
   Props:
+  - `:height`         - controlled height in pixels (optional)
   - `:initial-height` - starting height in pixels (default 250)
   - `:min-height`     - minimum panel height (default 100)
   - `:max-height`     - maximum panel height (default 600)
+  - `:on-height-change` - callback fired on drag end with the final height
   - `:children`       - child elements to render inside the panel"
-  [{:keys [initial-height min-height max-height children]
+  [{:keys [height initial-height min-height max-height on-height-change children]
     :or {initial-height 250 min-height 100 max-height 800}}]
-  (let [[panel-height set-panel-height!] (uix/use-state initial-height)
+  (let [[panel-height set-panel-height!] (uix/use-state (or height initial-height))
         dragging-ref (uix/use-ref false)
         start-y-ref (uix/use-ref 0)
-        start-h-ref (uix/use-ref 0)]
+        start-h-ref (uix/use-ref 0)
+        current-h-ref (uix/use-ref panel-height)]
+
+    ;; Sync controlled height when provided
+    (uix/use-effect
+     (fn []
+       (when (some? height)
+         (let [clamped-height (-> height
+                                  (max min-height)
+                                  (min max-height))]
+           (set-panel-height! clamped-height)))
+       js/undefined)
+     [height min-height max-height])
 
     ;; Global mousemove/mouseup listeners for drag
     (uix/use-effect
@@ -39,15 +57,22 @@
                                new-h (-> (+ @start-h-ref dy)
                                          (max min-height)
                                          (min max-height))]
-                           (set-panel-height! new-h))))
+                           ;; Update local state immediately for smooth visual feedback
+                           (set-panel-height! new-h)
+                           ;; Also update ref so mouseup has the latest value
+                           (reset! current-h-ref new-h))))
              on-up (fn [_e]
+                     (when @dragging-ref
+                       ;; Only commit to global state when drag ends
+                       (when on-height-change
+                         (on-height-change @current-h-ref)))
                      (reset! dragging-ref false))]
          (.addEventListener js/document "mousemove" on-move)
          (.addEventListener js/document "mouseup" on-up)
          (fn []
            (.removeEventListener js/document "mousemove" on-move)
            (.removeEventListener js/document "mouseup" on-up))))
-     [min-height max-height])
+     [on-height-change min-height max-height])
 
     ($ :div {:style {:height (str panel-height "px")
                      :display "flex"

@@ -56,7 +56,7 @@ app                               (app.core)
             │   │       └── TreeNode... Child nodes (recursive)
             │   └── MetadataTable     (app.components.metadata) Computes column offsets, wraps columns
             │       └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
-            ├── SelectionBar      (app.components.selection_bar) Highlight color picker + assign/clear buttons
+            ├── SelectionBar      (app.components.selection_bar) Selection shortcuts + highlight controls + panel buttons
             └── ResizablePanel    (app.components.resizable_panel) Draggable resize handle wrapper
                 └── MetadataGrid  (app.components.grid) AG-Grid table with editing, selection sync
 ```
@@ -83,6 +83,9 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!scale-origin` | keyword | `:tips` | Scale origin for labels (`:tips` or `:root`) |
 | `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
 | `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
+| `!metadata-panel-collapsed` | boolean | `true` | Whether the metadata grid panel is collapsed |
+| `!metadata-panel-height` | number | `250` | Current metadata grid panel height in pixels |
+| `!metadata-panel-last-drag-height` | number | `250` | Last height set via drag-resize |
 | `!highlight-color` | string | `"#4682B4"` | Brush color for painting highlights onto selected leaves |
 | `!selected-ids` | set | `#{}` | Set of leaf names currently selected (transient, checkbox-driven) |
 | `!highlights` | map | `{}` | Persistent highlight assignments `{leaf-name → CSS color}` |
@@ -116,6 +119,9 @@ app
  :scale-origin            :tips  :set-scale-origin!            fn
  :show-pixel-grid         false  :set-show-pixel-grid!         fn
  :col-spacing             0      :set-col-spacing!             fn
+ :metadata-panel-collapsed true  :set-metadata-panel-collapsed! fn
+ :metadata-panel-height    250   :set-metadata-panel-height!    fn
+ :metadata-panel-last-drag-height 250 :set-metadata-panel-last-drag-height! fn
  :highlight-color         "..."  :set-highlight-color!         fn
  :selected-ids            #{}    :set-selected-ids!            fn
  :highlights              {}     :set-highlights!              fn}
@@ -134,6 +140,8 @@ Phylo uses a two-tier highlight model:
 2. **`highlights`** — a persistent `{leaf-name → CSS-color}` map representing committed highlight assignments. Users select leaves, pick a brush color via `SelectionBar`, and click "Assign" to stamp the current `highlight-color` onto every leaf in `selected-ids`.
 
 Tree nodes render a colored circle for highlighted leaves and a dashed selection ring for selected leaves. Both can be active simultaneously.
+
+Selection shortcuts in `SelectionBar` provide explicit **Select All** and **Select None** buttons so users can bulk-update `selected-ids` without relying on the AG-Grid header controls.
 
 ### Cell Editing
 

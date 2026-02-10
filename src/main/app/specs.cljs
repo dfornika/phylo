@@ -50,15 +50,18 @@
 ;; ===== App State Context =====
 
 (s/def ::newick-str (s/nilable string?))
-(s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
-(s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
-(s/def ::x-mult number?)
-(s/def ::y-mult number?)
-
 (s/def ::set-newick-str! fn?)
+
+(s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
 (s/def ::set-metadata-rows! fn?)
+
+(s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
 (s/def ::set-active-cols! fn?)
+
+(s/def ::x-mult number?)
 (s/def ::set-x-mult! fn?)
+
+(s/def ::y-mult number?)
 (s/def ::set-y-mult! fn?)
 
 (s/def ::show-internal-markers boolean?)
@@ -88,6 +91,15 @@
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
 
+(s/def ::metadata-panel-collapsed boolean?)
+(s/def ::set-metadata-panel-collapsed! fn?)
+
+(s/def ::metadata-panel-height number?)
+(s/def ::set-metadata-panel-height! fn?)
+
+(s/def ::metadata-panel-last-drag-height number?)
+(s/def ::set-metadata-panel-last-drag-height! fn?)
+
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
 (s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
@@ -103,7 +115,10 @@
                    ::col-spacing ::set-col-spacing!
                    ::highlight-color ::set-highlight-color!
                    ::selected-ids ::set-selected-ids!
-                   ::highlights ::set-highlights!]))
+                   ::highlights ::set-highlights!
+                   ::metadata-panel-collapsed ::set-metadata-panel-collapsed!
+                   ::metadata-panel-height ::set-metadata-panel-height!
+                   ::metadata-panel-last-drag-height ::set-metadata-panel-last-drag-height!]))
 
 ;; ===== Component Props =====
 
@@ -173,12 +188,17 @@
                    ::selected-ids 
                    ::on-toggle-selection]))
 
-;; Toolbar and SelectionBar read from context — no props spec needed.
+;; Toolbar reads from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
 (s/def ::width-px number?)
 (s/def ::component-height-px number?)
+(s/def ::metadata-panel-collapsed boolean?)
+(s/def ::metadata-panel-height number?)
+(s/def ::metadata-panel-last-drag-height number?)
+(s/def ::set-metadata-panel-height! fn?)
+(s/def ::set-metadata-panel-last-drag-height! fn?)
 
 (s/def ::tree-viewer-props
   (s/keys :req-un [::tree 
@@ -195,7 +215,12 @@
                    ::component-height-px
                    ::active-cols ::set-active-cols!
                    ::metadata-rows ::set-metadata-rows!
-                   ::set-selected-ids! ]
+                   ::set-selected-ids!
+                   ::metadata-panel-collapsed
+                   ::metadata-panel-height
+                   ::metadata-panel-last-drag-height
+                   ::set-metadata-panel-height!
+                   ::set-metadata-panel-last-drag-height! ]
           :opt-un [::highlights ::selected-ids]))
 
 (s/def ::phylogenetic-tree-props
@@ -251,11 +276,14 @@
 (s/def ::initial-height number?)
 (s/def ::min-height number?)
 (s/def ::max-height number?)
+(s/def ::height number?)
+(s/def ::on-height-change fn?)
 
 (s/def ::resizable-panel-props
   (s/keys :req-un [::initial-height 
                    ::min-height 
-                   ::max-height]))
+                   ::max-height]
+          :opt-un [::height ::on-height-change]))
 
 ;; ===== Function Specs =====
 
