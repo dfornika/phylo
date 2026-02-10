@@ -21,6 +21,8 @@
           {:keys [newick-str]} (nextstrain/parse-nextstrain-json json)]
       (is (= "('A B':0.1)root;" newick-str)))))
 
+;; This is failing due to floating-point precision giving:
+;; "((A1:0.1,A2:0.19999999999999998)A:0.1,B:0.15)root;"
 (deftest parse-nextstrain-json-nested-tree
   (testing "Handles nested trees with multiple levels"
     (let [json "{\"tree\":{\"name\":\"root\",\"node_attrs\":{\"div\":0},\"children\":[{\"name\":\"A\",\"node_attrs\":{\"div\":0.1},\"children\":[{\"name\":\"A1\",\"node_attrs\":{\"div\":0.2}},{\"name\":\"A2\",\"node_attrs\":{\"div\":0.3}}]},{\"name\":\"B\",\"node_attrs\":{\"div\":0.15}}]}}"
