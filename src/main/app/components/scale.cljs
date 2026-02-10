@@ -78,3 +78,16 @@
      :minor-ticks []
      :base-ticks [0]
      :unit 0}))
+
+(comment
+  (let [max-depth 10]
+    (scale-ticks {:max-depth max-depth
+                  :x-scale 100
+                  :origin :tips}))
+  
+  (let [max-depth 10]
+    (scale-ticks {:max-depth max-depth
+                  :x-scale 100
+                  :origin :root}))
+  
+  )

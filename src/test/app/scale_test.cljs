@@ -168,8 +168,12 @@
       (is (= (count (:major-ticks result-root)) (count (:major-ticks result-tips))))
       ;; The first major tick for :root should be 0
       (is (= 0 (first (:major-ticks result-root))))
-      ;; The last major tick for :tips should be 0
-      (is (= 0 (last (:major-ticks result-tips)))))))
+      ;; The last major tick for :root should be 10
+      (is (= 10 (last (:major-ticks result-root))))
+      ;; The first major tick for :tips should be 0
+      (is (= 0 (first (:major-ticks result-tips))))
+      ;; The last major tick for :tips should be 10
+      (is (= 10 (last (:major-ticks result-tips)))))))
 
 (deftest scale-ticks-unit-calculation
   (testing "scale-ticks unit is calculated via tree/calculate-scale-unit"
