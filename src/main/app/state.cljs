@@ -14,6 +14,8 @@
   - [[!y-mult]]         - vertical tip spacing (pixels)
   - [[!show-internal-markers]] - whether to show markers on internal nodes
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
+  - [[!show-branch-lengths]]   - whether to show numeric branch lengths on branches
+  - [[!scale-origin]]          - scale origin for labels (:tips or :root)
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
   - [[!col-spacing]]           - extra horizontal spacing between metadata columns
   - [[!highlight-color]]       - CSS color string used as the current brush color
