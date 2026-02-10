@@ -66,3 +66,9 @@
     (let [json "{\"tree\":{\"node_attrs\":{\"div\":0},\"children\":[{\"name\":\"A\",\"node_attrs\":{\"div\":0.1}},{\"node_attrs\":{\"div\":0.2}}]}}"
           {:keys [newick-str]} (nextstrain/parse-nextstrain-json json)]
       (is (= "(A:0.1,:0.2);" newick-str)))))
+
+(deftest parse-nextstrain-json-internal-node-without-name
+  (testing "Handles internal nodes with no name"
+    (let [json "{\"tree\":{\"name\":\"root\",\"node_attrs\":{\"div\":0},\"children\":[{\"node_attrs\":{\"div\":0.1},\"children\":[{\"name\":\"A1\",\"node_attrs\":{\"div\":0.2}}]},{\"name\":\"B\",\"node_attrs\":{\"div\":0.15}}]}}"
+          {:keys [newick-str]} (nextstrain/parse-nextstrain-json json)]
+      (is (= "((A1:0.1):0.1,B:0.15)root;" newick-str)))))
