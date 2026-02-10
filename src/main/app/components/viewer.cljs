@@ -156,7 +156,7 @@
   - `:show-internal-markers`   - whether to show circles on internal nodes
   - `:show-scale-gridlines`    - whether to show evolutionary distance gridlines
   - `:scale-origin`            - `:tips` or `:root` for scale labeling
-  - `:show-branch-lengths`     - whether to show internal node branch lengths
+  - `:show-distance-from-origin`     - whether to show internal node distances from origin
   - `:show-pixel-grid`         - whether to show pixel coordinate debug grid
   - `:col-spacing`             - extra horizontal spacing between metadata columns
   - `:width-px`                - total available width in pixels
@@ -164,7 +164,7 @@
   - `:highlights`              - map of {leaf-name -> color} for persistent highlights
   - `:selected-ids`            - set of leaf names currently selected in the grid"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
-           show-internal-markers show-branch-lengths scale-origin width-px component-height-px
+           show-internal-markers show-distance-from-origin scale-origin width-px component-height-px
            show-scale-gridlines show-pixel-grid col-spacing
            highlights selected-ids metadata-rows
            set-active-cols! set-selected-ids! set-metadata-rows!]}]
@@ -314,7 +314,7 @@
                                   :x-scale current-x-scale
                                   :y-scale y-mult
                                   :show-internal-markers show-internal-markers
-                                  :show-branch-lengths show-branch-lengths
+                                  :show-distance-from-origin show-distance-from-origin
                                   :scale-origin scale-origin
                                   :max-depth max-depth
                                   :marker-radius (:node-marker-radius LAYOUT)
@@ -430,7 +430,7 @@
   When no Newick string is loaded, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
-                x-mult y-mult show-internal-markers show-branch-lengths
+                x-mult y-mult show-internal-markers show-distance-from-origin
                 scale-origin show-scale-gridlines show-pixel-grid
                 col-spacing highlights selected-ids
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
@@ -448,7 +448,7 @@
                      :x-mult x-mult
                      :y-mult y-mult
                      :show-internal-markers show-internal-markers
-                     :show-branch-lengths show-branch-lengths
+                     :show-distance-from-origin show-distance-from-origin
                      :scale-origin scale-origin
                      :show-scale-gridlines show-scale-gridlines
                      :show-pixel-grid show-pixel-grid

@@ -57,7 +57,7 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical spacing in pixels between adjacent tips
   - `:show-internal-markers`  - boolean, whether to render circles on internal nodes
-  - `:show-branch-lengths`   - boolean, whether to render internal node distances
+  - `:show-distance-from-origin`   - boolean, whether to render internal node distances
   - `:scale-origin`         - `:tips` or `:root` for distance labeling
   - `:max-depth`            - maximum x-coordinate in the tree
   - `:marker-radius`          - radius of the circular node marker in pixels
@@ -65,7 +65,7 @@
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
-  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-branch-lengths
+  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-distance-from-origin
            scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
@@ -80,7 +80,7 @@
         fill (if highlight-color highlight-color marker-fill)
         radius (if highlight-color (+ marker-radius 1.5) marker-radius)
         node-depth (:x node)
-        label-value (when (and (not is-leaf?) show-branch-lengths (number? node-depth) (pos? max-depth))
+        label-value (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
                       (scale/label-value scale-origin max-depth node-depth))
         distance-label (when (some? label-value)
                          (.toFixed (js/Number label-value) 1))
@@ -102,7 +102,7 @@
                      :stroke-dasharray "3 2"
                      :style {:pointer-events "none"}}))
 
-       ;; Internal node branch-length label
+       ;; Internal node distance label
        (when distance-label
          ($ :text {:x (- scaled-x 6)
                    :y (- scaled-y 6)
@@ -130,7 +130,7 @@
                       :x-scale x-scale
                       :y-scale y-scale
                       :show-internal-markers show-internal-markers
-                      :show-branch-lengths show-branch-lengths
+                      :show-distance-from-origin show-distance-from-origin
                       :scale-origin scale-origin
                       :max-depth max-depth
                       :marker-radius marker-radius
@@ -150,13 +150,13 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical tip spacing
   - `:show-internal-markers`  - whether to render circles on internal nodes
-  - `:show-branch-lengths`   - whether to render internal node distances
+  - `:show-distance-from-origin`    - whether to render internal node distances
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
-  [{:keys [tree x-scale y-scale show-internal-markers show-branch-lengths scale-origin max-depth marker-radius marker-fill
+  [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
            highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
@@ -165,7 +165,7 @@
                   :x-scale x-scale
                   :y-scale y-scale
                   :show-internal-markers show-internal-markers
-                  :show-branch-lengths show-branch-lengths
+                  :show-distance-from-origin show-distance-from-origin
                   :scale-origin scale-origin
                   :max-depth max-depth
                   :marker-radius marker-radius

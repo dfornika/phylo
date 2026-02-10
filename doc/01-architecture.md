@@ -79,7 +79,7 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!y-mult` | number | `30` | Vertical tip spacing in pixels (10–100) |
 | `!show-internal-markers` | boolean | `false` | Show circle markers on internal nodes |
 | `!show-scale-gridlines` | boolean | `false` | Show evolutionary distance gridlines |
-| `!show-branch-lengths` | boolean | `false` | Show internal node distance labels |
+| `!show-distance-from-origin` | boolean | `false` | Show internal node distance labels |
 | `!scale-origin` | keyword | `:tips` | Scale origin for labels (`:tips` or `:root`) |
 | `!show-pixel-grid` | boolean | `false` | Show pixel coordinate debug grid |
 | `!col-spacing` | number | `0` | Extra horizontal spacing between metadata columns |
@@ -112,7 +112,7 @@ app
  :y-mult                  30     :set-y-mult!                  fn
  :show-internal-markers   false  :set-show-internal-markers!   fn
  :show-scale-gridlines    false  :set-show-scale-gridlines!    fn
- :show-branch-lengths     false  :set-show-branch-lengths!     fn
+ :show-distance-from-origin     false  :set-show-distance-from-origin!     fn
  :scale-origin            :tips  :set-scale-origin!            fn
  :show-pixel-grid         false  :set-show-pixel-grid!         fn
  :col-spacing             0      :set-col-spacing!             fn

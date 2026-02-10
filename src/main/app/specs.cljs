@@ -67,8 +67,8 @@
 (s/def ::show-scale-gridlines boolean?)
 (s/def ::set-show-scale-gridlines! fn?)
 
-(s/def ::show-branch-lengths boolean?)
-(s/def ::set-show-branch-lengths! fn?)
+(s/def ::show-distance-from-origin boolean?)
+(s/def ::set-show-distance-from-origin! fn?)
 
 (s/def ::scale-origin #{:tips :root})
 (s/def ::set-scale-origin! fn?)
@@ -97,7 +97,7 @@
                    ::y-mult ::set-y-mult!
                    ::show-internal-markers ::set-show-internal-markers!
                    ::show-scale-gridlines ::set-show-scale-gridlines!
-                   ::show-branch-lengths ::set-show-branch-lengths!
+                   ::show-distance-from-origin ::set-show-distance-from-origin!
                    ::scale-origin ::set-scale-origin!
                    ::show-pixel-grid ::set-show-pixel-grid!
                    ::col-spacing ::set-col-spacing!
@@ -166,7 +166,7 @@
                    ::show-internal-markers 
                    ::marker-radius 
                    ::marker-fill
-                   ::show-branch-lengths 
+                   ::show-distance-from-origin 
                    ::scale-origin 
                    ::max-depth]
           :opt-un [::highlights 
@@ -188,7 +188,7 @@
                    ::show-internal-markers
                    ::show-scale-gridlines 
                    ::show-pixel-grid
-                   ::show-branch-lengths
+                   ::show-distance-from-origin
                    ::scale-origin
                    ::col-spacing 
                    ::width-px
@@ -205,7 +205,7 @@
                    ::show-internal-markers
                    ::marker-radius 
                    ::marker-fill
-                   ::show-branch-lengths 
+                   ::show-distance-from-origin 
                    ::scale-origin
                    ::max-depth]
           :opt-un [::highlights 
@@ -215,7 +215,8 @@
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth 
                    ::x-scale 
-                   ::tree-height]))
+                   ::tree-height
+                   ::scale-origin]))
 
 (s/def ::metadata-table-props
   (s/keys :req-un [::active-cols 
