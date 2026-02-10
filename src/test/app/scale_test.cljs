@@ -259,11 +259,11 @@
 
 (deftest decimals-for-unit-fractional-units
   (testing "decimals-for-unit handles fractional units between powers of 10"
-    ;; Unit 0.05 -> log10(0.05) ≈ -1.3, ceil(1.3) = 2
+    ;; Unit 0.05 -> ceil(-log10(0.05)) = ceil(1.3) = 2
     (is (= 2 (#'scale/decimals-for-unit 0.05)))
-    ;; Unit 0.5 -> log10(0.5) ≈ -0.3, ceil(0.3) = 1
+    ;; Unit 0.5 -> ceil(-log10(0.5)) = ceil(0.3) = 1
     (is (= 1 (#'scale/decimals-for-unit 0.5)))
-    ;; Unit 0.25 -> log10(0.25) ≈ -0.6, ceil(0.6) = 1
+    ;; Unit 0.25 -> ceil(-log10(0.25)) = ceil(0.6) = 1
     (is (= 1 (#'scale/decimals-for-unit 0.25)))))
 
 ;; ===== label-decimals =====
