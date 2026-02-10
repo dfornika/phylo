@@ -79,6 +79,85 @@
 (defonce !highlights
   (atom {}))
 
+;; ===== Export / Import =====
+
+(def ^:private export-version
+  "Current export schema version for standalone HTML export payloads."
+  1)
+
+(def ^:private export-defaults
+  {:newick-str default-tree
+   :metadata-rows []
+   :active-cols []
+   :x-mult 0.5
+   :y-mult 30
+   :show-internal-markers false
+   :show-scale-gridlines false
+   :show-pixel-grid false
+   :col-spacing 0
+   :highlight-color "#4682B4"
+   :selected-ids #{}
+   :highlights {}})
+
+(defn export-state
+  "Returns a versioned, EDN-serializable snapshot of app state.
+
+  Intended for embedding into standalone HTML exports."
+  []
+  {:version export-version
+   :state {:newick-str @!newick-str
+           :metadata-rows @!metadata-rows
+           :active-cols @!active-cols
+           :x-mult @!x-mult
+           :y-mult @!y-mult
+           :show-internal-markers @!show-internal-markers
+           :show-scale-gridlines @!show-scale-gridlines
+           :show-pixel-grid @!show-pixel-grid
+           :col-spacing @!col-spacing
+           :highlight-color @!highlight-color
+           :selected-ids @!selected-ids
+           :highlights @!highlights}})
+
+(defn- normalize-export
+  "Normalizes export payloads to a flat state map.
+
+  Accepts either the full {:version :state} wrapper or a raw state map."
+  [payload]
+  (cond
+    (and (map? payload) (map? (:state payload))) (:state payload)
+    (map? payload) payload
+    :else nil))
+
+(defn- coerce-set
+  "Coerces a value to a set, returning empty set when invalid."
+  [value]
+  (cond
+    (set? value) value
+    (sequential? value) (set value)
+    :else #{}))
+
+(defn apply-export-state!
+  "Applies an exported state payload into the live atoms.
+
+  Missing keys fall back to defaults so exports remain forward-compatible."
+  [payload]
+  (when-let [state-map (normalize-export payload)]
+    (let [merged (merge export-defaults state-map)]
+      (reset! !newick-str (:newick-str merged))
+      (reset! !metadata-rows (:metadata-rows merged))
+      (reset! !active-cols (:active-cols merged))
+      (reset! !x-mult (:x-mult merged))
+      (reset! !y-mult (:y-mult merged))
+      (reset! !show-internal-markers (:show-internal-markers merged))
+      (reset! !show-scale-gridlines (:show-scale-gridlines merged))
+      (reset! !show-pixel-grid (:show-pixel-grid merged))
+      (reset! !col-spacing (:col-spacing merged))
+      (reset! !highlight-color (:highlight-color merged))
+      (reset! !selected-ids (coerce-set (:selected-ids merged)))
+      (reset! !highlights (if (map? (:highlights merged))
+                            (:highlights merged)
+                            {})))))
+
 ;; ===== Context =====
 
 (def app-context

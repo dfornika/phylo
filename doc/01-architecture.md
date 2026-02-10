@@ -146,6 +146,41 @@ The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: pars
 
 The `:app` shadow-cljs build includes `uix.dev` as a preload, which integrates with `react-refresh`. Combined with the `defonce` atoms, this gives robust state preservation during development — both React component state and application data survive hot reloads.
 
+
+## Standalone HTML Export
+
+Phylo can export a fully self-contained HTML snapshot that embeds the current
+app bundle, styles, and state so the viewer can be reopened offline with the
+same tree, metadata, and visual settings.
+
+### Export Pipeline
+
+1. `Toolbar` collects all runtime scripts (`<script src=...>`) and stylesheets
+   (`<link rel="stylesheet">`) from the current document.
+2. Each script and stylesheet is fetched and inlined directly into the export.
+3. The current app state is serialized via `state/export-state` and embedded
+   into the HTML as an EDN payload in a `<script id="phylo-export-state">` tag.
+4. Static assets (currently `images/logo.svg`) are fetched and embedded as data
+   URLs in `window.__PHYLO_ASSET_MAP__` for offline rendering.
+5. The resulting HTML file is saved as `phylo-viewer.html`.
+
+### State Serialization
+
+`app.state/export-state` returns a versioned map of the exportable state, and
+`app.state/apply-export-state!` rehydrates it. Missing keys default safely so
+older exports continue to load as the app evolves.
+
+### Bootstrapping on Load
+
+`app.core/init` looks for the embedded EDN payload and applies it before the
+initial render. This allows exported HTML files to restore state immediately.
+
+### Asset Resolution
+
+`TreeViewer` resolves the logo source using an asset map if present, so the
+exported HTML does not rely on external files.
+
+
 ## Layout System
 
 The `LAYOUT` constant in `app.layout` centralizes all spacing values:
@@ -156,7 +191,7 @@ The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 | `:svg-padding-y` | 40px | Vertical SVG padding |
 | `:header-height` | 36px | Metadata header bar height |
 | `:label-buffer` | 150px | Space for tip labels |
-| `:metadata-gap` | 40px | Gap between labels and metadata |
+| `:metadata-gap` | 20px | Gap between labels and metadata |
 | `:default-col-width` | 120px | Default metadata column width |
 | `:toolbar-gap` | 20px | Toolbar control spacing |
 | `:node-marker-radius` | 3px | Radius of circular SVG node markers |

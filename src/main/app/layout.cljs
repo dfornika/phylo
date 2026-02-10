@@ -22,7 +22,7 @@
    :svg-padding-y 40
    :header-height 36
    :label-buffer 150
-   :metadata-gap 40
+   :metadata-gap 20
    :default-col-width 120
    :toolbar-gap 20
    :node-marker-radius 3

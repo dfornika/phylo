@@ -6,6 +6,8 @@
   (:require [uix.core :as uix :refer [defui $]]
             [app.csv :as csv]
             [app.state :as state]
+            [app.export.html :as export-html]
+            [app.export.svg :as export-svg]
             [app.layout :refer [LAYOUT]]))
 
 ;; ===== File I/O =====
@@ -22,63 +24,6 @@
       (set! (.-onload reader)
             (fn [e] (on-read-fn (-> e .-target .-result))))
       (.readAsText reader file))))
-
-(defn- fallback-download!
-  "Downloads the blob using the fallback `<a download>` method.
-
-  Creates a temporary anchor element with an object URL, clicks it,
-  then cleans up asynchronously to avoid racing the download."
-  [blob filename]
-  (let [url (.createObjectURL js/URL blob)
-        a   (.createElement js/document "a")]
-    (set! (.-href a) url)
-    (set! (.-download a) filename)
-    (.appendChild (.-body js/document) a)
-    (.click a)
-    (js/setTimeout
-     (fn []
-       (.removeChild (.-body js/document) a)
-       (.revokeObjectURL js/URL url))
-     0)))
-
-(defn- save-blob!
-  "Triggers a browser file save for the given Blob.
-
-  Attempts the File System Access API (`showSaveFilePicker`) first,
-  which opens a native \"Save as...\" dialog. Falls back to a
-  programmatic `<a download>` click for browsers that do not
-  support it (Firefox, Safari)."
-  [blob filename]
-  (if (exists? js/window.showSaveFilePicker)
-    (-> (.showSaveFilePicker js/window
-                             (clj->js {:suggestedName filename
-                                       :types [{:description "SVG Image"
-                                                :accept {"image/svg+xml" [".svg"]}}]}))
-        (.then (fn [handle]
-                 (-> (.createWritable handle)
-                     (.then (fn [writable]
-                              (-> (.write writable blob)
-                                  (.then #(.close writable))))))))
-        (.catch (fn [err]
-                  (when-not (= (.-name err) "AbortError")
-                    (js/console.error "File System Access API failed:" err)
-                    (fallback-download! blob filename)))))
-    (fallback-download! blob filename)))
-
-(defn export-svg!
-  "Exports the phylogenetic tree SVG to a file.
-
-  Grabs the live `<svg>` DOM node by its id, clones it, adds the
-  `xmlns` attribute required for standalone SVG files, serializes
-  it to XML text, and triggers a save dialog."
-  []
-  (when-let [svg-el (js/document.getElementById "phylo-svg")]
-    (let [clone      (.cloneNode svg-el true)
-          _          (.setAttribute clone "xmlns" "http://www.w3.org/2000/svg")
-          serializer (js/XMLSerializer.)
-          svg-str    (.serializeToString serializer clone)
-          blob       (js/Blob. #js [svg-str] #js {:type "image/svg+xml;charset=utf-8"})]
-      (save-blob! blob "phylo-tree.svg"))))
 
 ;; ===== Style constants =====
 
@@ -194,17 +139,32 @@
                         :style {:accent-color navy}
                         :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
              "Pixel Grid"))
+
        ;; ── Export ──
-       ($ :button {:on-click (fn [_] (export-svg!))
-                   :style {:font-family toolbar-font
-                           :font-size "13px"
-                           :font-weight 600
-                           :color navy
-                           :padding "6px 14px"
-                           :cursor "pointer"
-                           :background "#f0f2f5"
-                           :border (str "1px solid " navy)
-                           :border-radius "6px"
-                           :transition "background 0.15s"
-                           :margin-left "auto"}}
-          "\u21E9 Export SVG"))))
+       ($ :div {:style {:display "flex"
+                        :gap "8px"
+                        :margin-left "auto"}}
+          ($ :button {:on-click (fn [_] (export-svg/export-svg!))
+                      :style {:font-family toolbar-font
+                              :font-size "13px"
+                              :font-weight 600
+                              :color navy
+                              :padding "6px 14px"
+                              :cursor "pointer"
+                              :background "#f0f2f5"
+                              :border (str "1px solid " navy)
+                              :border-radius "6px"
+                              :transition "background 0.15s"}}
+             "\u21E9 Export SVG")
+          ($ :button {:on-click (fn [_] (export-html/export-html!))
+                      :style {:font-family toolbar-font
+                              :font-size "13px"
+                              :font-weight 600
+                              :color navy
+                              :padding "6px 14px"
+                              :cursor "pointer"
+                              :background "#f0f2f5"
+                              :border (str "1px solid " navy)
+                              :border-radius "6px"
+                              :transition "background 0.15s"}}
+             "\u21E9 Export HTML")))))

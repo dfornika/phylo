@@ -97,6 +97,13 @@
                      :stroke-dasharray "4 4"
                      :stroke-width 1}))))))
 
+
+(defn- asset-src
+  "Returns a data URL for bundled assets when present, falling back to the path."
+  [path]
+  (let [assets (.-__PHYLO_ASSET_MAP__ js/window)]
+    (or (and assets (aget assets path)) path)))
+
 ;; ---- Helpers for SVG coordinate conversion ----
 
 (defn- client->svg
@@ -241,7 +248,7 @@
                           :margin 0
                           :letter-spacing "0.5px"}}
              "Phylo Viewer")
-          ($ :img {:src "images/logo.svg" :height "32px"})
+          ($ :img {:src (asset-src "images/logo.svg") :height "32px"})
           )
 
        ;; Toolbar
@@ -344,7 +351,7 @@
                         :margin 0
                         :letter-spacing "0.5px"}}
            "Phylo Viewer")
-        ($ :img {:src "images/logo.svg" :height "32px"}))
+        ($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
      ;; Toolbar
      ($ Toolbar)
      ;; Empty-state message
