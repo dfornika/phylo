@@ -5,6 +5,8 @@
   state from React context via [[app.state/use-app-state]]."
   (:require [uix.core :as uix :refer [defui $]]
             [app.csv :as csv]
+            [clojure.string :as str]
+            [app.import.arborview :as arbor]
             [app.state :as state]
             [app.export.html :as export-html]
             [app.export.svg :as export-svg]
@@ -45,9 +47,18 @@
   {:display "flex"
    :align-items "center"
    :gap "8px"
-   :padding "6px 12px"
+   :padding "4px 8px"
    :background "#f0f2f5"
    :border-radius "6px"})
+
+(def ^:private group-style
+  {:display "flex"
+   :align-items "center"
+   :gap "10px"
+   :padding "4px 6px"
+   :border "1px solid #dee2e6"
+   :border-radius "8px"
+   :background "#ffffff"})
 
 ;; ===== Main Toolbar =====
 
@@ -65,7 +76,7 @@
                 show-pixel-grid set-show-pixel-grid!
                 set-newick-str!
                 set-metadata-rows! set-active-cols!]} (state/use-app-state)]
-    ($ :div {:style {:padding "10px 16px"
+    ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
                      :display "flex"
@@ -75,96 +86,106 @@
                      :font-family toolbar-font
                      :color navy}}
 
-       ;; ── File loaders ──
-       ($ :div {:style (merge section-style {:gap "16px"})}
-          ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
-             ($ :label {:style label-style} "Tree")
-             ($ :input {:type "file"
-                        :accept ".nwk,.newick,.tree,.txt"
-                        :style {:font-family toolbar-font :font-size "12px" :color navy}
-                        :on-change #(read-file! % (fn [content]
-                                                    (set-newick-str! (.trim content))))}))
-          ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
-             ($ :label {:style label-style} "Metadata")
-             ($ :input {:type "file"
-                        :accept ".csv,.tsv,.txt"
-                        :style {:font-family toolbar-font :font-size "12px" :color navy}
-                        :on-change #(read-file! % (fn [content]
-                                                    (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
-                                                      (set-metadata-rows! data)
-                                                      (set-active-cols! headers))))})))
+       ;; ── Import ──
+       ($ :div {:style group-style}
+          ($ :div {:style (merge section-style {:gap "12px"})}
+             ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+                ($ :label {:style label-style} "Tree")
+                ($ :input {:type "file"
+                           :accept ".nwk,.newick,.tree,.txt"
+                           :style {:font-family toolbar-font :font-size "12px" :color navy}
+                           :on-change #(read-file! % (fn [content]
+                                                       (set-newick-str! (.trim content))))}))
+             ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+                ($ :label {:style label-style} "Metadata")
+                ($ :input {:type "file"
+                           :accept ".csv,.tsv,.txt"
+                           :style {:font-family toolbar-font :font-size "12px" :color navy}
+                           :on-change #(read-file! % (fn [content]
+                                                       (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
+                                                         (set-metadata-rows! data)
+                                                         (set-active-cols! headers))))})))
+          ($ :div {:style section-style}
+             ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
+                ($ :label {:style label-style} "ArborView HTML")
+                ($ :input {:type "file"
+                           :accept ".html,.htm"
+                           :style {:font-family toolbar-font :font-size "12px" :color navy}
+                           :on-change #(read-file! % (fn [content]
+                                                       (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
+                                                         (when newick-str
+                                                           (set-newick-str! (str/trim newick-str)))
+                                                         (when metadata-raw
+                                                           (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
+                                                             (set-metadata-rows! data)
+                                                             (set-active-cols! headers))))))}))))
 
-       ;; ── Sliders ──
-       ($ :div {:style section-style}
-          ($ :label {:style label-style} "Tree Width")
-          ($ :input {:type "range"
-                     :min 0.05 :max 1.5 :step 0.01
-                     :value x-mult
-                     :style {:width "90px" :accent-color navy}
-                     :on-change #(set-x-mult! (js/parseFloat (.. % -target -value)))}))
-
-       ($ :div {:style section-style}
-          ($ :label {:style label-style} "Tree Height")
-          ($ :input {:type "range"
-                     :min 10 :max 100
-                     :value y-mult
-                     :style {:width "90px" :accent-color navy}
-                     :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
-
-       ($ :div {:style section-style}
-          ($ :label {:style label-style} "Metadata Column Gap")
-          ($ :input {:type "range"
-                     :min 0 :max 50 :step 1
-                     :value col-spacing
-                     :style {:width "70px" :accent-color navy}
-                     :on-change #(set-col-spacing! (js/parseInt (.. % -target -value) 10))}))
-
-       ;; ── Toggles ──
-       ($ :div {:style (merge section-style {:gap "14px"})}
-          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
-             ($ :input {:type "checkbox"
-                        :checked show-internal-markers
-                        :style {:accent-color navy}
-                        :on-change #(set-show-internal-markers! (not show-internal-markers))})
-             "Internal Node Markers")
-          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
-             ($ :input {:type "checkbox"
-                        :checked show-scale-gridlines
-                        :style {:accent-color navy}
-                        :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
-             "Scale Gridlines")
-          ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
-             ($ :input {:type "checkbox"
-                        :checked show-pixel-grid
-                        :style {:accent-color navy}
-                        :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
-             "Pixel Grid"))
+       ;; ── Controls ──
+       ($ :div {:style group-style}
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Width")
+             ($ :input {:type "range"
+                        :min 0.05 :max 1.5 :step 0.01
+                        :value x-mult
+                        :style {:width "80px" :accent-color navy}
+                        :on-change #(set-x-mult! (js/parseFloat (.. % -target -value)))}))
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Height")
+             ($ :input {:type "range"
+                        :min 10 :max 100
+                        :value y-mult
+                        :style {:width "80px" :accent-color navy}
+                        :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Metadata Columns")
+             ($ :input {:type "range"
+                        :min 0 :max 50 :step 1
+                        :value col-spacing
+                        :style {:width "64px" :accent-color navy}
+                        :on-change #(set-col-spacing! (js/parseInt (.. % -target -value) 10))}))
+          ($ :div {:style (merge section-style {:gap "10px"})}
+             ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked show-internal-markers
+                           :style {:accent-color navy}
+                           :on-change #(set-show-internal-markers! (not show-internal-markers))})
+                "Internal Nodes")
+             ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked show-scale-gridlines
+                           :style {:accent-color navy}
+                           :on-change #(set-show-scale-gridlines! (not show-scale-gridlines))})
+                "Scale")
+             #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked show-pixel-grid
+                           :style {:accent-color navy}
+                           :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
+                "Pixel Grid")))
 
        ;; ── Export ──
-       ($ :div {:style {:display "flex"
-                        :gap "8px"
-                        :margin-left "auto"}}
+       ($ :div {:style (merge group-style {:margin-left "auto"})}
           ($ :button {:on-click (fn [_] (export-svg/export-svg!))
                       :style {:font-family toolbar-font
                               :font-size "13px"
                               :font-weight 600
                               :color navy
-                              :padding "6px 14px"
+                              :padding "6px 12px"
                               :cursor "pointer"
                               :background "#f0f2f5"
                               :border (str "1px solid " navy)
                               :border-radius "6px"
                               :transition "background 0.15s"}}
-             "\u21E9 Export SVG")
+             "\u21E9 SVG")
           ($ :button {:on-click (fn [_] (export-html/export-html!))
                       :style {:font-family toolbar-font
                               :font-size "13px"
                               :font-weight 600
                               :color navy
-                              :padding "6px 14px"
+                              :padding "6px 12px"
                               :cursor "pointer"
                               :background "#f0f2f5"
                               :border (str "1px solid " navy)
                               :border-radius "6px"
                               :transition "background 0.15s"}}
-             "\u21E9 Export HTML")))))
+             "\u21E9 HTML")))))

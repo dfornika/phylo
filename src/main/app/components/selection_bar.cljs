@@ -9,6 +9,12 @@
   (:require [uix.core :as uix :refer [defui $]]
             [app.state :as state]))
 
+(def ^:private navy "#003366")
+
+(def ^:private selectionbar-font
+  "System sans-serif font stack for the toolbar."
+  "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif")
+
 (defui SelectionBar
   "Compact bar showing selection count and highlight controls.
 
@@ -29,9 +35,11 @@
                       :cursor "pointer" :border "1px solid #bbb"
                       :border-radius "3px" :background "#fff"}]
     ($ :div {:style {:display "flex" :gap "10px" :padding "4px 8px"
-                     :background "#e8f0fe" :border-bottom "1px solid #ccd"
+                     :background "#f0f2f5" :border-bottom "1px solid #ccd"
                      :align-items "center" :flex-wrap "wrap"
-                     :min-height "24px"}}
+                     :min-height "24px"
+                     :font-family selectionbar-font
+                     :color navy}}
        ;; Selection count
        ($ :span {:style {:font-size "12px" :font-weight "bold" :min-width "110px"}}
           (str n-selected " row" (when (not= n-selected 1) "s") " selected"))
