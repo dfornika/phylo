@@ -6,7 +6,8 @@
   tree. All data arrives via props; these components do not access
   React context."
   (:require [uix.core :refer [defui $]]
-            [app.layout :refer [LAYOUT]]))
+            [app.layout :refer [LAYOUT]]
+            [app.components.scale :as scale]))
 
 (defui StickyHeader
   "Renders a sticky header row displaying metadata column labels.
@@ -14,27 +15,57 @@
   Props (see `::app.specs/sticky-header-props`):
   - `:columns`      - seq of column config maps with `:key`, `:label`, `:width`
   - `:start-offset` - pixel offset where metadata columns begin
-  - `:col-spacing`   - extra horizontal gap between columns (default 0)"
-  [{:keys [columns start-offset col-spacing]}]
-  ($ :div {:style {:position "sticky"
-                   :top 0
-                   :z-index 10
-                   :background "#f8f9fa"
-                   :border-bottom "2px solid #dee2e6"
-                   :height (str (:header-height LAYOUT) "px")
-                   :display "flex"
-                   :align-items "center"
-                   :padding-left (str (:svg-padding-x LAYOUT) "px")
-                   :font-family "sans-serif"
-                   :font-size "12px"
-                   :font-weight "bold"}}
-     ;; Spacer pushes headers to align with metadata columns
-     ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px") :flex-shrink 0}}
-        "Phylogeny")
-
-     (for [{:keys [key label width]} columns]
-       ($ :div {:key key :style {:width (str (+ width (or col-spacing 0)) "px") :flex-shrink 0}}
-          label))))
+  - `:col-spacing`  - extra horizontal gap between columns (default 0)
+  - `:max-depth`    - maximum x-coordinate in the tree
+  - `:x-scale`      - horizontal scaling factor (pixels per branch-length unit)
+  - `:scale-origin` - `:tips` or `:root` for scale labeling"
+  [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin]}]
+  (let [scale-width (max 0 (- start-offset (:svg-padding-x LAYOUT)))
+        {:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
+                                                              :x-scale x-scale})]
+    ($ :div {:style {:position "sticky"
+                     :top 0
+                     :z-index 10
+                     :background "#f8f9fa"
+                     :border-bottom "2px solid #dee2e6"
+                     :height (str (:header-height LAYOUT) "px")
+                     :display "flex"
+                     :align-items "center"
+                     :padding-left (str (:svg-padding-x LAYOUT) "px")
+                     :font-family "sans-serif"
+                     :font-size "12px"
+                     :font-weight "bold"}}
+       ($ :svg {:style {:position "absolute"
+                        :left (str (:svg-padding-x LAYOUT) "px")
+                        :top "4px"
+                        :height "16px"
+                        :width (str scale-width "px")
+                        :pointer-events "none"}}
+          ($ :line {:x1 0 :y1 12
+                    :x2 (* max-depth x-scale) :y2 12
+                    :stroke "#111" :stroke-width 1})
+          (for [t minor-ticks]
+            ($ :line {:key (str "hdr-minor-" t)
+                      :x1 (* t x-scale) :y1 10
+                      :x2 (* t x-scale) :y2 12
+                      :stroke "#111" :stroke-width 1}))
+          (for [t major-ticks]
+            ($ :g {:key (str "hdr-tick-" t)}
+               ($ :line {:x1 (* t x-scale) :y1 8
+                         :x2 (* t x-scale) :y2 12
+                         :stroke "#111" :stroke-width 1})
+               ($ :text {:x (* t x-scale) :y 6
+                         :text-anchor "middle"
+                         :style {:font-family "monospace"
+                                 :font-size "10px"
+                                 :fill "#111"}}
+                  (.toFixed (js/Number (scale/label-value scale-origin max-depth t)) 1)))))
+       ;; Spacer pushes headers to align with metadata columns
+       ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px")
+                        :flex-shrink 0}})
+       (for [{:keys [key label width]} columns]
+         ($ :div {:key key :style {:width (str (+ width (or col-spacing 0)) "px") :flex-shrink 0}}
+            label)))))
 
 (defui MetadataColumn
   "Renders one column of metadata values as SVG text elements,

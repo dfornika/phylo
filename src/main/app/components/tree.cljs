@@ -56,12 +56,13 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical spacing in pixels between adjacent tips
   - `:show-internal-markers`  - boolean, whether to render circles on internal nodes
+  - `:show-branch-lengths`   - boolean, whether to render internal node branch lengths
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - default fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
-  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers
+  [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-branch-lengths
            marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
@@ -75,6 +76,10 @@
         selected? (and is-leaf? selected-ids (contains? selected-ids node-name))
         fill (if highlight-color highlight-color marker-fill)
         radius (if highlight-color (+ marker-radius 1.5) marker-radius)
+        branch-length (:branch-length node)
+        branch-length-num (when (some? branch-length) (js/parseFloat branch-length))
+        branch-length-label (when (and (not is-leaf?) show-branch-lengths (not (js/isNaN branch-length-num)) (pos? (:x node)))
+                              (.toFixed branch-length-num 1))
         on-click (when (and is-leaf? on-toggle-selection)
                    (fn [_e] (on-toggle-selection node-name)))]
     ($ :g
@@ -93,6 +98,15 @@
                      :stroke-dasharray "3 2"
                      :style {:pointer-events "none"}}))
 
+       ;; Internal node branch-length label
+       (when branch-length-label
+         ($ :text {:x (- scaled-x 6)
+                   :y (- scaled-y 6)
+                   :text-anchor "end"
+                   :style {:font-family "monospace"
+                           :font-size "10px"
+                           :fill "#111"}}
+            branch-length-label))
        ;; Tip label
        (when is-leaf?
          ($ :text {:x (+ scaled-x 8)
@@ -112,6 +126,7 @@
                       :x-scale x-scale
                       :y-scale y-scale
                       :show-internal-markers show-internal-markers
+                      :show-branch-lengths show-branch-lengths
                       :marker-radius marker-radius
                       :marker-fill marker-fill
                       :highlights highlights
@@ -129,12 +144,13 @@
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical tip spacing
   - `:show-internal-markers`  - whether to render circles on internal nodes
+  - `:show-branch-lengths`   - whether to render internal node branch lengths
   - `:marker-radius`          - radius of the circular node marker in pixels
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
-  [{:keys [tree x-scale y-scale show-internal-markers marker-radius marker-fill
+  [{:keys [tree x-scale y-scale show-internal-markers show-branch-lengths marker-radius marker-fill
            highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
@@ -143,6 +159,7 @@
                   :x-scale x-scale
                   :y-scale y-scale
                   :show-internal-markers show-internal-markers
+                  :show-branch-lengths show-branch-lengths
                   :marker-radius marker-radius
                   :marker-fill marker-fill
                   :highlights highlights

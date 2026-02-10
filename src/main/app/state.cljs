@@ -59,6 +59,14 @@
 (defonce !show-scale-gridlines
   (atom false))
 
+;; "Atom holding whether to display numeric branch lengths on internal nodes."
+(defonce !show-branch-lengths
+  (atom false))
+
+;; "Atom holding scale origin for labels (:tips or :root)."
+(defonce !scale-origin
+  (atom :tips))
+
 ;; "Atom holding whether to display a pixel-coordinate debug grid over the SVG canvas."
 (defonce !show-pixel-grid
   (atom false))
@@ -93,6 +101,8 @@
    :y-mult 30
    :show-internal-markers false
    :show-scale-gridlines false
+   :show-branch-lengths false
+   :scale-origin :tips
    :show-pixel-grid false
    :col-spacing 0
    :highlight-color "#4682B4"
@@ -112,6 +122,8 @@
            :y-mult @!y-mult
            :show-internal-markers @!show-internal-markers
            :show-scale-gridlines @!show-scale-gridlines
+           :show-branch-lengths @!show-branch-lengths
+           :scale-origin @!scale-origin
            :show-pixel-grid @!show-pixel-grid
            :col-spacing @!col-spacing
            :highlight-color @!highlight-color
@@ -150,6 +162,8 @@
       (reset! !y-mult (:y-mult merged))
       (reset! !show-internal-markers (:show-internal-markers merged))
       (reset! !show-scale-gridlines (:show-scale-gridlines merged))
+      (reset! !show-branch-lengths (:show-branch-lengths merged))
+      (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
       (reset! !col-spacing (:col-spacing merged))
       (reset! !highlight-color (:highlight-color merged))
@@ -179,6 +193,8 @@
         y-mult         (uix/use-atom !y-mult)
         show-internal-markers (uix/use-atom !show-internal-markers)
         show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
+        show-branch-lengths   (uix/use-atom !show-branch-lengths)
+        scale-origin          (uix/use-atom !scale-origin)
         show-pixel-grid       (uix/use-atom !show-pixel-grid)
         col-spacing           (uix/use-atom !col-spacing)
         highlight-color       (uix/use-atom !highlight-color)
@@ -198,6 +214,10 @@
                             :set-show-internal-markers! #(reset! !show-internal-markers %)
                             :show-scale-gridlines show-scale-gridlines
                             :set-show-scale-gridlines! #(reset! !show-scale-gridlines %)
+                            :show-branch-lengths show-branch-lengths
+                            :set-show-branch-lengths! #(reset! !show-branch-lengths %)
+                            :scale-origin scale-origin
+                            :set-scale-origin! #(reset! !scale-origin %)
                             :show-pixel-grid show-pixel-grid
                             :set-show-pixel-grid! #(reset! !show-pixel-grid %)
                             :col-spacing col-spacing
