@@ -2,7 +2,8 @@
   "Tests for scale tick calculation functions in [[app.components.scale]]."
   (:require [cljs.test :refer [deftest testing is]]
             [app.components.scale :as scale]
-            [app.tree :as tree]))
+            [app.tree :as tree]
+            [clojure.string]))
 
 ;; ===== tick-position =====
 
@@ -213,3 +214,164 @@
       (is (pos? (count (:major-ticks result))))
       (is (pos? (:unit result)))
       (is (every? #(and (>= % 0) (<= % 1000)) (:major-ticks result))))))
+
+;; ===== decimals-for-unit =====
+
+(deftest decimals-for-unit-standard-units
+  (testing "decimals-for-unit returns appropriate precision for typical units"
+    ;; Unit 1.0 should give 1 decimal (log10(1) = 0, ceil = 0, max with 1 = 1)
+    (is (= 1 (#'scale/decimals-for-unit 1.0)))
+    ;; Unit 0.1 should give 1 decimal (log10(0.1) = -1, ceil(-(-1)) = 1)
+    (is (= 1 (#'scale/decimals-for-unit 0.1)))
+    ;; Unit 0.01 should give 2 decimals (log10(0.01) = -2, ceil(-(-2)) = 2)
+    (is (= 2 (#'scale/decimals-for-unit 0.01)))
+    ;; Unit 0.001 should give 3 decimals
+    (is (= 3 (#'scale/decimals-for-unit 0.001)))
+    ;; Unit 0.0001 should give 4 decimals (capped at 4)
+    (is (= 4 (#'scale/decimals-for-unit 0.0001)))))
+
+(deftest decimals-for-unit-very-small-units
+  (testing "decimals-for-unit caps precision at 4 for very small units"
+    ;; Even smaller units should be capped at 4
+    (is (= 4 (#'scale/decimals-for-unit 0.00001)))
+    (is (= 4 (#'scale/decimals-for-unit 0.000001)))
+    (is (= 4 (#'scale/decimals-for-unit 1e-10)))))
+
+(deftest decimals-for-unit-large-units
+  (testing "decimals-for-unit returns minimum 1 decimal for large units"
+    ;; Unit 10 should give 1 decimal (minimum)
+    (is (= 1 (#'scale/decimals-for-unit 10)))
+    ;; Unit 100 should give 1 decimal (minimum)
+    (is (= 1 (#'scale/decimals-for-unit 100)))
+    ;; Unit 1000 should give 1 decimal (minimum)
+    (is (= 1 (#'scale/decimals-for-unit 1000)))))
+
+(deftest decimals-for-unit-edge-cases
+  (testing "decimals-for-unit handles edge cases"
+    ;; Zero unit returns 1 (default)
+    (is (= 1 (#'scale/decimals-for-unit 0)))
+    ;; Negative unit returns 1 (default)
+    (is (= 1 (#'scale/decimals-for-unit -1)))
+    ;; nil returns 1 (default)
+    (is (= 1 (#'scale/decimals-for-unit nil)))
+    ;; Non-number returns 1 (default)
+    (is (= 1 (#'scale/decimals-for-unit "not-a-number")))))
+
+(deftest decimals-for-unit-fractional-units
+  (testing "decimals-for-unit handles fractional units between powers of 10"
+    ;; Unit 0.05 -> log10(0.05) ≈ -1.3, ceil(1.3) = 2
+    (is (= 2 (#'scale/decimals-for-unit 0.05)))
+    ;; Unit 0.5 -> log10(0.5) ≈ -0.3, ceil(0.3) = 1
+    (is (= 1 (#'scale/decimals-for-unit 0.5)))
+    ;; Unit 0.25 -> log10(0.25) ≈ -0.6, ceil(0.6) = 1
+    (is (= 1 (#'scale/decimals-for-unit 0.25)))))
+
+;; ===== label-decimals =====
+
+(deftest label-decimals-typical-max-depth
+  (testing "label-decimals returns appropriate precision for typical max-depth values"
+    ;; max-depth 10 -> unit = calculate-scale-unit(2) = 0.5 -> decimals = 1
+    (let [max-depth 10
+          unit (tree/calculate-scale-unit (/ max-depth 5))]
+      (is (= (#'scale/decimals-for-unit unit) (scale/label-decimals max-depth))))
+    ;; max-depth 1 -> unit = calculate-scale-unit(0.2) = 0.1 -> decimals = 1
+    (let [max-depth 1
+          unit (tree/calculate-scale-unit (/ max-depth 5))]
+      (is (= (#'scale/decimals-for-unit unit) (scale/label-decimals max-depth))))))
+
+(deftest label-decimals-very-small-max-depth
+  (testing "label-decimals handles very small max-depth values"
+    ;; max-depth 0.01 -> unit = calculate-scale-unit(0.002) -> small unit -> more decimals
+    (let [max-depth 0.01]
+      (is (>= (scale/label-decimals max-depth) 1))
+      (is (<= (scale/label-decimals max-depth) 4)))
+    ;; max-depth 0.001
+    (let [max-depth 0.001]
+      (is (>= (scale/label-decimals max-depth) 1))
+      (is (<= (scale/label-decimals max-depth) 4)))))
+
+(deftest label-decimals-large-max-depth
+  (testing "label-decimals handles large max-depth values"
+    ;; max-depth 1000 -> unit = calculate-scale-unit(200) = 100 -> decimals = 1 (min)
+    (is (= 1 (scale/label-decimals 1000)))
+    ;; max-depth 10000
+    (is (= 1 (scale/label-decimals 10000)))))
+
+(deftest label-decimals-zero-max-depth
+  (testing "label-decimals handles zero max-depth"
+    ;; Zero max-depth uses unit = 1, which gives decimals = 1
+    (is (= 1 (scale/label-decimals 0)))))
+
+(deftest label-decimals-nil-max-depth
+  (testing "label-decimals handles nil max-depth"
+    ;; nil max-depth is treated as 0, which uses unit = 1
+    (is (= 1 (scale/label-decimals nil)))))
+
+(deftest label-decimals-negative-max-depth
+  (testing "label-decimals handles negative max-depth"
+    ;; Negative max-depth is treated as 0 (due to pos? check), uses unit = 1
+    (is (= 1 (scale/label-decimals -10)))))
+
+;; ===== format-label =====
+
+(deftest format-label-basic-formatting
+  (testing "format-label formats values with appropriate precision"
+    ;; With max-depth 10, we expect 1 decimal place
+    (is (= "5.0" (scale/format-label :root 10 5)))
+    (is (= "2.5" (scale/format-label :root 10 2.5)))))
+
+(deftest format-label-tips-origin
+  (testing "format-label with :tips origin subtracts from max-depth"
+    ;; max-depth 10, tick 3 -> value = 10 - 3 = 7
+    (let [result (scale/format-label :tips 10 3)]
+      ;; Should be "7.0" (with 1 decimal for max-depth 10)
+      (is (= "7.0" result)))
+    ;; max-depth 10, tick 10 -> value = 10 - 10 = 0
+    (is (= "0.0" (scale/format-label :tips 10 10)))))
+
+(deftest format-label-root-origin
+  (testing "format-label with :root origin returns tick value"
+    ;; max-depth 10, tick 3 -> value = 3
+    (let [result (scale/format-label :root 10 3)]
+      (is (= "3.0" result)))
+    ;; max-depth 10, tick 0 -> value = 0
+    (is (= "0.0" (scale/format-label :root 10 0)))))
+
+(deftest format-label-small-max-depth
+  (testing "format-label with small max-depth uses more decimal places"
+    ;; max-depth 0.05 should require more decimals
+    (let [result (scale/format-label :root 0.05 0.01)
+          decimals (scale/label-decimals 0.05)]
+      ;; Verify it has the expected number of decimals
+      (is (>= decimals 2))
+      ;; Result should contain a decimal point
+      (is (re-find #"\." result)))))
+
+(deftest format-label-large-max-depth
+  (testing "format-label with large max-depth uses minimal decimal places"
+    ;; max-depth 1000 should use 1 decimal
+    (is (= "500.0" (scale/format-label :root 1000 500)))
+    (is (= "1000.0" (scale/format-label :root 1000 1000)))))
+
+(deftest format-label-zero-value
+  (testing "format-label handles zero values correctly"
+    (is (= "0.0" (scale/format-label :root 10 0)))
+    (is (= "10.0" (scale/format-label :tips 10 0)))))
+
+(deftest format-label-nil-max-depth
+  (testing "format-label handles nil max-depth"
+    ;; nil max-depth defaults to 0, which uses 1 decimal
+    (is (= "5.0" (scale/format-label :root nil 5)))))
+
+(deftest format-label-precision-matches-decimals
+  (testing "format-label precision matches label-decimals output"
+    (let [max-depth 10
+          tick 3
+          decimals (scale/label-decimals max-depth)
+          formatted (scale/format-label :root max-depth tick)]
+      ;; Count decimal places in formatted string
+      (let [parts (clojure.string/split formatted #"\.")
+            actual-decimals (if (> (count parts) 1)
+                              (count (second parts))
+                              0)]
+        (is (= decimals actual-decimals))))))
