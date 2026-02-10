@@ -260,7 +260,7 @@
         _recalc-on-cols-change
         (uix/use-effect
          (fn [] (update-panel-max-height))
-         [update-panel-max-height active-cols])
+         [active-cols update-panel-max-height])
 
         ;; ---- Box (lasso) selection state ----
         svg-ref                (uix/use-ref nil)
