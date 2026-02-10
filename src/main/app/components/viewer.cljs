@@ -194,6 +194,21 @@
         viewport-ref         (uix/use-ref nil)
         [panel-max-height set-panel-max-height!] (uix/use-state 250)
 
+        ;; Refs to access latest values in the resize listener without changing callback identity
+        metadata-panel-collapsed-ref (uix/use-ref metadata-panel-collapsed)
+        metadata-panel-height-ref    (uix/use-ref metadata-panel-height)
+
+        ;; Keep refs in sync with state
+        _sync-collapsed-ref
+        (uix/use-effect
+         (fn [] (reset! metadata-panel-collapsed-ref metadata-panel-collapsed))
+         [metadata-panel-collapsed])
+
+        _sync-height-ref
+        (uix/use-effect
+         (fn [] (reset! metadata-panel-height-ref metadata-panel-height))
+         [metadata-panel-height])
+
         ;; Toggle a single leaf in/out of selected-ids
         toggle-selection (uix/use-callback
                           (fn [leaf-name]
@@ -216,17 +231,21 @@
                                      metadata-rows)))
                             [metadata-rows active-cols set-metadata-rows!])
 
+        ;; Stable callback that reads latest values from refs
         update-panel-max-height
         (uix/use-callback
          (fn []
            (when-let [^js el @viewport-ref]
              (let [viewport-height (.-height (.getBoundingClientRect el))
                    sticky-height (:header-height LAYOUT)
-                   current-panel-height (if metadata-panel-collapsed 0 (or metadata-panel-height 0))
+                   collapsed? @metadata-panel-collapsed-ref
+                   current-height @metadata-panel-height-ref
+                   current-panel-height (if collapsed? 0 (or current-height 0))
                    next-max (max 0 (+ current-panel-height (- viewport-height sticky-height)))]
                (set-panel-max-height! next-max))))
-         [metadata-panel-collapsed metadata-panel-height])
+         [])
 
+        ;; Register resize listener once on mount
         _panel-max-effect
         (uix/use-effect
          (fn []
@@ -235,7 +254,13 @@
              (.addEventListener js/window "resize" on-resize)
              (fn []
                (.removeEventListener js/window "resize" on-resize))))
-         [update-panel-max-height active-cols])
+         [])
+
+        ;; Re-calculate when active-cols changes (affects layout)
+        _recalc-on-cols-change
+        (uix/use-effect
+         (fn [] (update-panel-max-height))
+         [active-cols])
 
         ;; ---- Box (lasso) selection state ----
         svg-ref                (uix/use-ref nil)
