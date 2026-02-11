@@ -17,13 +17,13 @@
             [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
             [app.components.scale :as scale]
-            [app.specs :as specs]))
-
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 (defui Branch
   "Renders a single tree branch as two SVG lines: a horizontal segment
   (the branch itself) and a vertical connector to the parent node.
 
-  Props (see `::app.specs/branch-props`):
+  Props (see `:app.specs/app.specs/branch-props`):
   - `:x`, `:y`             - endpoint (child) coordinates
   - `:parent-x`, `:parent-y` - start (parent) coordinates
   - `:line-color`          - stroke color string
@@ -36,13 +36,20 @@
      ($ :line {:x1 parent-x :y1 parent-y :x2 parent-x :y2 y :stroke line-color :stroke-width line-width})))
 
 (s/def :app.specs/tree-node-props
-  (s/keys :req-un [:app.specs/name
-                   :app.specs/branch-length
-                   :app.specs/x
-                   :app.specs/y
-                   
-                   ]
-          :opt-un [:app.specs/children]))
+  (s/keys :req-un [:app.specs/node
+                   :app.specs/parent-x
+                   :app.specs/parent-y
+                   :app.specs/x-scale
+                   :app.specs/y-scale
+                   :app.specs/show-internal-markers
+                   :app.specs/marker-radius
+                   :app.specs/marker-fill
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/max-depth]
+          :opt-un [:app.specs/highlights
+                   :app.specs/selected-ids
+                   :app.specs/on-toggle-selection]))
 
 (defui TreeNode*
   "Recursively renders a tree node and all its descendants as SVG.
@@ -148,7 +155,9 @@
                        :selected-ids selected-ids
                        :on-toggle-selection on-toggle-selection})))))
 
-(def TreeNode (specs/with-spec-check TreeNode* :app.specs/tree-node-props))
+(defui-with-spec TreeNode
+  [{:spec :app.specs/tree-node-props :props props}]
+  ($ TreeNode* props))
 #_(def TreeNode TreeNode*)
 
 (defui PhylogeneticTree
@@ -157,7 +166,7 @@
   A thin wrapper that places a `<g>` with the standard SVG padding
   transform and delegates recursive node rendering to [[TreeNode]].
 
-  Props (see `::app.specs/phylogenetic-tree-props`):
+  Props (see `:app.specs/phylogenetic-tree-props`):
   - `:tree`                   - positioned root node (recursive map)
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical tip spacing

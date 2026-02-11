@@ -25,8 +25,9 @@
   (get-allowed-keys ::app-state)
 )
 
+
 (defn validate-spec!
-  "Validates a value against a spec in dev mode. Logs errors for invalid values
+  "Validates a value against a spec. Logs errors for invalid values
   and warnings for unexpected keys. Returns the value unchanged (for threading).
   
   Options:
@@ -35,7 +36,7 @@
    (validate-spec! value spec label {}))
   ([value spec label {:keys [check-unexpected-keys?]
                       :or {check-unexpected-keys? false}}]
-   (when ^boolean goog.DEBUG
+   
      ;; Check spec validity
      (when-not (s/valid? spec value)
        (js/console.error (str "Invalid " label ":")
@@ -51,20 +52,12 @@
              (js/console.warn (str "Unexpected keys in " label ":")
                               (clj->js unexpected)
                               "\nAllowed:"
-                              (clj->js allowed)))))))
-   value))
+                              (clj->js allowed))))))
+     value))
 
-(defn with-spec-check
-  "Wraps a component function to validate its props against a spec in dev mode."
-  [component spec]
-  (fn [props]
-    (let [props-clj (if (object? props)
-                      (js->clj props :key-fn csk/->kebab-case-keyword)
-                      props)]
-      (js/console.log props)
-      (js/console.log props-clj)
-      (validate-spec! props-clj spec "component props"))
-    (component props)))
+
+
+
 
 (comment
   (let [test-props (clj->js {:helloThere "world"})]
