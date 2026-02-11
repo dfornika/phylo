@@ -4,13 +4,22 @@
   Wraps arbitrary children in a container whose height is controlled
   by dragging a handle bar. The panel can be collapsed down to its
   configured `:min-height` (which may be set to 0) and expanded back."
-  (:require [uix.core :as uix :refer [defui $]]))
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :as uix :refer [defui $]]
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
 (def ^:private handle-height
   "Height of the drag handle bar in pixels."
   6)
 
-(defui ResizablePanel
+(s/def :app.specs/resizable-panel-props
+  (s/keys :req-un [:app.specs/initial-height
+                   :app.specs/min-height
+                   :app.specs/max-height]
+          :opt-un [:app.specs/height ::on-height-change]))
+
+(defui ResizablePanel*
   "A panel with a draggable top-edge resize handle.
 
   The panel maintains its own height in local state. Dragging the
@@ -104,3 +113,9 @@
        ($ :div {:style {:flex "1"
                         :overflow "hidden"}}
           children))))
+
+
+(defui-with-spec ResizablePanel
+  [{:spec :app.specs/resizable-panel-props :props props}]
+  ($ ResizablePanel* props))
+#_(def ResizablePanel ResizablePanel*)

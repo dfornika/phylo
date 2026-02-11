@@ -5,7 +5,9 @@
   [[TreeContainer]]. TreeContainer reads state from React context
   and derives the positioned tree, passing everything as props to
   the pure TreeViewer."
-  (:require [uix.core :as uix :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :as uix :refer [defui $]]
+            [app.specs :as specs]
             [app.state :as state]
             [app.layout :refer [LAYOUT]]
             [app.tree :as tree]
@@ -17,6 +19,7 @@
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
             [clojure.string :as str]))
+
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -140,6 +143,29 @@
   "Minimum manhattan-distance (px) before a mousedown→move is treated as
   a box-select rather than an accidental click."
   5)
+
+(s/def :app.specs/tree-viewer-props
+  (s/keys :req-un [:app.specs/tree
+                   :app.specs/tips
+                   :app.specs/max-depth
+                   :app.specs/x-mult :app.specs/y-mult
+                   :app.specs/show-internal-markers
+                   :app.specs/show-scale-gridlines
+                   :app.specs/show-pixel-grid
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/col-spacing
+                   :app.specs/width-px
+                   :app.specs/component-height-px
+                   :app.specs/active-cols :app.specs/set-active-cols!
+                   :app.specs/metadata-rows :app.specs/set-metadata-rows!
+                   :app.specs/set-selected-ids!
+                   :app.specs/metadata-panel-collapsed
+                   :app.specs/metadata-panel-height
+                   :app.specs/metadata-panel-last-drag-height
+                   :app.specs/set-metadata-panel-height!
+                   :app.specs/set-metadata-panel-last-drag-height!]
+          :opt-un [:app.specs/highlights :app.specs/selected-ids]))
 
 (defui TreeViewer
   "Top-level visualization shell that combines toolbar, metadata header,

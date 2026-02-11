@@ -15,7 +15,7 @@
 (defui StickyHeader
   "Renders a sticky header row displaying metadata column labels.
 
-  Props (see `::app.specs/sticky-header-props`):
+  Props (see `:app.specs/sticky-header-props`):
   - `:columns`      - seq of column config maps with `:key`, `:label`, `:width`
   - `:start-offset` - pixel offset where metadata columns begin
   - `:col-spacing`  - extra horizontal gap between columns (default 0)

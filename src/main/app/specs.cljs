@@ -252,15 +252,6 @@
 (s/def ::on-cols-reordered fn?)
 (s/def ::on-selection-changed fn?)
 
-(s/def ::metadata-grid-props
-  (s/keys :req-un [::metadata-rows 
-                   ::active-cols 
-                   ::tips
-                   ::on-cols-reordered 
-                   ::on-selection-changed]
-          :opt-un [::selected-ids 
-                   ::on-cell-edited]))
-
 ;; ResizablePanel — wrapper with draggable resize handle.
 
 (s/def ::initial-height number?)
@@ -268,12 +259,6 @@
 (s/def ::max-height number?)
 (s/def ::height number?)
 (s/def ::on-height-change fn?)
-
-(s/def ::resizable-panel-props
-  (s/keys :req-un [::initial-height 
-                   ::min-height 
-                   ::max-height]
-          :opt-un [::height ::on-height-change]))
 
 ;; ===== Function Specs =====
 
