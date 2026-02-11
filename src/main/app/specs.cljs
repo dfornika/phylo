@@ -191,14 +191,6 @@
 (s/def ::line-color string?)
 (s/def ::line-width number?)
 
-(s/def ::branch-props
-  (s/keys :req-un [::x 
-                   ::y 
-                   ::parent-x 
-                   ::parent-y 
-                   ::line-color 
-                   ::line-width]))
-
 (s/def ::node ::positioned-node)
 (s/def ::x-scale number?)
 
@@ -247,12 +239,6 @@
                    ::tree-height
                    ::scale-origin]))
 
-(s/def ::metadata-table-props
-  (s/keys :req-un [::active-cols 
-                   ::tips 
-                   ::start-offset 
-                   ::y-scale 
-                   ::col-spacing]))
 
 ;; TreeContainer receives only layout dimensions.
 

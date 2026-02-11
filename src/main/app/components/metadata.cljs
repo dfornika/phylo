@@ -5,9 +5,12 @@
   the components that render CSV/TSV metadata alongside the phylogenetic
   tree. All data arrives via props; these components do not access
   React context."
-  (:require [uix.core :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
-            [app.components.scale :as scale]))
+            [app.components.scale :as scale]
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
 (defui StickyHeader
   "Renders a sticky header row displaying metadata column labels.
@@ -112,7 +115,14 @@
                                 :font-size "12px"}}
                  (get-in tip [:metadata column-key] "N/A"))))))))
 
-(defui MetadataTable
+(s/def :app.specs/metadata-table-props
+  (s/keys :req-un [:app.specs/active-cols
+                   :app.specs/tips
+                   :app.specs/start-offset
+                   :app.specs/y-scale
+                   :app.specs/col-spacing]))
+
+(defui MetadataTable*
   "Renders all metadata columns as a group, computing per-column offsets.
 
   Props (see `::app.specs/metadata-table-props`):
@@ -148,3 +158,7 @@
                                :cell-height y-scale
                                :col-width (+ (:width col) col-spacing)}))
           active-cols)))))
+
+(defui-with-spec MetadataTable
+  [{:spec :app.specs/metadata-table-props :props props}]
+  ($ MetadataTable* props))

@@ -19,7 +19,17 @@
             [app.components.scale :as scale]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
-(defui Branch
+
+
+(s/def :app.specs/branch-props
+  (s/keys :req-un [:app.specs/x
+                   :app.specs/y
+                   :app.specs/parent-x
+                   :app.specs/parent-y
+                   :app.specs/line-color
+                   :app.specs/line-width]))
+
+(defui Branch*
   "Renders a single tree branch as two SVG lines: a horizontal segment
   (the branch itself) and a vertical connector to the parent node.
 
@@ -34,6 +44,11 @@
      ($ :line {:x1 parent-x :y1 y :x2 x :y2 y :stroke line-color :stroke-width line-width})
      ;; Vertical connector to siblings
      ($ :line {:x1 parent-x :y1 parent-y :x2 parent-x :y2 y :stroke line-color :stroke-width line-width})))
+
+(defui-with-spec Branch
+  [{:spec :app.specs/branch-props :props props}]
+  ($ Branch* props))
+#_(def Branch Branch*)
 
 (s/def :app.specs/tree-node-props
   (s/keys :req-un [:app.specs/node
