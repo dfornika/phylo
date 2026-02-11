@@ -18,7 +18,8 @@
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
 
 (defui PixelGrid
@@ -94,7 +95,13 @@
                               :fill "#111"}}
                (scale/format-label scale-origin max-depth t)))))))
 
-(defui ScaleGridlines
+(s/def :app.specs/scale-gridlines-props
+  (s/keys :req-un [:app.specs/max-depth
+                   :app.specs/x-scale
+                   :app.specs/tree-height
+                   :app.specs/scale-origin]))
+
+(defui ScaleGridlines*
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
 
   Computes human-friendly tick intervals via [[tree/calculate-scale-unit]] and
@@ -121,6 +128,11 @@
                    :stroke-dasharray "4 4"
                    :stroke-width 1})))))
 
+(defui-with-spec ScaleGridlines
+  [{:spec :app.specs/scale-gridlines-props :props props}]
+  ($ ScaleGridlines* props))
+#_(def ScaleGridlines ScaleGridlines*)
+
 (defn- asset-src
   "Returns a data URL for bundled assets when present, falling back to the path."
   [path]
@@ -143,6 +155,7 @@
   "Minimum manhattan-distance (px) before a mousedown→move is treated as
   a box-select rather than an accidental click."
   5)
+
 
 (s/def :app.specs/tree-viewer-props
   (s/keys :req-un [:app.specs/tree
@@ -167,7 +180,7 @@
                    :app.specs/set-metadata-panel-last-drag-height!]
           :opt-un [:app.specs/highlights :app.specs/selected-ids]))
 
-(defui TreeViewer
+(defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
   and a scrollable SVG viewport containing the tree, gridlines, and
   metadata columns.
@@ -447,6 +460,11 @@
                              :on-selection-changed set-selected-ids!
                              :on-cell-edited handle-cell-edited}))))))
 
+(defui-with-spec TreeViewer
+  [{:spec :app.specs/tree-viewer-props :props props}]
+  ($ TreeViewer* props))
+#_(def TreeViewer TreeViewer*)
+
 (defui EmptyState
   "Placeholder shown when no tree is loaded.
   Displays a centered message with the app header and toolbar."
@@ -507,7 +525,12 @@
                        :margin 0}}
            "Load a Newick file using the toolbar above."))))
 
-(defui TreeContainer
+
+(s/def :app.specs/tree-container-props
+  (s/keys :req-un [:app.specs/width-px
+                   :app.specs/component-height-px]))
+
+(defui TreeContainer*
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
@@ -555,3 +578,8 @@
                      :set-metadata-rows! set-metadata-rows!
                      :component-height-px component-height-px})
       ($ EmptyState {:component-height-px component-height-px}))))
+
+(defui-with-spec TreeContainer
+  [{:spec :app.specs/tree-container-props :props props}]
+  ($ TreeContainer* props))
+#_(def TreeContainer TreeContainer*)

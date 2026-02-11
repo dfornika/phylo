@@ -163,28 +163,12 @@
 (s/def ::tip-count nat-int?)
 (s/def ::tree-height number?)
 
-(s/def ::sticky-header-props
-  (s/keys :req-un [::columns 
-                   ::start-offset
-                   ::max-depth
-                   ::x-scale 
-                   ::scale-origin]))
-
 (s/def ::tips (s/coll-of ::positioned-node))
 (s/def ::x-offset number?)
 (s/def ::y-scale number?)
 (s/def ::column-key keyword?)
 
 (s/def ::col-width number?)
-
-(s/def ::metadata-column-props
-  (s/keys :req-un [::tips 
-                   ::x-offset 
-                   ::y-scale 
-                   ::column-key 
-                   ::column-label 
-                   ::cell-height 
-                   ::col-width]))
 
 (s/def ::parent-x number?)
 (s/def ::parent-y number?)

@@ -12,7 +12,16 @@
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
-(defui StickyHeader
+
+(s/def :app.specs/sticky-header-props
+  (s/keys :req-un [:app.specs/columns
+                   :app.specs/start-offset
+                   :app.specs/max-depth
+                   :app.specs/x-scale
+                   :app.specs/scale-origin]))
+
+
+(defui StickyHeader*
   "Renders a sticky header row displaying metadata column labels.
 
   Props (see `:app.specs/sticky-header-props`):
@@ -71,7 +80,22 @@
          ($ :div {:key key :style {:width (str (+ width (or col-spacing 0)) "px") :flex-shrink 0}}
             label)))))
 
-(defui MetadataColumn
+(defui-with-spec StickyHeader
+  [{:spec :app.specs/sticky-header-props :props props}]
+  ($ StickyHeader* props))
+#_(def StickyHeader StickyHeader*)
+
+
+(s/def :app.specs/metadata-column-props
+  (s/keys :req-un [:app.specs/tips
+                   :app.specs/x-offset
+                   :app.specs/y-scale
+                   :app.specs/column-key
+                   :app.specs/column-label
+                   :app.specs/cell-height
+                   :app.specs/col-width]))
+
+(defui MetadataColumn*
   "Renders one column of metadata values as SVG text elements,
   with an in-SVG header label and subtle cell borders.
 
@@ -114,6 +138,13 @@
                         :style {:font-family "monospace"
                                 :font-size "12px"}}
                  (get-in tip [:metadata column-key] "N/A"))))))))
+
+
+(defui-with-spec MetadataColumn
+  [{:spec :app.specs/metadata-column-props :props props}]
+  ($ MetadataColumn* props))
+#_(def MetadataColumn MetadataColumn*r*)
+
 
 (s/def :app.specs/metadata-table-props
   (s/keys :req-un [:app.specs/active-cols

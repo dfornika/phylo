@@ -58,6 +58,8 @@
 (defn ^:export init
   "Exported entry point called by shadow-cljs on page load."
   []
+  (when ^boolean goog.DEBUG
+    (js/console.log "goog.DEBUG = true\nDebug mode enabled"))
   (apply-embedded-export!)
   (render))
 
