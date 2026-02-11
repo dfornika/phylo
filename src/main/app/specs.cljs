@@ -206,22 +206,6 @@
 (s/def ::marker-fill string?)
 (s/def ::on-toggle-selection (s/nilable fn?))
 
-#_(s/def ::tree-node-props
-  (s/keys :req-un [::node 
-                   ::parent-x 
-                   ::parent-y 
-                   ::x-scale 
-                   ::y-scale
-                   ::show-internal-markers 
-                   ::marker-radius 
-                   ::marker-fill
-                   ::show-distance-from-origin 
-                   ::scale-origin 
-                   ::max-depth]
-          :opt-un [::highlights 
-                   ::selected-ids 
-                   ::on-toggle-selection]))
-
 ;; Toolbar reads from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
@@ -256,20 +240,6 @@
                    ::set-metadata-panel-height!
                    ::set-metadata-panel-last-drag-height! ]
           :opt-un [::highlights ::selected-ids]))
-
-(s/def ::phylogenetic-tree-props
-  (s/keys :req-un [::tree 
-                   ::x-scale 
-                   ::y-scale
-                   ::show-internal-markers
-                   ::marker-radius 
-                   ::marker-fill
-                   ::show-distance-from-origin 
-                   ::scale-origin
-                   ::max-depth]
-          :opt-un [::highlights 
-                   ::selected-ids 
-                   ::on-toggle-selection]))
 
 (s/def ::scale-gridlines-props
   (s/keys :req-un [::max-depth 

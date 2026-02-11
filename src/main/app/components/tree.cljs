@@ -160,7 +160,22 @@
   ($ TreeNode* props))
 #_(def TreeNode TreeNode*)
 
-(defui PhylogeneticTree
+
+(s/def :app.specs/phylogenetic-tree-props
+  (s/keys :req-un [:app.specs/tree
+                   :app.specs/x-scale
+                   :app.specs/y-scale
+                   :app.specs/show-internal-markers
+                   :app.specs/marker-radius
+                   :app.specs/marker-fill
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/max-depth]
+          :opt-un [:app.specs/highlights
+                   :app.specs/selected-ids
+                   :app.specs/on-toggle-selection]))
+
+(defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
 
   A thin wrapper that places a `<g>` with the standard SVG padding
@@ -180,17 +195,23 @@
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
            highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-     ($ TreeNode {:node tree
-                  :parent-x 0
-                  :parent-y (:y tree)
-                  :x-scale x-scale
-                  :y-scale y-scale
-                  :show-internal-markers show-internal-markers
-                  :show-distance-from-origin show-distance-from-origin
-                  :scale-origin scale-origin
-                  :max-depth max-depth
-                  :marker-radius marker-radius
-                  :marker-fill marker-fill
-                  :highlights highlights
-                  :selected-ids selected-ids
-                  :on-toggle-selection on-toggle-selection})))
+     ($ TreeNode* {:node tree
+                   :parent-x 0
+                   :parent-y (:y tree)
+                   :x-scale x-scale
+                   :y-scale y-scale
+                   :show-internal-markers show-internal-markers
+                   :show-distance-from-origin show-distance-from-origin
+                   :scale-origin scale-origin
+                   :max-depth max-depth
+                   :marker-radius marker-radius
+                   :marker-fill marker-fill
+                   :highlights highlights
+                   :selected-ids selected-ids
+                   :on-toggle-selection on-toggle-selection})))
+
+
+(defui-with-spec PhylogeneticTree
+  [{:spec :app.specs/phylogenetic-tree-props :props props}]
+  ($ PhylogeneticTree* props))
+#_(def PhylogeneticTree PhylogeneticTree*)
