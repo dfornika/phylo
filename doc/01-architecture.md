@@ -169,8 +169,11 @@ same tree, metadata, and visual settings.
 ### Export Pipeline
 
 1. `Toolbar` collects all runtime scripts (`<script src=...>`) and stylesheets
-   (`<link rel="stylesheet">`) from the current document.
-2. Each script and stylesheet is fetched and inlined directly into the export.
+   (`<link rel="stylesheet">`) from the current document. If the page is already
+   an export, it also reuses inline `<script data-src>` and `<style data-href>`
+   blocks so exports can be re-exported.
+2. External scripts and stylesheets are fetched and inlined directly into the export,
+   while inline `data-src` / `data-href` blocks are copied as-is.
 3. The current app state is serialized via `state/export-state` and embedded
    into the HTML as an EDN payload in a `<script id="phylo-export-state">` tag.
 4. Static assets (currently `images/logo.svg`) are fetched and embedded as data
