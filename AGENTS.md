@@ -147,7 +147,6 @@ All tests are pure-function tests. No component/rendering tests exist yet.
 
 Areas the owner has been iterating on (in case they ask for "another iteration"):
 - Component rendering tests (requires a browser-based test target or jsdom)
-- SVG export / download functionality
 - Tree ladderizing (sorting branches by descending tips)
 - Configurable metadata ID column (currently implicit first column)
 - Color-coding branches or metadata by categorical values
