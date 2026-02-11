@@ -24,7 +24,9 @@
   - [[!highlight-color]]       - CSS color string used as the current brush color
   - [[!selected-ids]]          - set of leaf IDs selected in the AG-Grid
   - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights"
-  (:require [uix.core :as uix :refer [defui $]]))
+  (:require [cljs.spec.alpha :as s]
+            [app.specs :as specs]
+            [uix.core :as uix :refer [defui $]]))
 
 ;; ===== Default Data =====
 
@@ -135,23 +137,23 @@
   Intended for embedding into standalone HTML exports."
   []
   {:version export-version
-   :state {:newick-str @!newick-str
-           :metadata-rows @!metadata-rows
-           :active-cols @!active-cols
-           :x-mult @!x-mult
-           :y-mult @!y-mult
-           :show-internal-markers @!show-internal-markers
-           :show-scale-gridlines @!show-scale-gridlines
+   :state {:newick-str      @!newick-str
+           :metadata-rows   @!metadata-rows
+           :active-cols     @!active-cols
+           :x-mult          @!x-mult
+           :y-mult          @!y-mult
+           :show-internal-markers     @!show-internal-markers
+           :show-scale-gridlines      @!show-scale-gridlines
            :show-distance-from-origin @!show-distance-from-origin
-           :scale-origin @!scale-origin
-           :show-pixel-grid @!show-pixel-grid
-           :col-spacing @!col-spacing
-           :metadata-panel-collapsed @!metadata-panel-collapsed
-           :metadata-panel-height @!metadata-panel-height
+           :scale-origin              @!scale-origin
+           :show-pixel-grid           @!show-pixel-grid
+           :col-spacing               @!col-spacing
+           :metadata-panel-collapsed  @!metadata-panel-collapsed
+           :metadata-panel-height     @!metadata-panel-height
            :metadata-panel-last-drag-height @!metadata-panel-last-drag-height
            :highlight-color @!highlight-color
-           :selected-ids @!selected-ids
-           :highlights @!highlights}})
+           :selected-ids    @!selected-ids
+           :highlights      @!highlights}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -208,6 +210,27 @@
   Provided by [[AppStateProvider]], consumed via [[use-app-state]]."
   (uix/create-context nil))
 
+
+(s/def :app.specs/app-state
+  (s/keys :req-un [:app.specs/newick-str      :app.specs/set-newick-str!
+                   :app.specs/metadata-rows   :app.specs/set-metadata-rows!
+                   :app.specs/active-cols     :app.specs/set-active-cols!
+                   :app.specs/x-mult          :app.specs/set-x-mult!
+                   :app.specs/y-mult          :app.specs/set-y-mult!
+                   :app.specs/show-internal-markers           :app.specs/set-show-internal-markers!
+                   :app.specs/show-scale-gridlines            :app.specs/set-show-scale-gridlines!
+                   :app.specs/show-distance-from-origin       :app.specs/set-show-distance-from-origin!
+                   :app.specs/scale-origin    :app.specs/set-scale-origin!
+                   :app.specs/show-pixel-grid :app.specs/set-show-pixel-grid!
+                   :app.specs/col-spacing     :app.specs/set-col-spacing!
+                   :app.specs/highlight-color :app.specs/set-highlight-color!
+                   :app.specs/selected-ids    :app.specs/set-selected-ids!
+                   :app.specs/highlights      :app.specs/set-highlights!
+                   :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
+                   :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
+                   :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
+                   ]))
+
 (defui AppStateProvider
   "Wraps children with the app state context.
 
@@ -220,52 +243,54 @@
         active-cols    (uix/use-atom !active-cols)
         x-mult         (uix/use-atom !x-mult)
         y-mult         (uix/use-atom !y-mult)
-        show-internal-markers (uix/use-atom !show-internal-markers)
-        show-scale-gridlines  (uix/use-atom !show-scale-gridlines)
+        show-internal-markers       (uix/use-atom !show-internal-markers)
+        show-scale-gridlines        (uix/use-atom !show-scale-gridlines)
         show-distance-from-origin   (uix/use-atom !show-distance-from-origin)
-        scale-origin          (uix/use-atom !scale-origin)
-        show-pixel-grid       (uix/use-atom !show-pixel-grid)
-        col-spacing           (uix/use-atom !col-spacing)
-        metadata-panel-collapsed (uix/use-atom !metadata-panel-collapsed)
-        metadata-panel-height (uix/use-atom !metadata-panel-height)
+        scale-origin                (uix/use-atom !scale-origin)
+        show-pixel-grid             (uix/use-atom !show-pixel-grid)
+        col-spacing                 (uix/use-atom !col-spacing)
+        metadata-panel-collapsed    (uix/use-atom !metadata-panel-collapsed)
+        metadata-panel-height       (uix/use-atom !metadata-panel-height)
         metadata-panel-last-drag-height (uix/use-atom !metadata-panel-last-drag-height)
-        highlight-color       (uix/use-atom !highlight-color)
-        selected-ids          (uix/use-atom !selected-ids)
-        highlights            (uix/use-atom !highlights)]
-    ($ app-context {:value {:newick-str       newick-str
-                            :set-newick-str!  #(reset! !newick-str %)
-                            :metadata-rows    metadata-rows
-                            :set-metadata-rows! #(reset! !metadata-rows %)
-                            :active-cols      active-cols
-                            :set-active-cols! #(reset! !active-cols %)
-                            :x-mult           x-mult
-                            :set-x-mult!      #(reset! !x-mult %)
-                            :y-mult           y-mult
-                            :set-y-mult!      #(reset! !y-mult %)
-                            :show-internal-markers show-internal-markers
-                            :set-show-internal-markers! #(reset! !show-internal-markers %)
-                            :show-scale-gridlines show-scale-gridlines
-                            :set-show-scale-gridlines! #(reset! !show-scale-gridlines %)
-                            :show-distance-from-origin show-distance-from-origin
-                            :set-show-distance-from-origin! #(reset! !show-distance-from-origin %)
-                            :scale-origin scale-origin
-                            :set-scale-origin! #(reset! !scale-origin %)
-                            :show-pixel-grid show-pixel-grid
-                            :set-show-pixel-grid! #(reset! !show-pixel-grid %)
-                            :col-spacing col-spacing
-                            :set-col-spacing! #(reset! !col-spacing %)
-                            :metadata-panel-collapsed metadata-panel-collapsed
-                            :set-metadata-panel-collapsed! #(reset! !metadata-panel-collapsed %)
-                            :metadata-panel-height metadata-panel-height
-                            :set-metadata-panel-height! #(reset! !metadata-panel-height %)
-                            :metadata-panel-last-drag-height metadata-panel-last-drag-height
-                            :set-metadata-panel-last-drag-height! #(reset! !metadata-panel-last-drag-height %)
-                            :highlight-color highlight-color
-                            :set-highlight-color! #(reset! !highlight-color %)
-                            :selected-ids selected-ids
-                            :set-selected-ids! #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %))
-                            :highlights highlights
-                            :set-highlights! #(reset! !highlights %)}}
+        highlight-color             (uix/use-atom !highlight-color)
+        selected-ids                (uix/use-atom !selected-ids)
+        highlights                  (uix/use-atom !highlights)
+        app-state     {:newick-str           newick-str
+                       :set-newick-str!      #(reset! !newick-str %)
+                       :metadata-rows        metadata-rows
+                       :set-metadata-rows!   #(reset! !metadata-rows %)
+                       :active-cols          active-cols
+                       :set-active-cols!     #(reset! !active-cols %)
+                       :x-mult               x-mult
+                       :set-x-mult!          #(reset! !x-mult %)
+                       :y-mult               y-mult
+                       :set-y-mult!          #(reset! !y-mult %)
+                       :show-internal-markers                show-internal-markers
+                       :set-show-internal-markers!           #(reset! !show-internal-markers %)
+                       :show-scale-gridlines                 show-scale-gridlines
+                       :set-show-scale-gridlines!            #(reset! !show-scale-gridlines %)
+                       :show-distance-from-origin            show-distance-from-origin
+                       :set-show-distance-from-origin!       #(reset! !show-distance-from-origin %)
+                       :scale-origin         scale-origin
+                       :set-scale-origin!    #(reset! !scale-origin %)
+                       :show-pixel-grid      show-pixel-grid
+                       :set-show-pixel-grid! #(reset! !show-pixel-grid %)
+                       :col-spacing          col-spacing
+                       :set-col-spacing!     #(reset! !col-spacing %)
+                       :metadata-panel-collapsed             metadata-panel-collapsed
+                       :set-metadata-panel-collapsed!        #(reset! !metadata-panel-collapsed %)
+                       :metadata-panel-height                metadata-panel-height
+                       :set-metadata-panel-height!           #(reset! !metadata-panel-height %)
+                       :metadata-panel-last-drag-height      metadata-panel-last-drag-height
+                       :set-metadata-panel-last-drag-height! #(reset! !metadata-panel-last-drag-height %)
+                       :highlight-color      highlight-color
+                       :set-highlight-color! #(reset! !highlight-color %)
+                       :selected-ids         selected-ids
+                       :set-selected-ids!    #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %))
+                       :highlights           highlights
+                       :set-highlights!      #(reset! !highlights %)}]
+    (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true})
+    ($ app-context {:value app-state}
        children)))
 
 (defn use-app-state

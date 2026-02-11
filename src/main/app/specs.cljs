@@ -8,7 +8,58 @@
 
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
-  (:require [cljs.spec.alpha :as s]))
+  (:require [cljs.spec.alpha :as s]
+            [clojure.set :as set]))
+
+
+(defn get-allowed-keys
+  "Gets all allowed keys for a spec, including both required and optional."
+  [spec]
+  (when-let [form (s/form spec)]
+    (let [{:keys [req-un opt-un]} (apply hash-map (rest form))]
+      (set (concat (map #(keyword (name %)) req-un)
+                   (map #(keyword (name %)) opt-un))))))
+
+(comment
+  (get-allowed-keys ::app-state)
+)
+
+(defn validate-spec!
+  "Validates a value against a spec in dev mode. Logs errors for invalid values
+  and warnings for unexpected keys. Returns the value unchanged (for threading).
+  
+  Options:
+  - check-unexpected-keys? (default true) - warn about keys not in spec"
+  ([value spec label]
+   (validate-spec! value spec label {}))
+  ([value spec label {:keys [check-unexpected-keys?]
+                      :or {check-unexpected-keys? true}}]
+   (when ^boolean goog.DEBUG
+     ;; Check spec validity
+     (when-not (s/valid? spec value)
+       (js/console.error (str "Invalid " label ":")
+                         (s/explain-str spec value)))
+     
+     ;; Check for unexpected keys (optional)
+     (when (and check-unexpected-keys?
+                (map? value))
+       (when-let [allowed (get-allowed-keys spec)]
+         (let [actual (set (keys value))
+               unexpected (set/difference actual allowed)]
+           (when (seq unexpected)
+             (js/console.warn (str "Unexpected keys in " label ":") 
+                             (clj->js unexpected)
+                             "\nAllowed:" 
+                             (clj->js allowed)))))))
+   value))
+
+(defn with-spec-check
+  "Wraps a component function to validate its props against a spec in dev mode."
+  [component spec]
+  (fn [props]
+    (validate-spec! props spec "component props")
+    (component props)))
+
 
 ;; ===== Tree Data Structures =====
 
@@ -101,7 +152,7 @@
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
 ;; Shape of the context map provided by `app.state/AppStateProvider`.
-(s/def ::app-state
+#_(s/def ::app-state
   (s/keys :req-un [::newick-str ::set-newick-str!
                    ::metadata-rows ::set-metadata-rows!
                    ::active-cols ::set-active-cols!
