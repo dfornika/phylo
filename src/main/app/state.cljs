@@ -289,7 +289,8 @@
                        :set-selected-ids!    #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %))
                        :highlights           highlights
                        :set-highlights!      #(reset! !highlights %)}]
-    (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true})
+    (when ^boolean goog.DEBUG
+      (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))
     ($ app-context {:value app-state}
        children)))
 

@@ -9,7 +9,7 @@
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
   (:require [cljs.spec.alpha :as s]
-            [clojure.set :as set]
+            [clojure.set]
             [camel-snake-kebab.core :as csk]))
 
 
@@ -31,7 +31,7 @@
   and warnings for unexpected keys. Returns the value unchanged (for threading).
   
   Options:
-  - check-unexpected-keys? (default true) - warn about keys not in spec"
+  - check-unexpected-keys? (default false) - warn about keys not in spec"
   ([value spec label]
    (validate-spec! value spec label {}))
   ([value spec label {:keys [check-unexpected-keys?]
@@ -47,7 +47,7 @@
                 (map? value))
        (when-let [allowed (get-allowed-keys spec)]
          (let [actual (set (keys value))
-               unexpected (set/difference actual allowed)]
+               unexpected (clojure.set/difference actual allowed)]
            (when (seq unexpected)
              (js/console.warn (str "Unexpected keys in " label ":")
                               (clj->js unexpected)
@@ -210,7 +210,7 @@
 (s/def ::set-metadata-panel-height! fn?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-(s/def ::tree-viewer-props
+#_(s/def ::tree-viewer-props
   (s/keys :req-un [::tree 
                    ::tips 
                    ::max-depth 

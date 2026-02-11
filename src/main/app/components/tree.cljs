@@ -66,6 +66,8 @@
                    :app.specs/selected-ids
                    :app.specs/on-toggle-selection]))
 
+(declare TreeNode)
+
 (defui TreeNode*
   "Recursively renders a tree node and all its descendants as SVG.
 
@@ -154,7 +156,7 @@
 
        ;; Recurse into children
        (for [child (:children node)]
-         ($ TreeNode* {:key (:id child)
+         ($ TreeNode {:key (:id child)
                        :node child
                        :parent-x (:x node)
                        :parent-y (:y node)
@@ -210,20 +212,20 @@
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
            highlights selected-ids on-toggle-selection]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-     ($ TreeNode* {:node tree
-                   :parent-x 0
-                   :parent-y (:y tree)
-                   :x-scale x-scale
-                   :y-scale y-scale
-                   :show-internal-markers show-internal-markers
-                   :show-distance-from-origin show-distance-from-origin
-                   :scale-origin scale-origin
-                   :max-depth max-depth
-                   :marker-radius marker-radius
-                   :marker-fill marker-fill
-                   :highlights highlights
-                   :selected-ids selected-ids
-                   :on-toggle-selection on-toggle-selection})))
+     ($ TreeNode {:node tree
+                  :parent-x 0
+                  :parent-y (:y tree)
+                  :x-scale x-scale
+                  :y-scale y-scale
+                  :show-internal-markers show-internal-markers
+                  :show-distance-from-origin show-distance-from-origin
+                  :scale-origin scale-origin
+                  :max-depth max-depth
+                  :marker-radius marker-radius
+                  :marker-fill marker-fill
+                  :highlights highlights
+                  :selected-ids selected-ids
+                  :on-toggle-selection on-toggle-selection})))
 
 
 (defui-with-spec PhylogeneticTree

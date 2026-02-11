@@ -17,7 +17,8 @@
   (s/keys :req-un [:app.specs/initial-height
                    :app.specs/min-height
                    :app.specs/max-height]
-          :opt-un [:app.specs/height ::on-height-change]))
+          :opt-un [:app.specs/height 
+                   :app.specs/on-height-change]))
 
 (defui ResizablePanel*
   "A panel with a draggable top-edge resize handle.
