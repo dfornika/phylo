@@ -20,7 +20,6 @@
                    :app.specs/x-scale
                    :app.specs/scale-origin]))
 
-
 (defui StickyHeader*
   "Renders a sticky header row displaying metadata column labels.
 

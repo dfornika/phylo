@@ -185,7 +185,7 @@
   and a scrollable SVG viewport containing the tree, gridlines, and
   metadata columns.
 
-  Props (see `::app.specs/tree-viewer-props`):
+  Props (see `:app.specs/tree-viewer-props`):
   - `:tree`                    - positioned root node
   - `:tips`                    - flat vector of enriched leaf nodes
   - `:max-depth`               - maximum x-coordinate in the tree
@@ -527,8 +527,8 @@
 
 
 (s/def :app.specs/tree-container-props
-  (s/keys :req-un [:app.specs/width-px
-                   :app.specs/component-height-px]))
+  (s/keys :req-un [:app.specs/width-px]
+          :opt-un [:app.specs/component-height-px]))
 
 (defui TreeContainer*
   "Intermediate component that bridges state context and pure rendering.

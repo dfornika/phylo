@@ -187,48 +187,13 @@
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
 (s/def ::width-px number?)
-(s/def ::component-height-px number?)
+(s/def ::component-height-px (s/nilable number?))
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::metadata-panel-height number?)
 (s/def ::metadata-panel-last-drag-height number?)
 (s/def ::set-metadata-panel-height! fn?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-#_(s/def ::tree-viewer-props
-  (s/keys :req-un [::tree 
-                   ::tips 
-                   ::max-depth 
-                   ::x-mult ::y-mult 
-                   ::show-internal-markers
-                   ::show-scale-gridlines 
-                   ::show-pixel-grid
-                   ::show-distance-from-origin
-                   ::scale-origin
-                   ::col-spacing 
-                   ::width-px
-                   ::component-height-px
-                   ::active-cols ::set-active-cols!
-                   ::metadata-rows ::set-metadata-rows!
-                   ::set-selected-ids!
-                   ::metadata-panel-collapsed
-                   ::metadata-panel-height
-                   ::metadata-panel-last-drag-height
-                   ::set-metadata-panel-height!
-                   ::set-metadata-panel-last-drag-height! ]
-          :opt-un [::highlights ::selected-ids]))
-
-(s/def ::scale-gridlines-props
-  (s/keys :req-un [::max-depth 
-                   ::x-scale 
-                   ::tree-height
-                   ::scale-origin]))
-
-
-;; TreeContainer receives only layout dimensions.
-
-(s/def ::tree-container-props
-  (s/keys :req-un [::width-px 
-                   ::component-height-px]))
 
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
