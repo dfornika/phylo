@@ -9,7 +9,8 @@
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
   (:require [cljs.spec.alpha :as s]
-            [clojure.set :as set]))
+            [clojure.set :as set]
+            [camel-snake-kebab.core :as csk]))
 
 
 (defn get-allowed-keys
@@ -33,13 +34,13 @@
   ([value spec label]
    (validate-spec! value spec label {}))
   ([value spec label {:keys [check-unexpected-keys?]
-                      :or {check-unexpected-keys? true}}]
+                      :or {check-unexpected-keys? false}}]
    (when ^boolean goog.DEBUG
      ;; Check spec validity
      (when-not (s/valid? spec value)
        (js/console.error (str "Invalid " label ":")
                          (s/explain-str spec value)))
-     
+
      ;; Check for unexpected keys (optional)
      (when (and check-unexpected-keys?
                 (map? value))
@@ -47,19 +48,28 @@
          (let [actual (set (keys value))
                unexpected (set/difference actual allowed)]
            (when (seq unexpected)
-             (js/console.warn (str "Unexpected keys in " label ":") 
-                             (clj->js unexpected)
-                             "\nAllowed:" 
-                             (clj->js allowed)))))))
+             (js/console.warn (str "Unexpected keys in " label ":")
+                              (clj->js unexpected)
+                              "\nAllowed:"
+                              (clj->js allowed)))))))
    value))
 
 (defn with-spec-check
   "Wraps a component function to validate its props against a spec in dev mode."
   [component spec]
   (fn [props]
-    (validate-spec! props spec "component props")
+    (let [props-clj (if (object? props)
+                      (js->clj props :key-fn csk/->kebab-case-keyword)
+                      props)]
+      (js/console.log props)
+      (js/console.log props-clj)
+      (validate-spec! props-clj spec "component props"))
     (component props)))
 
+(comment
+  (let [test-props (clj->js {:helloThere "world"})]
+    (js->clj test-props :key-fn csk/->kebab-case-keyword))
+  )
 
 ;; ===== Tree Data Structures =====
 
@@ -151,26 +161,6 @@
 (s/def ::metadata-panel-last-drag-height number?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-;; Shape of the context map provided by `app.state/AppStateProvider`.
-#_(s/def ::app-state
-  (s/keys :req-un [::newick-str ::set-newick-str!
-                   ::metadata-rows ::set-metadata-rows!
-                   ::active-cols ::set-active-cols!
-                   ::x-mult ::set-x-mult!
-                   ::y-mult ::set-y-mult!
-                   ::show-internal-markers ::set-show-internal-markers!
-                   ::show-scale-gridlines ::set-show-scale-gridlines!
-                   ::show-distance-from-origin ::set-show-distance-from-origin!
-                   ::scale-origin ::set-scale-origin!
-                   ::show-pixel-grid ::set-show-pixel-grid!
-                   ::col-spacing ::set-col-spacing!
-                   ::highlight-color ::set-highlight-color!
-                   ::selected-ids ::set-selected-ids!
-                   ::highlights ::set-highlights!
-                   ::metadata-panel-collapsed ::set-metadata-panel-collapsed!
-                   ::metadata-panel-height ::set-metadata-panel-height!
-                   ::metadata-panel-last-drag-height ::set-metadata-panel-last-drag-height!]))
-
 ;; ===== Component Props =====
 
 (s/def ::columns (s/coll-of ::metadata-header))
@@ -223,7 +213,7 @@
 (s/def ::marker-fill string?)
 (s/def ::on-toggle-selection (s/nilable fn?))
 
-(s/def ::tree-node-props
+#_(s/def ::tree-node-props
   (s/keys :req-un [::node 
                    ::parent-x 
                    ::parent-y 
