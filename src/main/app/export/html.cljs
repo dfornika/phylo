@@ -102,6 +102,18 @@
        distinct
        vec))
 
+(defn- collect-inline-script-tags
+  "Returns ordered inline script blocks tagged with data-src."
+  []
+  (->> (.querySelectorAll js/document "script[data-src]")
+       array-seq
+       (map (fn [el]
+              {:url (.getAttribute el "data-src")
+               :text (.-textContent el)}))
+       (filter (fn [{:keys [url text]}]
+                 (and (inlineable-src? url) (string? text))))
+       vec))
+
 (defn- collect-stylesheet-hrefs
   "Returns ordered stylesheet href URLs from the current document."
   []
@@ -110,6 +122,18 @@
        (map #(.getAttribute % "href"))
        (filter inlineable-src?)
        distinct
+       vec))
+
+(defn- collect-inline-style-tags
+  "Returns ordered inline style blocks tagged with data-href."
+  []
+  (->> (.querySelectorAll js/document "style[data-href]")
+       array-seq
+       (map (fn [el]
+              {:url (.getAttribute el "data-href")
+               :text (.-textContent el)}))
+       (filter (fn [{:keys [url text]}]
+                 (and (inlineable-src? url) (string? text))))
        vec))
 
 (defn escape-script-content
@@ -192,8 +216,16 @@
   "Exports a standalone HTML file with inlined assets and embedded state."
   []
   (let [state-edn (pr-str (state/export-state))
-        script-srcs (collect-script-srcs)
-        style-hrefs (collect-stylesheet-hrefs)
+        inline-styles (collect-inline-style-tags)
+        inline-scripts (collect-inline-script-tags)
+        inline-style-urls (into #{} (map :url inline-styles))
+        inline-script-urls (into #{} (map :url inline-scripts))
+        style-hrefs (->> (collect-stylesheet-hrefs)
+                         (remove inline-style-urls)
+                         vec)
+        script-srcs (->> (collect-script-srcs)
+                         (remove inline-script-urls)
+                         vec)
         asset-paths ["images/logo.svg"]]
     (-> (js/Promise.all
          (clj->js [(fetch-texts style-hrefs)
@@ -201,8 +233,10 @@
                    (fetch-asset-map asset-paths)]))
         (.then (fn [results]
                  (let [[styles scripts asset-map] (js->clj results)
-                       html (build-export-html {:styles styles
-                                                :scripts scripts
+                       all-styles (vec (concat inline-styles styles))
+                       all-scripts (vec (concat inline-scripts scripts))
+                       html (build-export-html {:styles all-styles
+                                                :scripts all-scripts
                                                 :asset-map asset-map
                                                 :state-edn state-edn})
                        blob (js/Blob. #js [html] #js {:type "text/html;charset=utf-8"})]

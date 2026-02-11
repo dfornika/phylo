@@ -1,4 +1,4 @@
-name: Deploy Codox Docs
+name: Deploy App + Docs
 
 on:
   push:
@@ -20,6 +20,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
       - name: Setup java
         uses: actions/setup-java@v5
         with:
@@ -38,13 +44,46 @@ jobs:
           key: ${{ runner.os }}-maven-${{ hashFiles('deps.edn') }}
           restore-keys: ${{ runner.os }}-maven-
 
+      - name: Install npm deps
+        run: npm ci
+
+      - name: Build app
+        run: npm run build
+
       - name: Generate docs
         run: clojure -X:codox
+
+      - name: Assemble site
+        run: |
+          rm -rf site
+          mkdir -p site/docs
+          cp -R resources/public/* site/
+          cp -R target/doc/* site/docs/
+
+      - name: Inject docs link
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          path = Path('site/index.html')
+          html = path.read_text()
+          link = (
+              '<a href="docs/" target="_blank" rel="noopener noreferrer" '
+              'style="position:fixed;top:10px;right:14px;font:600 12px '
+              '-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,Helvetica,Arial,sans-serif;'
+              'color:#003366;text-decoration:none;z-index:9999">Documentation</a>'
+          )
+          marker = '<div id="app"></div>'
+          if marker in html:
+              html = html.replace(marker, marker + link)
+          else:
+              html = html.replace('</body>', link + '</body>')
+          path.write_text(html)
+          PY
 
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: target/doc
+          path: site
 
   deploy:
     needs: build
