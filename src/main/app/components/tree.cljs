@@ -33,7 +33,7 @@
   "Renders a single tree branch as two SVG lines: a horizontal segment
   (the branch itself) and a vertical connector to the parent node.
 
-  Props (see `:app.specs/app.specs/branch-props`):
+  Props (see `:app.specs/branch-props`):
   - `:x`, `:y`             - endpoint (child) coordinates
   - `:parent-x`, `:parent-y` - start (parent) coordinates
   - `:line-color`          - stroke color string
