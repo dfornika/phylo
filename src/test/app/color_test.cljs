@@ -623,7 +623,7 @@
 (deftest format-number-medium-values
   (testing "Formats medium values (>= 100, < 1000) with 1 decimal place"
     (is (= "100" (#'color/format-number 100.0)))
-    (is (= "456.8" (#'color/format-number 456.789)))
+    (is (= "456.7" (#'color/format-number 456.789)))
     (is (= "999.9" (#'color/format-number 999.99)))))
 
 (deftest format-number-small-values
@@ -641,7 +641,7 @@
 (deftest format-number-negative-values
   (testing "Formats negative values based on absolute value"
     (is (= "-1000" (#'color/format-number -1000)))
-    (is (= "-456.8" (#'color/format-number -456.789)))
+    (is (= "-456.7" (#'color/format-number -456.789)))
     (is (= "-50.25" (#'color/format-number -50.25)))
     (is (= "-0.123" (#'color/format-number -0.123)))))
 

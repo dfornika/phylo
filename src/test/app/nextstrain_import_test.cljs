@@ -42,10 +42,10 @@
       (is (= "(A:0)root;" newick-str)))))
 
 (deftest parse-nextstrain-json-invalid-json
-  (testing "Returns nil for invalid JSON"
+  (testing "Returns error map for invalid JSON"
     (let [json "{invalid json"
           result (nextstrain/parse-nextstrain-json json)]
-      (is (nil? result)))))
+      (is (= {:error :invalid-json} result)))))
 
 (deftest parse-nextstrain-json-null-input
   (testing "Returns nil for null input"

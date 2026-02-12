@@ -84,4 +84,4 @@
           {:newick-str (str (tree->newick (to-tree-map tree nil true)) ";")}))
       (catch :default err
         (js/console.warn "Failed to parse Nextstrain JSON:" err)
-        nil))))
+        {:error :invalid-json}))))

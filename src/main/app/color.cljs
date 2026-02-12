@@ -88,6 +88,7 @@
      :palette (get palettes id)}))
 
 (defn- normalize-hex
+  "Normalizes a hex color string to a 6-char lowercase hex without '#'."
   [hex]
   (let [s (str/replace (str hex) "#" "")]
     (cond
@@ -96,6 +97,7 @@
       :else "000000")))
 
 (defn- hex->rgb
+  "Converts a hex color string to an [r g b] vector."
   [hex]
   (let [s (normalize-hex hex)
         r (js/parseInt (subs s 0 2) 16)
@@ -104,6 +106,7 @@
     [r g b]))
 
 (defn- rgb->hex
+  "Converts RGB components to a hex color string."
   [r g b]
   (let [clamp (fn [n] (-> n js/Math.round (max 0) (min 255)))
         to-hex (fn [n]
@@ -112,10 +115,12 @@
     (str "#" (to-hex r) (to-hex g) (to-hex b))))
 
 (defn- lerp
+  "Linearly interpolates between a and b using t in [0,1]."
   [a b t]
   (+ a (* (- b a) t)))
 
 (defn- lerp-color
+  "Linearly interpolates between two hex colors at t in [0,1]."
   [c1 c2 t]
   (let [[r1 g1 b1] (hex->rgb c1)
         [r2 g2 b2] (hex->rgb c2)]
@@ -124,6 +129,7 @@
               (lerp b1 b2 t))))
 
 (defn- gradient-color
+  "Returns a color from a 2-3 stop gradient for t in [0,1]."
   [colors t]
   (let [t (-> t (max 0) (min 1))]
     (cond
@@ -138,32 +144,52 @@
   5)
 
 (defn- non-empty-string?
+  "True when value is a non-blank string."
   [value]
   (and (string? value) (not (str/blank? value))))
 
 (defn- trim-trailing-zeros
+  "Trims trailing fractional zeros from a numeric string."
   [s]
-  (str/replace s #"\.?0+$" ""))
+  (cond
+    (str/blank? s) ""
+    (str/includes? s ".") (-> s
+                              (str/replace #"(\.\d*?)0+$" "$1")
+                              (str/replace #"\.$" ""))
+    :else s))
+
+(defn- truncate-to
+  "Truncates a number to a fixed number of decimal places."
+  [n decimals]
+  (let [factor (js/Math.pow 10 decimals)]
+    (/ (js/Math.trunc (* n factor)) factor)))
 
 (defn- format-number
+  "Formats a number to a compact string with adaptive precision.
+
+  Uses truncation (not rounding) to avoid expanding upper bounds in ranges."
   [n]
   (let [abs (js/Math.abs n)
-        s (cond
-            (>= abs 1000) (.toFixed n 0)
-            (>= abs 100) (.toFixed n 1)
-            (>= abs 1) (.toFixed n 2)
-            :else (.toFixed n 3))]
+        decimals (cond
+                   (>= abs 1000) 0
+                   (>= abs 100) 1
+                   (>= abs 1) 2
+                   :else 3)
+        truncated (truncate-to n decimals)
+        s (.toFixed truncated decimals)]
     (trim-trailing-zeros s)))
 
 (defn- format-date-ms
+  "Formats epoch milliseconds as YYYY-MM-DD in UTC."
   [ms]
   (let [date (js/Date. ms)
-        year (.getFullYear date)
-        month (-> (.getMonth date) inc (str) (.padStart 2 "0"))
-        day (-> (.getDate date) (str) (.padStart 2 "0"))]
+        year (.getUTCFullYear date)
+        month (-> (.getUTCMonth date) inc (str) (.padStart 2 "0"))
+        day (-> (.getUTCDate date) (str) (.padStart 2 "0"))]
     (str year "-" month "-" day)))
 
 (defn- parse-number
+  "Parses a numeric value from a string or returns the number."
   [value]
   (cond
     (nil? value) nil
@@ -271,6 +297,7 @@
               tips)))))
 
 (defn- format-range
+  "Formats a legend range label for numeric or date values."
   [field-type start end]
   (let [fmt (if (= field-type :date) format-date-ms format-number)
         start-label (fmt start)
@@ -285,7 +312,7 @@
   Returns {:type <keyword> :entries <vector>} with entries of
   {:id <string> :label <string> :color <hex>}.
   Numeric/date fields are binned into ranges; categorical fields
-  list each unique value." 
+  list each unique value."
   [tips field-key palette-id type-override]
   (let [values (map #(get-in % [:metadata field-key]) tips)
         field-type (resolve-field-type values type-override)
