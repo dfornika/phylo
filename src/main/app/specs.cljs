@@ -145,6 +145,18 @@
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
 
+(s/def ::color-by-enabled? boolean?)
+(s/def ::set-color-by-enabled! fn?)
+
+(s/def ::color-by-field (s/nilable keyword?))
+(s/def ::set-color-by-field! fn?)
+
+(s/def ::color-by-palette #{:bright :contrast :pastel :blue-red :teal-gold})
+(s/def ::set-color-by-palette! fn?)
+
+(s/def ::color-by-type-override #{:auto :categorical :numeric :date})
+(s/def ::set-color-by-type-override! fn?)
+
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::set-metadata-panel-collapsed! fn?)
 

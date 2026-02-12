@@ -56,7 +56,7 @@ app                               (app.core)
             │   │       └── TreeNode... Child nodes (recursive)
             │   └── MetadataTable     (app.components.metadata) Computes column offsets, wraps columns
             │       └── MetadataColumn  (app.components.metadata) Per-column header + data cells with borders
-            ├── SelectionBar      (app.components.selection_bar) Selection shortcuts + highlight controls + panel buttons
+            ├── SelectionBar      (app.components.selection_bar) Selection shortcuts + highlight controls + auto-color controls + panel buttons
             └── ResizablePanel    (app.components.resizable_panel) Draggable resize handle wrapper
                 └── MetadataGrid  (app.components.grid) AG-Grid table with editing, selection sync
 ```
@@ -89,6 +89,10 @@ All shared mutable state lives in `defonce` atoms in the `app.state` namespace. 
 | `!highlight-color` | string | `"#4682B4"` | Brush color for painting highlights onto selected leaves |
 | `!selected-ids` | set | `#{}` | Set of leaf names currently selected (transient, checkbox-driven) |
 | `!highlights` | map | `{}` | Persistent highlight assignments `{leaf-name → CSS color}` |
+| `!color-by-enabled?` | boolean | `false` | Enables metadata-driven auto-coloring |
+| `!color-by-field` | keyword | `nil` | Metadata field keyword to color by |
+| `!color-by-palette` | keyword | `:bright` | Palette id for auto-coloring |
+| `!color-by-type-override` | keyword | `:auto` | Override for type detection (`:auto`, `:categorical`, `:numeric`, `:date`) |
 
 ### Context Architecture
 
@@ -124,7 +128,11 @@ app
  :metadata-panel-last-drag-height 250 :set-metadata-panel-last-drag-height! fn
  :highlight-color         "..."  :set-highlight-color!         fn
  :selected-ids            #{}    :set-selected-ids!            fn
- :highlights              {}     :set-highlights!              fn}
+ :highlights              {}     :set-highlights!              fn
+ :color-by-enabled?       false  :set-color-by-enabled!       fn
+ :color-by-field          nil    :set-color-by-field!          fn
+ :color-by-palette        :bright :set-color-by-palette!        fn
+ :color-by-type-override  :auto  :set-color-by-type-override!  fn}
 ```
 
 Components that need shared state call `(state/use-app-state)` to get this map. Leaf rendering components (`TreeNode`, `Branch`, `MetadataColumn`, `StickyHeader`, `ScaleGridlines`, `PixelGrid`) stay props-based since they receive computed/positioned data, not raw state.
@@ -133,13 +141,15 @@ Components that need shared state call `(state/use-app-state)` to get this map. 
 
 ### Highlight Model
 
-Phylo uses a two-tier highlight model:
+Phylo uses a three-layer color model:
 
 1. **`selected-ids`** — a transient `#{set}` of leaf names currently selected via AG-Grid row checkboxes or tree leaf clicks. Selection is bidirectional: clicking a leaf toggles it in `selected-ids`, and a `use-effect` in `MetadataGrid` programmatically syncs AG-Grid checkboxes to match. A `syncing-ref` guard prevents circular updates.
 
-2. **`highlights`** — a persistent `{leaf-name → CSS-color}` map representing committed highlight assignments. Users select leaves, pick a brush color via `SelectionBar`, and click "Assign" to stamp the current `highlight-color` onto every leaf in `selected-ids`.
+2. **Auto-coloring** — when enabled, `TreeViewer` derives a `{leaf-name → CSS-color}` map from metadata using the selected field, palette, and type override. Numeric/date fields use gradients; categorical fields use distinct palettes.
 
-Tree nodes render a colored circle for highlighted leaves and a dashed selection ring for selected leaves. Both can be active simultaneously.
+3. **`highlights`** — a persistent `{leaf-name → CSS-color}` map representing committed highlight assignments. Users select leaves, pick a brush color via `SelectionBar`, and click "Assign" to stamp the current `highlight-color` onto every leaf in `selected-ids`. Manual highlights override auto-coloring when both are present.
+
+Tree nodes render a colored circle for highlighted leaves (auto or manual) and a dashed selection ring for selected leaves. Both can be active simultaneously.
 
 Selection shortcuts in `SelectionBar` provide explicit **Select All** and **Select None** buttons so users can bulk-update `selected-ids` without relying on the AG-Grid header controls.
 
@@ -329,6 +339,7 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `prepare-tree`, `get-leaves`, etc.) |
 | `app.newick` | Recursive descent Newick parser |
 | `app.csv` | CSV/TSV parsing with column metadata and data type detection |
+| `app.date` | Date parsing helpers (normalize to YYYY-MM-DD, convert to epoch ms) |
 | `app.specs` | Spec definitions for data structures & functions |
 | `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
 | `app.components.metadata` | `StickyHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |

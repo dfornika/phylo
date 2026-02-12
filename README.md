@@ -10,12 +10,14 @@ Phylo renders Newick-format trees as interactive SVGs with support for metadata 
 
 ## Features
 
-- Load Newick trees and CSV/TSV metadata
+- Load [Newick](https://en.wikipedia.org/wiki/Newick_format) trees and CSV/TSV metadata
 - [ArborView](https://github.com/phac-nml/ArborView) HTML import (tree + metadata)
 - [Nextstrain](https://nextstrain.org/) JSON import (tree only)
 - Adjustable layout (width, height, column spacing)
 - Scale bar with optional gridlines and origin toggle (tips/root)
 - Internal node distance labels and leaf selection/highlighting
+- Auto-color leaves by metadata field (categorical palettes or numeric/date gradients)
+- Type override for color-by fields (auto/categorical/numeric/date)
 - Export to standalone HTML and SVG
 
 ## Prerequisites
@@ -47,6 +49,7 @@ src/
       tree.cljs               # Pure tree layout functions (assign coords, prepare-tree, etc.)
       newick.cljs             # Newick tree format parser
       csv.cljs                # CSV/TSV parser with metadata column support
+      date.cljs               # Date parsing helpers
       specs.cljs              # clojure.spec definitions for data structures & props
       components/
         tree.cljs             # Branch, TreeNode, PhylogeneticTree — SVG tree rendering
@@ -78,6 +81,9 @@ Newick string
 
 ArborView HTML imports follow the same pipeline after extracting the embedded
 Newick string and metadata table.
+
+Auto-coloring derives a per-leaf color map from metadata in the viewer layer and merges it with manual highlights.
+
 
 ## Running Tests
 

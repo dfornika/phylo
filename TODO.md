@@ -1,7 +1,7 @@
 # TODO — Upcoming Iterations
 
 Planning notes for future work sessions on Phylo.
-Last updated: 2026-02-011
+Last updated: 2026-02-12
 ---
 
 ## In Progress
@@ -9,12 +9,23 @@ Last updated: 2026-02-011
 ---
 
 ## Backlog
-- [ ] Palette-based node coloring by metadata value (select column, auto-assign colors)
 - [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
 - [ ] Storybook-based UI Component testing
+- [ ] Investigate use of `uix/use-memo` more extensively to improve performance on larger trees
+- [ ] Investigate using [chroma.js](https://github.com/gka/chroma.js) or similar library form more flexible color palettes.
+- [ ] Add floating legend to indicate what each color represents. Auto-populate for auto-colors.
+Allow users to enter labels for custom colors.
 - [ ] Refactor newick string parsing out of TreeContainer (TreeContainer should accept pre-parsed data structure)
-- [ ] Allow users to "merge/join" additional metadata from multiple files (joining on sample ID),
-if other metadata has already been loaded.
+- [ ] Allow users to "merge/join" additional metadata from multiple files, joining on sample ID (or 
+custom field?), if other metadata has already been loaded.
+- [ ] Allow user to collapse subtrees. Metadata table should also collapse those rows, showing
+only the subtree root node as a summary row. If any metadata fields have constant values across all
+collapsed rows, that value should be shown. Otherwise a placeholder like (mixed) (possibly 
+with a tooltip summary?).
+- [ ] Add a "genotype matrix" UI component that can be displayed instead of (or alongside?) the
+metadata table. Loci/alleles are represented by colored boxes.
+- [ ] Auto-detect if tree is "ultrameric" or not, choose initial setting for whether to put origin
+of scale at root or tips based on auto-detection (origin at tips for ultrameric, root otherwise). 
 
 ---
 
@@ -32,6 +43,7 @@ if other metadata has already been loaded.
 - [x] Self-contained HTML Export
 - [x] CSV export from Metadata Grid (download grid contents)
 - [x] Select sub-trees by clicking interior tree nodes
+- [x] Palette-based node coloring by metadata value (select column, auto-assign colors)
 
 ---
 

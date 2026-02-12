@@ -7,7 +7,8 @@
 
   Type detection classifies columns as `:date`, `:numeric`, or `:string`
   based on sampling all non-empty values."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [app.date :as date]))
 
 
 ;; ===== CSV Serialization =====
@@ -40,47 +41,6 @@
       (str (str/join "\n" (cons header data-lines)) "\n"))
     ""))
 
-
-;; ===== Date Parsing =====
-
-(def ^:private iso-date-re
-  "Matches YYYY-MM-DD format."
-  #"^(\d{4})-(\d{1,2})-(\d{1,2})$")
-
-(def ^:private dmy-date-re
-  "Matches DD/MM/YYYY format."
-  #"^(\d{1,2})/(\d{1,2})/(\d{4})$")
-
-(defn parse-date
-  "Attempts to parse a date string into a normalized `YYYY-MM-DD` string.
-
-  Supports two formats:
-  - ISO: `YYYY-MM-DD` (e.g. `\"2024-03-15\"`)
-  - DMY: `DD/MM/YYYY` (e.g. `\"15/03/2024\"`)
-
-  Returns the normalized `\"YYYY-MM-DD\"` string on success, or `nil`
-  if the input is nil, empty, or does not match a known date format.
-
-  Basic validation ensures month is 1–12 and day is 1–31, but does
-  not check calendar correctness (e.g. Feb 30 would pass)."
-  [s]
-  (when (and s (not (str/blank? s)))
-    (let [s (str/trim s)]
-      (if-let [[_ y m d] (re-matches iso-date-re s)]
-        (let [month (js/parseInt m 10)
-              day   (js/parseInt d 10)]
-          (when (and (<= 1 month 12) (<= 1 day 31))
-            (str y "-"
-                 (when (< month 10) "0") month "-"
-                 (when (< day 10) "0") day)))
-        (when-let [[_ d m y] (re-matches dmy-date-re s)]
-          (let [month (js/parseInt m 10)
-                day   (js/parseInt d 10)]
-            (when (and (<= 1 month 12) (<= 1 day 31))
-              (str y "-"
-                   (when (< month 10) "0") month "-"
-                   (when (< day 10) "0") day))))))))
-
 ;; ===== Column Type Detection =====
 
 (defn- numeric?
@@ -105,7 +65,7 @@
     (if (zero? total)
       :string
       (let [threshold    (* 0.8 total)
-            date-count   (count (filter parse-date non-empty))
+            date-count   (count (filter date/parse-date non-empty))
             num-count    (count (filter numeric? non-empty))]
         (cond
           (>= date-count threshold) :date

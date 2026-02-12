@@ -142,29 +142,7 @@
                   "S2,\"just\rcarriage\"\n")
              result)))))
 
-;; ===== parse-date =====
 
-(deftest parse-date-iso-format
-  (testing "Parses YYYY-MM-DD format"
-    (is (= "2024-03-15" (csv/parse-date "2024-03-15")))
-    (is (= "2021-01-01" (csv/parse-date "2021-01-01")))))
-
-(deftest parse-date-dd-mm-yyyy-format
-  (testing "Parses DD/MM/YYYY format and normalizes to YYYY-MM-DD"
-    (is (= "2024-03-15" (csv/parse-date "15/03/2024")))
-    (is (= "2021-12-25" (csv/parse-date "25/12/2021")))))
-
-(deftest parse-date-invalid-returns-nil
-  (testing "Returns nil for non-date strings"
-    (is (nil? (csv/parse-date "hello")))
-    (is (nil? (csv/parse-date "123")))
-    (is (nil? (csv/parse-date "")))
-    (is (nil? (csv/parse-date nil)))))
-
-(deftest parse-date-whitespace-trimmed
-  (testing "Trims whitespace before parsing"
-    (is (= "2024-01-01" (csv/parse-date "  2024-01-01  ")))
-    (is (= "2024-01-01" (csv/parse-date " 01/01/2024 ")))))
 
 ;; ===== detect-column-type =====
 
