@@ -11,6 +11,7 @@
             [app.state :as state]
             [app.layout :refer [LAYOUT]]
             [app.tree :as tree]
+            [app.color :as color]
             [app.components.tree :refer [PhylogeneticTree]]
             [app.components.metadata :refer [StickyHeader MetadataTable]]
             [app.components.scale :as scale]
@@ -178,7 +179,9 @@
                    :app.specs/metadata-panel-last-drag-height
                    :app.specs/set-metadata-panel-height!
                    :app.specs/set-metadata-panel-last-drag-height!]
-          :opt-un [:app.specs/highlights :app.specs/selected-ids]))
+          :opt-un [:app.specs/highlights :app.specs/selected-ids
+                   :app.specs/color-by-enabled? :app.specs/color-by-field
+                   :app.specs/color-by-palette]))
 
 (defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
@@ -201,6 +204,9 @@
   - `:width-px`                - total available width in pixels
   - `:component-height-px`     - total available height in pixels
   - `:highlights`              - map of {leaf-name -> color} for persistent highlights
+  - `:color-by-enabled?`       - whether metadata color-by is active
+  - `:color-by-field`          - keyword for the metadata field to color by
+  - `:color-by-palette`        - palette id keyword for auto-coloring
   - `:selected-ids`            - set of leaf names currently selected in the grid
   - `:metadata-panel-collapsed` - whether the metadata grid panel is collapsed
   - `:metadata-panel-height`    - current height of the metadata grid panel
@@ -212,6 +218,7 @@
            show-scale-gridlines show-pixel-grid col-spacing
            highlights selected-ids metadata-rows metadata-panel-collapsed
            metadata-panel-height metadata-panel-last-drag-height
+           color-by-enabled? color-by-field color-by-palette
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
@@ -228,6 +235,13 @@
                            (* col-spacing (max 0 (dec (count active-cols))))
                            100)
         svg-height      (+ tree-height 100)
+
+        color-by-map (uix/use-memo
+                      (fn []
+                        (when (and color-by-enabled? color-by-field (seq tips))
+                          (color/build-color-map tips color-by-field color-by-palette)))
+                      [color-by-enabled? color-by-field color-by-palette tips])
+        merged-highlights (merge (or color-by-map {}) (or highlights {}))
 
         ;; Layout refs for sizing the metadata panel
         viewport-ref         (uix/use-ref nil)
@@ -430,7 +444,7 @@
                                   :max-depth max-depth
                                   :marker-radius (:node-marker-radius LAYOUT)
                                   :marker-fill (:node-marker-fill LAYOUT)
-                                  :highlights highlights
+                                  :highlights merged-highlights
                                   :selected-ids selected-ids
                                   :on-toggle-selection toggle-selection
                                   :on-select-subtree select-subtree})
@@ -559,6 +573,7 @@
                 scale-origin show-scale-gridlines show-pixel-grid
                 col-spacing highlights selected-ids metadata-panel-collapsed
                 metadata-panel-height metadata-panel-last-drag-height
+                color-by-enabled? color-by-field color-by-palette
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
@@ -581,6 +596,9 @@
                      :show-pixel-grid show-pixel-grid
                      :col-spacing col-spacing
                      :highlights highlights
+                     :color-by-enabled? color-by-enabled?
+                     :color-by-field color-by-field
+                     :color-by-palette color-by-palette
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed
