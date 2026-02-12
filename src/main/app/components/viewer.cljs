@@ -429,7 +429,7 @@
                      :flex-direction "column"
                      :height (if component-height-px
                                (str component-height-px "px")
-                               "100vh")
+                               "calc(100vh - var(--phylo-top-offset, 0px))")
                      :padding-bottom "20px"
                      :box-sizing "border-box"}}
 
@@ -576,7 +576,7 @@
                    :flex-direction "column"
                    :height (if component-height-px
                              (str component-height-px "px")
-                             "100vh")
+                             "calc(100vh - var(--phylo-top-offset, 0px))")
                    :box-sizing "border-box"}}
      ;; Header
      ($ :header {:style {:height "48px"

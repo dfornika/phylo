@@ -29,6 +29,13 @@
       (is (= "Alice" (:Name (first result))))
       (is (= "A person" (:Description (first result)))))))
 
+
+(deftest parse-csv-quoted-commas
+  (testing "Preserves commas inside quoted values"
+    (let [input "Name,Location\nAlice,\"Seattle, USA\""
+          result (csv/parse-csv input)]
+      (is (= "Seattle, USA" (:Location (first result)))))))
+
 (deftest parse-csv-skips-blank-lines
   (testing "Blank lines in input are skipped"
     (let [input "A,B\n1,2\n\n3,4\n"
@@ -74,6 +81,13 @@
           {:keys [data]} (csv/parse-metadata input)]
       (is (= "A" (:Group (first data))))
       (is (= "B" (:Group (second data)))))))
+
+
+(deftest parse-metadata-quoted-commas
+  (testing "Preserves commas inside quoted metadata values"
+    (let [input "id,geographic_location\nS1,\"Seattle, USA\""
+          {:keys [data]} (csv/parse-metadata input)]
+      (is (= "Seattle, USA" (:geographic_location (first data)))))))
 
 ;; ===== metadata->csv =====
 

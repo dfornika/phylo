@@ -74,11 +74,34 @@
 
 ;; ===== CSV Parsing =====
 
+(defn- parse-delimited-line
+  "Parses a single CSV/TSV line into fields, respecting RFC4180-style quotes."
+  [line delimiter]
+  (let [length (count line)]
+    (loop [idx 0 in-quote? false field "" fields []]
+      (if (>= idx length)
+        (conj fields field)
+        (let [ch (.charAt line idx)
+              next-idx (inc idx)]
+          (cond
+            (= ch "\"")
+            (if in-quote?
+              (if (and (< next-idx length) (= (.charAt line next-idx) "\""))
+                (recur (+ idx 2) true (str field "\"") fields)
+                (recur next-idx false field fields))
+              (recur next-idx true field fields))
+
+            (and (not in-quote?) (= ch delimiter))
+            (recur next-idx false "" (conj fields field))
+
+            :else
+            (recur next-idx in-quote? (str field ch) fields)))))))
+
 (defn parse-csv
   "Parses a CSV/TSV string into a sequence of maps.
 
   Automatically detects the delimiter (tab or comma) by inspecting
-  the first line. Strips surrounding double quotes from values.
+  the first line. Handles RFC4180-style quoted values.
   Header strings are converted to keywords for map keys.
 
   Returns a sequence of maps, one per data row, keyed by the
@@ -86,15 +109,15 @@
   [content]
   (let [lines (-> content str/trim str/split-lines)
         first-line (first lines)
-        delimiter (if (str/includes? first-line "\t") #"\t" #",")
-        headers (->> (str/split first-line delimiter)
-                     (map #(-> % str/trim (str/replace #"^\"|\"$" "") keyword))
+        delimiter (if (str/includes? first-line "	") "	" ",")
+        headers (->> (parse-delimited-line first-line (first delimiter))
+                     (map #(-> % str/trim keyword))
                      (into []))
         data-rows (into [] (rest lines))]
     (keep (fn [line]
             (when (not (str/blank? line))
-              (let [values (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
-                                (str/split line delimiter))]
+              (let [values (map str/trim
+                                (parse-delimited-line line (first delimiter)))]
                 (zipmap headers values))))
           data-rows)))
 
@@ -124,14 +147,14 @@
   ([content default-col-width]
    (let [lines (-> content str/trim str/split-lines)
          first-line (first lines)
-         delimiter (if (str/includes? first-line "\t") #"\t" #",")
-         raw-headers (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
-                          (str/split first-line delimiter))
+         delimiter (if (str/includes? first-line "	") "	" ",")
+         raw-headers (map str/trim
+                          (parse-delimited-line first-line (first delimiter)))
          header-keys (mapv keyword raw-headers)
          data-rows (into [] (keep (fn [line]
                                     (when (not (str/blank? line))
-                                      (let [values (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
-                                                        (str/split line delimiter))]
+                                      (let [values (map str/trim
+                                                        (parse-delimited-line line (first delimiter)))]
                                         (zipmap header-keys values))))
                                   (rest lines)))
          header-configs (mapv (fn [h k]

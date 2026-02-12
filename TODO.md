@@ -22,6 +22,8 @@ Last updated: 2026-02-12
   - Bounds: clamp left-shift to a sensible range (e.g. [-200, 200]) so content cannot be dragged offscreen
   - Interaction: on mousedown in the handle, track mousemove on document and update left-shift; stop on mouseup
   - Add a small tooltip or cursor hint (e.g. `col-resize`) to make the affordance discoverable
+- [ ] Allow user to control spacing between tree and metadata table
+- [ ] Better auto-detection of metadata field widths, and per-column custom spacing adjustment
 - [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
 - [ ] Storybook-based UI Component testing
 - [ ] Investigate use of `uix/use-memo` more extensively to improve performance on larger trees
