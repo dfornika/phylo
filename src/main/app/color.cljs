@@ -139,26 +139,48 @@
       (when-not (js/isNaN t) t))
     :else nil))
 
+(def ^:private parse-success-threshold
+  "Minimum fraction of non-empty values that must parse successfully
+  as a given type (number/date) for that type to be inferred."
+  0.9)
+
+(defn- parse-success-ratio
+  "Given a sequence of parsed values (some may be nil), returns the
+  fraction that are non-nil. Returns 0 for an empty sequence."
+  [parsed-values]
+  (let [total   (count parsed-values)
+        success (count (keep identity parsed-values))]
+    (if (pos? total)
+      (/ success total)
+      0)))
+
 (defn infer-value-type
   "Infers field type from a collection of values.
 
   Returns {:type <keyword> :values <parsed>} where :values is numeric
-  for numeric/date types or raw strings for categorical."
+  for numeric/date types (with non-parsing values ignored) or raw
+  strings for categorical."
   [values]
-  (let [values (->> values (filter non-empty-string?) vec)
+  (let [values           (->> values (filter non-empty-string?) vec)
         has-hierarchical? (some hierarchical-code? values)]
     (cond
       (empty? values) {:type :categorical :values []}
       has-hierarchical? {:type :categorical :values values}
       :else
-      (let [nums (map parse-number values)
-            all-num? (every? some? nums)
-            dates (map parse-date values)
-            all-date? (every? some? dates)]
+      (let [nums             (map parse-number values)
+            num-success      (vec (keep identity nums))
+            num-ratio        (parse-success-ratio nums)
+            dates            (map parse-date values)
+            date-success     (vec (keep identity dates))
+            date-ratio       (parse-success-ratio dates)
+            numeric-enough?  (and (pos? (count num-success))
+                                  (>= num-ratio parse-success-threshold))
+            date-enough?     (and (pos? (count date-success))
+                                  (>= date-ratio parse-success-threshold))]
         (cond
-          all-num? {:type :numeric :values nums}
-          all-date? {:type :date :values dates}
-          :else {:type :categorical :values values})))))
+          numeric-enough? {:type :numeric :values num-success}
+          date-enough?    {:type :date :values date-success}
+          :else           {:type :categorical :values values})))))
 
 (defn infer-field-type
   "Infers the field type from metadata rows for a given key."
