@@ -579,3 +579,112 @@
           result (color/build-legend tips :missing-field nil :auto)]
       (is (= :categorical (:type result)))
       (is (= 0 (count (:entries result)))))))
+
+;; ===== trim-trailing-zeros =====
+
+(deftest trim-trailing-zeros-removes-trailing-zeros
+  (testing "Removes trailing zeros from numeric strings"
+    (is (= "1" (#'color/trim-trailing-zeros "1.000")))
+    (is (= "1.5" (#'color/trim-trailing-zeros "1.500")))
+    (is (= "1.25" (#'color/trim-trailing-zeros "1.250")))))
+
+(deftest trim-trailing-zeros-removes-decimal-point-if-all-zeros
+  (testing "Removes decimal point when all fractional digits are zero"
+    (is (= "10" (#'color/trim-trailing-zeros "10.0")))
+    (is (= "100" (#'color/trim-trailing-zeros "100.00")))
+    (is (= "5" (#'color/trim-trailing-zeros "5.0000")))))
+
+(deftest trim-trailing-zeros-preserves-non-zero-decimals
+  (testing "Preserves non-zero decimal digits"
+    (is (= "1.23" (#'color/trim-trailing-zeros "1.23")))
+    (is (= "0.001" (#'color/trim-trailing-zeros "0.001")))
+    (is (= "99.99" (#'color/trim-trailing-zeros "99.99")))))
+
+(deftest trim-trailing-zeros-handles-integers
+  (testing "Handles integers without decimal points"
+    (is (= "42" (#'color/trim-trailing-zeros "42")))
+    (is (= "100" (#'color/trim-trailing-zeros "100")))
+    (is (= "0" (#'color/trim-trailing-zeros "0")))))
+
+(deftest trim-trailing-zeros-handles-edge-cases
+  (testing "Handles edge cases"
+    (is (= "0" (#'color/trim-trailing-zeros "0.0")))
+    (is (= "" (#'color/trim-trailing-zeros "")))
+    (is (= "1.1" (#'color/trim-trailing-zeros "1.10000")))))
+
+;; ===== format-number =====
+
+(deftest format-number-large-values
+  (testing "Formats large values (>= 1000) with no decimal places"
+    (is (= "1000" (#'color/format-number 1000)))
+    (is (= "5432" (#'color/format-number 5432.789)))
+    (is (= "10000" (#'color/format-number 10000.1)))))
+
+(deftest format-number-medium-values
+  (testing "Formats medium values (>= 100, < 1000) with 1 decimal place"
+    (is (= "100" (#'color/format-number 100.0)))
+    (is (= "456.8" (#'color/format-number 456.789)))
+    (is (= "999.9" (#'color/format-number 999.99)))))
+
+(deftest format-number-small-values
+  (testing "Formats small values (>= 1, < 100) with 2 decimal places"
+    (is (= "1" (#'color/format-number 1.0)))
+    (is (= "50.25" (#'color/format-number 50.25)))
+    (is (= "99.99" (#'color/format-number 99.99)))))
+
+(deftest format-number-tiny-values
+  (testing "Formats tiny values (< 1) with 3 decimal places"
+    (is (= "0.5" (#'color/format-number 0.5)))
+    (is (= "0.123" (#'color/format-number 0.123)))
+    (is (= "0.999" (#'color/format-number 0.999)))))
+
+(deftest format-number-negative-values
+  (testing "Formats negative values based on absolute value"
+    (is (= "-1000" (#'color/format-number -1000)))
+    (is (= "-456.8" (#'color/format-number -456.789)))
+    (is (= "-50.25" (#'color/format-number -50.25)))
+    (is (= "-0.123" (#'color/format-number -0.123)))))
+
+(deftest format-number-trims-trailing-zeros
+  (testing "Trims trailing zeros from formatted output"
+    (is (= "100" (#'color/format-number 100.0)))
+    (is (= "1.5" (#'color/format-number 1.5)))
+    (is (= "0.5" (#'color/format-number 0.5)))))
+
+(deftest format-number-zero
+  (testing "Formats zero correctly"
+    (is (= "0" (#'color/format-number 0)))
+    (is (= "0" (#'color/format-number 0.0)))))
+
+;; ===== format-date-ms =====
+
+(deftest format-date-ms-basic-formatting
+  (testing "Formats epoch milliseconds to YYYY-MM-DD"
+    ;; 2024-01-01 00:00:00 UTC = 1704067200000 ms
+    (is (= "2024-01-01" (#'color/format-date-ms 1704067200000)))
+    ;; 2024-06-15 00:00:00 UTC = 1718409600000 ms
+    (is (= "2024-06-15" (#'color/format-date-ms 1718409600000)))))
+
+(deftest format-date-ms-epoch-zero
+  (testing "Formats epoch zero (1970-01-01)"
+    ;; Unix epoch = 0 ms = 1970-01-01 00:00:00 UTC
+    (is (= "1970-01-01" (#'color/format-date-ms 0)))))
+
+(deftest format-date-ms-pads-month-and-day
+  (testing "Pads month and day with leading zeros"
+    ;; 2024-01-05 00:00:00 UTC = 1704412800000 ms
+    (is (= "2024-01-05" (#'color/format-date-ms 1704412800000)))
+    ;; 2024-09-03 00:00:00 UTC = 1725321600000 ms
+    (is (= "2024-09-03" (#'color/format-date-ms 1725321600000)))))
+
+(deftest format-date-ms-end-of-year
+  (testing "Formats end-of-year dates correctly"
+    ;; 2024-12-31 00:00:00 UTC = 1735603200000 ms
+    (is (= "2024-12-31" (#'color/format-date-ms 1735603200000)))))
+
+(deftest format-date-ms-different-years
+  (testing "Formats dates from different years"
+    ;; 2020-03-15 00:00:00 UTC = 1584230400000 ms
+    (is (= "2020-03-15" (#'color/format-date-ms 1584230400000)))
+    ;; 2025-07-04 00:00:00 UTC = 1751587200000 ms
+    (is (= "2025-07-04" (#'color/format-date-ms 1751587200000)))))
