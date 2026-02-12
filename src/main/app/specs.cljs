@@ -188,6 +188,7 @@
 (s/def ::cell-height number?)
 (s/def ::tip-count nat-int?)
 (s/def ::tree-height number?)
+(s/def ::sticky-header-width number?)
 
 (s/def ::tips (s/coll-of ::positioned-node))
 (s/def ::x-offset number?)

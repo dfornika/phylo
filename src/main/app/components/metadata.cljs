@@ -18,7 +18,8 @@
                    :app.specs/start-offset
                    :app.specs/max-depth
                    :app.specs/x-scale
-                   :app.specs/scale-origin]))
+                   :app.specs/scale-origin]
+          :opt-un [:app.specs/sticky-header-width]))
 
 (defui StickyHeader*
   "Renders a sticky header row displaying metadata column labels.
@@ -29,8 +30,9 @@
   - `:col-spacing`  - extra horizontal gap between columns (default 0)
   - `:max-depth`    - maximum x-coordinate in the tree
   - `:x-scale`      - horizontal scaling factor (pixels per branch-length unit)
-  - `:scale-origin` - `:tips` or `:root` for scale labeling"
-  [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin]}]
+  - `:scale-origin` - `:tips` or `:root` for scale labeling
+  - `:width`       - optional width for the sticky header"
+  [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin width]}]
   (let [scale-width (max 0 (- start-offset (:svg-padding-x LAYOUT)))
         {:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                               :x-scale x-scale
@@ -46,7 +48,9 @@
                      :padding-left (str (:svg-padding-x LAYOUT) "px")
                      :font-family "sans-serif"
                      :font-size "12px"
-                     :font-weight "bold"}}
+                     :font-weight "bold"
+                     :width "100%"
+                     :min-width (when width (str width "px"))}}
        ($ :svg {:style {:position "absolute"
                         :left (str (:svg-padding-x LAYOUT) "px")
                         :top "10px"

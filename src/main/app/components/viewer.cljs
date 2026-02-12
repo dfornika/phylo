@@ -19,7 +19,7 @@
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
-            [app.components.legend :refer [FloatingLegend]]
+            [app.components.legend :refer [FloatingLegend legend-width]]
             [clojure.string :as str])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
@@ -237,10 +237,14 @@
                             tree-end-x
                             (:metadata-gap LAYOUT))
         tree-height     (* (count tips) y-mult)
-        svg-width       (+ metadata-start-x
+        legend-right-pad 12
+        legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
+                            (+ (:x legend-pos) legend-width legend-right-pad))
+        base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
                            (* col-spacing (max 0 (dec (count active-cols))))
                            100)
+        svg-width       (max base-svg-width (or legend-right-edge 0))
         svg-height      (+ tree-height 100)
 
         color-by-map (uix/use-memo
@@ -457,7 +461,8 @@
                            :col-spacing col-spacing
                            :max-depth max-depth
                            :x-scale current-x-scale
-                           :scale-origin scale-origin})
+                           :scale-origin scale-origin
+                           :width svg-width})
 
           ($ :svg {:id "phylo-svg"
                    :ref svg-ref

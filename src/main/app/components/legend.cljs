@@ -5,7 +5,7 @@
             [clojure.string :as str])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
-(def ^:private legend-width 200)
+(def legend-width 200)
 (def ^:private header-height 20)
 (def ^:private row-height 16)
 (def ^:private section-gap 8)
@@ -73,7 +73,7 @@
         pos-x (or x 0)
         pos-y (or y 0)
         legend-h (legend-height sections collapsed?)
-        max-x (max 0 (- (or svg-width 0) legend-width))
+        max-x (max 0 (+ (or svg-width 0) legend-width))
         max-y (max 0 (- (or svg-height 0) legend-h))
         [editing-color set-editing-color!] (uix/use-state nil)
         [editing-text set-editing-text!] (uix/use-state "")
@@ -112,37 +112,20 @@
 
     (uix/use-effect
      (fn []
-       (let [fallback-x (max 0 (- (or svg-width 0) legend-width padding))
-             fallback-y (max 0 padding)
-             default-pos (when-let [^js svg @svg-ref]
-                          (let [rect (.getBoundingClientRect svg)
-                                client-x (- (.-right rect) padding legend-width)
-                                client-y (+ (.-top rect) padding)
-                                svg-pos (client->svg svg client-x client-y)]
-                            (when (and svg-pos (number? (first svg-pos)) (number? (second svg-pos)))
-                              {:x (max 0 (first svg-pos))
-                               :y (max 0 (second svg-pos))})))
-             base-pos (or default-pos {:x fallback-x :y fallback-y})
-             base-x (if (and (number? x) (number? y)) pos-x (:x base-pos))
-             base-y (if (and (number? x) (number? y)) pos-y (:y base-pos))
-             adjusted-pos (if-let [^js svg @svg-ref]
+       (when (or (nil? x) (nil? y))
+         (let [fallback-x (max 0 (- (or svg-width 0) legend-width padding))
+               fallback-y (max 0 padding)
+               default-pos (when-let [^js svg @svg-ref]
                             (let [rect (.getBoundingClientRect svg)
-                                  [vx1 vy1] (client->svg svg (.-left rect) (.-top rect))
-                                  [vx2 vy2] (client->svg svg (.-right rect) (.-bottom rect))
-                                  min-x (min vx1 vx2)
-                                  max-x (max vx1 vx2)
-                                  min-y (min vy1 vy2)
-                                  max-y (max vy1 vy2)
-                                  max-x (max min-x (- max-x legend-width))
-                                  max-y (max min-y (- max-y legend-h))]
-                              {:x (clamp base-x min-x max-x)
-                               :y (clamp base-y min-y max-y)})
-                            {:x base-x :y base-y})]
-         (when (or (nil? x) (nil? y)
-                   (not= (:x adjusted-pos) pos-x)
-                   (not= (:y adjusted-pos) pos-y))
-           (set-pos! adjusted-pos))))
-     [pos-y pos-x x y svg-width svg-height svg-ref legend-h set-pos!])
+                                  client-x (- (.-right rect) padding legend-width)
+                                  client-y (+ (.-top rect) padding)
+                                  svg-pos (client->svg svg client-x client-y)]
+                              (when (and svg-pos (number? (first svg-pos)) (number? (second svg-pos)))
+                                {:x (max 0 (first svg-pos))
+                                 :y (max 0 (second svg-pos))})))
+               {:keys [x y]} (or default-pos {:x fallback-x :y fallback-y})]
+           (set-pos! {:x x :y y}))))
+     [x y svg-width svg-height svg-ref set-pos!])
 
     ($ :g {:transform (str "translate(" pos-x "," pos-y ")")
            :style {:pointer-events "all"}
