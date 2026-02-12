@@ -6,7 +6,7 @@ html, body, #app {
 
 :root {
   /* Optional: set this from the host page when embedded in an iframe. */
-  --phylo-top-offset: 50px;
+  --phylo-top-offset: 0px;
 }
 
 .internal-node-marker--hidden {
