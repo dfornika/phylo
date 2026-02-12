@@ -37,3 +37,4 @@ resources/brepl_client.js
 .shadow-cljs
 resources/public/js/*
 src/gen/
+linux-install.sh
