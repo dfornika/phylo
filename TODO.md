@@ -5,7 +5,6 @@ Last updated: 2026-02-011
 ---
 
 ## In Progress
-- [ ] CSV export from Metadata Grid (download grid contents)
 
 
 ---
@@ -33,7 +32,7 @@ if other metadata has already been loaded.
   - `.github/workflows/test.yml` — runs on push to main + PRs
   - Test badge in README
 - [x] Self-contained HTML Export
-
+- [x] CSV export from Metadata Grid (download grid contents)
 
 ---
 
