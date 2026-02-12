@@ -110,15 +110,15 @@
       (is (= 3 (count (:values result)))))))
 
 (deftest infer-value-type-date-slash-format
-  (testing "Infers date type from slash-separated date strings"
-    (let [result (color/infer-value-type ["01/15/2024" "02/20/2024" "03/25/2024"])]
+  (testing "Infers date type from slash-separated date strings (DD/MM/YYYY)"
+    (let [result (color/infer-value-type ["15/01/2024" "20/02/2024" "25/03/2024"])]
       (is (= :date (:type result)))
       (is (every? number? (:values result)))
       (is (= 3 (count (:values result)))))))
 
 (deftest infer-value-type-date-mixed-formats
   (testing "Infers date type from mixed date formats"
-    (let [result (color/infer-value-type ["2024-01-01" "01/15/2024" "2024-02-20"])]
+    (let [result (color/infer-value-type ["2024-01-01" "15/01/2024" "2024-02-20"])]
       (is (= :date (:type result)))
       (is (every? number? (:values result)))
       (is (= 3 (count (:values result)))))))
@@ -219,7 +219,7 @@
 (deftest build-color-map-date-with-mixed-formats
   (testing "Builds color map for dates in mixed formats"
     (let [tips [{:name "tip1" :metadata {:date "2024-01-01"}}
-                {:name "tip2" :metadata {:date "06/15/2024"}}
+                {:name "tip2" :metadata {:date "15/06/2024"}}
                 {:name "tip3" :metadata {:date "2024-12-31"}}]
           result (color/build-color-map tips :date nil :auto)]
       (is (= 3 (count result)))

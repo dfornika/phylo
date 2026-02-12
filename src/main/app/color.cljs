@@ -4,7 +4,8 @@
   Provides small built-in categorical palettes and gradient scales,
   along with utilities to infer field types and build color maps
   keyed by leaf name."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [app.csv :as csv]))
 
 (def ^:private categorical-palettes
   {:bright {:label "Bright"
@@ -135,8 +136,8 @@
   (cond
     (number? value) value
     (non-empty-string? value)
-    (let [t (js/Date.parse value)]
-      (when-not (js/isNaN t) t))
+    (when-let [normalized (csv/parse-date value)]
+      (.getTime (js/Date. normalized)))
     :else nil))
 
 (def ^:private parse-success-threshold
