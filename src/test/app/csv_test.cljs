@@ -75,6 +75,73 @@
       (is (= "A" (:Group (first data))))
       (is (= "B" (:Group (second data)))))))
 
+;; ===== metadata->csv =====
+
+(deftest metadata->csv-basic
+  (testing "Serializes headers and rows in active column order"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Name :label "Name"}]
+          rows [{:ID "S1" :Name "Alpha"}
+                {:ID "S2" :Name "Beta"}]
+          result (csv/metadata->csv active-cols rows)]
+      (is (= "ID,Name\nS1,Alpha\nS2,Beta\n" result)))))
+
+(deftest metadata->csv-quotes-values
+  (testing "Quotes values with commas, quotes, or newlines"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Notes :label "Notes"}]
+          rows [{:ID "S1" :Notes "has,comma"}
+                {:ID "S2" :Notes "quote \" here"}
+                {:ID "S3" :Notes "line\nbreak"}]
+          result (csv/metadata->csv active-cols rows)]
+      (is (= (str "ID,Notes\n"
+                  "S1,\"has,comma\"\n"
+                  "S2,\"quote \"\" here\"\n"
+                  "S3,\"line\nbreak\"\n")
+             result)))))
+
+(deftest metadata->csv-empty-active-cols
+  (testing "Returns empty string when active-cols is empty"
+    (let [active-cols []
+          rows [{:ID "S1" :Name "Alpha"}]]
+      (is (= "" (csv/metadata->csv active-cols rows))))))
+
+(deftest metadata->csv-empty-rows
+  (testing "Returns header only when rows is empty"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Name :label "Name"}]
+          rows []]
+      (is (= "ID,Name\n" (csv/metadata->csv active-cols rows))))))
+
+(deftest metadata->csv-missing-keys
+  (testing "Defaults to empty string for missing keys in row data"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Name :label "Name"}
+                       {:key :City :label "City"}]
+          rows [{:ID "S1" :Name "Alpha"}  ;; City missing
+                {:ID "S2" :City "Toronto"}]]  ;; Name missing
+      (is (= "ID,Name,City\nS1,Alpha,\nS2,,Toronto\n" (csv/metadata->csv active-cols rows))))))
+
+(deftest metadata->csv-nil-values
+  (testing "Treats nil values as empty string"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Name :label "Name"}]
+          rows [{:ID "S1" :Name nil}
+                {:ID nil :Name "Beta"}]]
+      (is (= "ID,Name\nS1,\n,Beta\n" (csv/metadata->csv active-cols rows))))))
+
+(deftest metadata->csv-carriage-return
+  (testing "Quotes values containing carriage return characters"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Notes :label "Notes"}]
+          rows [{:ID "S1" :Notes "line\r\nbreak"}
+                {:ID "S2" :Notes "just\rcarriage"}]
+          result (csv/metadata->csv active-cols rows)]
+      (is (= (str "ID,Notes\n"
+                  "S1,\"line\r\nbreak\"\n"
+                  "S2,\"just\rcarriage\"\n")
+             result)))))
+
 ;; ===== parse-date =====
 
 (deftest parse-date-iso-format

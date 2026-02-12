@@ -6,6 +6,38 @@ Last updated: 2026-02-011
 
 ## In Progress
 
+
+---
+
+## Backlog
+- [ ] Palette-based node coloring by metadata value (select column, auto-assign colors)
+- [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
+- [ ] Select sub-trees by clicking interior tree nodes
+- [ ] Storybook-based UI Component testing
+- [ ] Refactor newick string parsing out of TreeContainer (TreeContainer should accept pre-parsed data structure)
+- [ ] Allow users to "merge/join" additional metadata from multiple files (joining on sample ID),
+if other metadata has already been loaded.
+
+---
+
+## Completed
+
+- [x] PR #1 — Docstrings, specs, tests, Codox docs (`refactor` branch)
+- [x] PR #2 — State management refactor, Newick loading, hot-reload (`state-management` branch)
+- [x] PR #3 — Node markers, `prepare-tree` refactor, GitHub Actions docs workflow (`update` branch)
+  - Circular markers on all leaf nodes; optional markers on internal nodes via checkbox
+  - Extracted `prepare-tree` function; `TreeContainer` bridges context → props; `PhylogeneticTree` is now a pure renderer
+  - `.github/workflows/docs.yml` — Codox → GitHub Pages (needs Pages enabled in repo settings)
+- [x] PR #4 — GitHub Actions test workflow (`test-workflow` branch)
+  - `.github/workflows/test.yml` — runs on push to main + PRs
+  - Test badge in README
+- [x] Self-contained HTML Export
+- [x] CSV export from Metadata Grid (download grid contents)
+
+---
+
+## Shelved
+
 ### 1. JS/TSX Component Extraction
 
 Factor leaf rendering components out into plain JSX/TSX so they can be consumed by any React project. This may also allow us to later test components in isolation using a tool like [Storybook](https://storybook.js.org).
@@ -40,30 +72,3 @@ while working on TypeScript counterparts. Preserve existing UIx components until
 - UIx `$` auto-converts kebab-case to camelCase for non-UIx components
 
 **Inspired by:** David Nolen's approach — components in JS, wiring/logic in ClojureScript. Described in [this talk](https://www.youtube.com/watch?v=3HxVMGaiZbc).
-
----
-
-## Backlog
-
-- [ ] CSV export from Metadata Grid (download grid contents)
-- [ ] Palette-based node coloring by metadata value (select column, auto-assign colors)
-- [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
-- [ ] Select sub-trees by clicking interior tree nodes
-- [ ] Storybook-based UI Component testing
-
-
-
----
-
-## Completed
-
-- [x] PR #1 — Docstrings, specs, tests, Codox docs (`refactor` branch)
-- [x] PR #2 — State management refactor, Newick loading, hot-reload (`state-management` branch)
-- [x] PR #3 — Node markers, `prepare-tree` refactor, GitHub Actions docs workflow (`update` branch)
-  - Circular markers on all leaf nodes; optional markers on internal nodes via checkbox
-  - Extracted `prepare-tree` function; `TreeContainer` bridges context → props; `PhylogeneticTree` is now a pure renderer
-  - `.github/workflows/docs.yml` — Codox → GitHub Pages (needs Pages enabled in repo settings)
-- [x] PR #4 — GitHub Actions test workflow (`test-workflow` branch)
-  - `.github/workflows/test.yml` — runs on push to main + PRs
-  - Test badge in README
-- [x] Self-contained HTML Export

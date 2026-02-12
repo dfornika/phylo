@@ -7,6 +7,8 @@
 
   Reads state from React context via [[app.state/use-app-state]]."
   (:require [uix.core :as uix :refer [defui $]]
+            [app.csv :as csv]
+            [app.export.html :as export-html]
             [app.state :as state]))
 
 (def ^:private navy "#003366")
@@ -60,7 +62,8 @@
                   (into #{} (keep (fn [row] (get row id-key))) metadata-rows)
                   #{})
         select-all-disabled? (not (seq all-ids))
-        select-none-disabled? (zero? n-selected)]
+        select-none-disabled? (zero? n-selected)
+        export-disabled? (not (seq active-cols))]
     ($ :div {:style {:display "flex" :gap "10px" :padding "4px 8px"
                      :background "#f0f2f5" :border-bottom "1px solid #ccd"
                      :align-items "center" :flex-wrap "wrap"
@@ -127,6 +130,23 @@
 
        ;; Minimize/restore/maximize controls (far right)
        ($ :div {:style {:margin-left "auto" :display "flex" :gap "6px"}}
+          ($ :button {:style (merge button-style
+                                   {:padding "3px 8px"}
+                                   (when export-disabled?
+                                     {:opacity "0.5" :cursor "default"}))
+                      :title "Download metadata as CSV"
+                      :disabled export-disabled?
+                      :on-click (fn [_]
+                                  (when (seq active-cols)
+                                    (let [csv-text (csv/metadata->csv active-cols metadata-rows)
+                                          blob (js/Blob. (clj->js [csv-text])
+                                                        #js {:type "text/csv;charset=utf-8"})]
+                                      (export-html/save-blob!
+                                       blob
+                                       "metadata.csv"
+                                       [{:description "CSV File"
+                                         :accept {"text/csv" [".csv"]}}]))))}
+             "CSV")
           ($ :button {:style (merge icon-button-style
                                    (when metadata-panel-collapsed
                                      {:opacity "0.4" :cursor "default"}))
