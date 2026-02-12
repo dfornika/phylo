@@ -17,6 +17,7 @@
             [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
             [app.components.scale :as scale]
+            [app.tree :as tree]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
@@ -64,7 +65,8 @@
                    :app.specs/max-depth]
           :opt-un [:app.specs/highlights
                    :app.specs/selected-ids
-                   :app.specs/on-toggle-selection]))
+                   :app.specs/on-toggle-selection
+                   :app.specs/on-select-subtree]))
 
 (declare TreeNode)
 
@@ -99,9 +101,11 @@
   - `:marker-fill`            - default fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
-  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
+  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection
+  - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-distance-from-origin
-           scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection]}]
+           scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection
+           on-select-subtree]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
@@ -109,6 +113,7 @@
         line-width 0.5
         line-color "#000"
         is-leaf? (empty? (:children node))
+        internal-node? (not is-leaf?)
         node-name (:name node)
         highlight-color (when (and is-leaf? highlights) (get highlights node-name))
         selected? (and is-leaf? selected-ids (contains? selected-ids node-name))
@@ -117,16 +122,48 @@
         node-depth (:x node)
         distance-label (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
                          (scale/format-label scale-origin max-depth node-depth))
-        on-click (when (and is-leaf? on-toggle-selection)
-                   (fn [_e] (on-toggle-selection node-name)))]
+        leaf-names (when internal-node?
+                     (into #{} (keep :name) (tree/get-leaves node)))
+        any-selected? (and (seq leaf-names) (some selected-ids leaf-names))
+        internal-state-class (when (seq leaf-names)
+                               (if any-selected?
+                                 " internal-node-marker--deselect"
+                                 " internal-node-marker--select"))
+        leaf-click (when (and is-leaf? on-toggle-selection)
+                     (fn [_e] (on-toggle-selection node-name)))
+        internal-click (when (and internal-node? on-select-subtree)
+                         (fn [_e] (on-select-subtree node)))
+        internal-class (str "internal-node-marker"
+                            (when (not show-internal-markers)
+                              " internal-node-marker--hidden")
+                            internal-state-class)
+        internal-fill (when show-internal-markers marker-fill)
+        internal-stroke (when show-internal-markers "#111")]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
-       ;; Node marker — always on leaves, optionally on internal nodes
-       (when (or is-leaf? show-internal-markers)
+       ;; Leaf marker
+       (when is-leaf?
          ($ :circle {:cx scaled-x :cy scaled-y :r radius :fill fill
-                     :style (when on-click {:cursor "pointer"})
-                     :on-click on-click}))
+                     :style (when leaf-click {:cursor "pointer"})
+                     :on-click leaf-click}))
+
+       ;; Internal node marker (hidden until hover when toggled off)
+       (when internal-node?
+         ($ :g
+            ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 12)
+                        :class (str internal-class " internal-node-hit")
+                        :style (when internal-click {:cursor "pointer"})
+                        :on-click internal-click})
+            ($ :circle {:cx scaled-x :cy scaled-y :r marker-radius
+                        :fill internal-fill
+                        :stroke internal-stroke
+                        :stroke-width (when show-internal-markers 1)
+                        :class internal-class
+                        :style (when internal-click {:cursor "pointer"})
+                        :on-click internal-click})
+            ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 4)
+                        :class "internal-node-hover-ring"})))
 
        ;; Selection ring for selected leaves
        (when selected?
@@ -150,8 +187,8 @@
                    :y scaled-y
                    :dominant-baseline "central"
                    :style {:font-family "monospace" :font-size "12px" :font-weight "bold"
-                           :cursor (when on-click "pointer")}
-                   :on-click on-click}
+                           :cursor (when leaf-click "pointer")}
+                   :on-click leaf-click}
             node-name))
 
        ;; Recurse into children
@@ -170,7 +207,8 @@
                        :marker-fill marker-fill
                        :highlights highlights
                        :selected-ids selected-ids
-                       :on-toggle-selection on-toggle-selection})))))
+                       :on-toggle-selection on-toggle-selection
+                       :on-select-subtree on-select-subtree})))))
 
 (defui-with-spec TreeNode
   [{:spec :app.specs/tree-node-props :props props}]
@@ -190,7 +228,8 @@
                    :app.specs/max-depth]
           :opt-un [:app.specs/highlights
                    :app.specs/selected-ids
-                   :app.specs/on-toggle-selection]))
+                   :app.specs/on-toggle-selection
+                   :app.specs/on-select-subtree]))
 
 (defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
@@ -208,9 +247,10 @@
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
-  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection"
+  - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection
+  - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
-           highlights selected-ids on-toggle-selection]}]
+           highlights selected-ids on-toggle-selection on-select-subtree]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -225,7 +265,8 @@
                   :marker-fill marker-fill
                   :highlights highlights
                   :selected-ids selected-ids
-                  :on-toggle-selection on-toggle-selection})))
+                  :on-toggle-selection on-toggle-selection
+                  :on-select-subtree on-select-subtree})))
 
 
 (defui-with-spec PhylogeneticTree

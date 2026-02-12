@@ -259,6 +259,21 @@
                                    (conj ids leaf-name))))))
                           [set-selected-ids!])
 
+        ;; Toggle subtree selection: if any selected, clear all; else select all
+        select-subtree (uix/use-callback
+                        (fn [node]
+                          (let [leaf-names (into #{}
+                                                 (keep :name)
+                                                 (tree/get-leaves node))]
+                            (when (seq leaf-names)
+                              (set-selected-ids!
+                               (fn [ids]
+                                 (let [ids (or ids #{})]
+                                   (if (some ids leaf-names)
+                                     (reduce disj ids leaf-names)
+                                     (into ids leaf-names))))))))
+                        [set-selected-ids!])
+
         ;; Update a single cell in metadata-rows when the grid is edited
         handle-cell-edited (uix/use-callback
                             (fn [id-value field-kw new-value]
@@ -417,7 +432,8 @@
                                   :marker-fill (:node-marker-fill LAYOUT)
                                   :highlights highlights
                                   :selected-ids selected-ids
-                                  :on-toggle-selection toggle-selection})
+                                  :on-toggle-selection toggle-selection
+                                  :on-select-subtree select-subtree})
 
              ;; Metadata columns
              (when (seq active-cols)

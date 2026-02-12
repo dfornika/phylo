@@ -5,14 +5,13 @@ Last updated: 2026-02-011
 ---
 
 ## In Progress
-
+- [ ] Select sub-trees by clicking interior tree nodes
 
 ---
 
 ## Backlog
 - [ ] Palette-based node coloring by metadata value (select column, auto-assign colors)
 - [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
-- [ ] Select sub-trees by clicking interior tree nodes
 - [ ] Storybook-based UI Component testing
 - [ ] Refactor newick string parsing out of TreeContainer (TreeContainer should accept pre-parsed data structure)
 - [ ] Allow users to "merge/join" additional metadata from multiple files (joining on sample ID),
