@@ -19,11 +19,9 @@
   Wraps the component tree with [[state/AppStateProvider]] so all
   descendants can access shared state via context."
   []
-  (let [component-height-px (when (exists? js/window)
-                              (.-innerHeight js/window))]
-    ($ state/AppStateProvider
-       ($ TreeContainer {:width-px 1200
-                         :component-height-px component-height-px}))))
+  ($ state/AppStateProvider
+     ($ TreeContainer {:width-px 1200
+                       :component-height-px nil})))
 
 (defonce root
   (when (exists? js/document)
