@@ -75,6 +75,31 @@
       (is (= "A" (:Group (first data))))
       (is (= "B" (:Group (second data)))))))
 
+;; ===== metadata->csv =====
+
+(deftest metadata->csv-basic
+  (testing "Serializes headers and rows in active column order"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Name :label "Name"}]
+          rows [{:ID "S1" :Name "Alpha"}
+                {:ID "S2" :Name "Beta"}]
+          result (csv/metadata->csv active-cols rows)]
+      (is (= "ID,Name\nS1,Alpha\nS2,Beta\n" result)))))
+
+(deftest metadata->csv-quotes-values
+  (testing "Quotes values with commas, quotes, or newlines"
+    (let [active-cols [{:key :ID :label "ID"}
+                       {:key :Notes :label "Notes"}]
+          rows [{:ID "S1" :Notes "has,comma"}
+                {:ID "S2" :Notes "quote \" here"}
+                {:ID "S3" :Notes "line\nbreak"}]
+          result (csv/metadata->csv active-cols rows)]
+      (is (= (str "ID,Notes\n"
+                  "S1,\"has,comma\"\n"
+                  "S2,\"quote \"\" here\"\n"
+                  "S3,\"line\nbreak\"\n")
+             result)))))
+
 ;; ===== parse-date =====
 
 (deftest parse-date-iso-format

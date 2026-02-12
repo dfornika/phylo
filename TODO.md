@@ -50,6 +50,9 @@ while working on TypeScript counterparts. Preserve existing UIx components until
 - [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
 - [ ] Select sub-trees by clicking interior tree nodes
 - [ ] Storybook-based UI Component testing
+- [ ] Refactor newick string parsing out of TreeContainer (TreeContainer should accept pre-parsed data structure)
+- [ ] Allow users to "merge/join" additional metadata from multiple files (joining on sample ID),
+if other metadata has already been loaded.
 
 
 

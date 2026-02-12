@@ -9,6 +9,45 @@
   based on sampling all non-empty values."
   (:require [clojure.string :as str]))
 
+
+;; ===== CSV Serialization =====
+
+(defn- csv-escape
+  "Escapes a single CSV value with RFC4180-style quoting.
+
+  Doubles any internal quotes and wraps the value in quotes only
+  when it contains a comma, quote, or newline."
+  [value]
+  (let [s (str (or value ""))
+        needs-quotes? (re-find #"[\",\n\r]" s)
+        escaped (clojure.string/replace s "\"" "\"\"")]
+    (if needs-quotes?
+      (str "\"" escaped "\"")
+      escaped)))
+
+(comment 
+  (csv-escape "hello,worl
+d")
+  (csv-escape "hello, world")
+  )
+
+
+(defn metadata->csv
+  "Serializes metadata rows into a CSV string.
+
+  Uses the order of `active-cols` to emit a header row (via :label)
+  and row values (via :key)."
+  [active-cols rows]
+  (if (seq active-cols)
+    (let [keys (mapv :key active-cols)
+          header (clojure.string/join "," (map csv-escape (map :label active-cols)))
+          data-lines (map (fn [row]
+                            (clojure.string/join "," (map (fn [k] (csv-escape (get row k ""))) keys)))
+                          rows)]
+      (str (clojure.string/join "\n" (cons header data-lines)) "\n"))
+    ""))
+
+
 ;; ===== Date Parsing =====
 
 (def ^:private iso-date-re
