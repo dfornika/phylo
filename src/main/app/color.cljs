@@ -4,7 +4,8 @@
   Provides small built-in categorical palettes and gradient scales,
   along with utilities to infer field types and build color maps
   keyed by leaf name."
-  (:require [clojure.string :as str]))
+  (:require [clojure.string :as str]
+            [app.date :as date]))
 
 (def ^:private categorical-palettes
   {:bright {:label "Bright"
