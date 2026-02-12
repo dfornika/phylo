@@ -157,6 +157,17 @@
 (s/def ::color-by-type-override #{:auto :categorical :numeric :date})
 (s/def ::set-color-by-type-override! fn?)
 
+(s/def ::legend-x number?)
+(s/def ::legend-y number?)
+(s/def ::legend-pos (s/nilable (s/keys :req-un [::legend-x ::legend-y])))
+(s/def ::set-legend-pos! fn?)
+
+(s/def ::legend-collapsed? boolean?)
+(s/def ::set-legend-collapsed! fn?)
+
+(s/def ::legend-labels (s/nilable (s/map-of string? string?)))
+(s/def ::set-legend-labels! fn?)
+
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::set-metadata-panel-collapsed! fn?)
 

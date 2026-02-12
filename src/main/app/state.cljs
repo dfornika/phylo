@@ -23,7 +23,10 @@
   - [[!metadata-panel-last-drag-height]] - last height set via drag
   - [[!highlight-color]]       - CSS color string used as the current brush color
   - [[!selected-ids]]          - set of leaf IDs selected in the AG-Grid
-  - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights"
+  - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights
+  - [[!legend-pos]]            - top-left legend position in SVG user space
+  - [[!legend-collapsed?]]     - whether the legend is collapsed
+  - [[!legend-labels]]         - map of {color-hex -> label} for custom colors"
   (:require [cljs.spec.alpha :as s]
             [app.specs :as specs]
             [uix.core :as uix :refer [defui $]]))
@@ -122,6 +125,18 @@
 (defonce !color-by-type-override
   (atom :auto))
 
+;; "Atom holding the top-left legend position in SVG user space."
+(defonce !legend-pos
+  (atom nil))
+
+;; "Atom holding whether the legend is collapsed."
+(defonce !legend-collapsed?
+  (atom false))
+
+;; "Atom holding label overrides for custom colors as {color-hex -> label}."
+(defonce !legend-labels
+  (atom {}))
+
 ;; ===== Export / Import =====
 
 (def ^:private export-version
@@ -149,7 +164,10 @@
    :color-by-enabled? false
    :color-by-field nil
    :color-by-palette :bright
-   :color-by-type-override :auto})
+   :color-by-type-override :auto
+   :legend-pos nil
+   :legend-collapsed? false
+   :legend-labels {}})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -177,7 +195,10 @@
            :color-by-enabled? @!color-by-enabled?
            :color-by-field     @!color-by-field
            :color-by-palette   @!color-by-palette
-           :color-by-type-override @!color-by-type-override}})
+           :color-by-type-override @!color-by-type-override
+           :legend-pos @!legend-pos
+           :legend-collapsed? @!legend-collapsed?
+           :legend-labels @!legend-labels}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -218,6 +239,17 @@
     value
     :auto))
 
+(defn- coerce-legend-pos
+  "Coerces a legend position map to {:x :y} or nil."
+  [value]
+  (when (and (map? value) (number? (:x value)) (number? (:y value)))
+    {:x (:x value) :y (:y value)}))
+
+(defn- coerce-legend-labels
+  "Coerces legend label overrides into a map."
+  [value]
+  (if (map? value) value {}))
+
 (defn apply-export-state!
   "Applies an exported state payload into the live atoms.
 
@@ -250,7 +282,10 @@
       (reset! !color-by-enabled? (boolean (:color-by-enabled? merged)))
       (reset! !color-by-field (:color-by-field merged))
       (reset! !color-by-palette (coerce-palette (:color-by-palette merged)))
-      (reset! !color-by-type-override (coerce-type-override (:color-by-type-override merged))))))
+      (reset! !color-by-type-override (coerce-type-override (:color-by-type-override merged)))
+      (reset! !legend-pos (coerce-legend-pos (:legend-pos merged)))
+      (reset! !legend-collapsed? (boolean (:legend-collapsed? merged)))
+      (reset! !legend-labels (coerce-legend-labels (:legend-labels merged))))))
 
 ;; ===== Context =====
 
@@ -279,6 +314,9 @@
                    :app.specs/color-by-field    :app.specs/set-color-by-field!
                    :app.specs/color-by-palette  :app.specs/set-color-by-palette!
                    :app.specs/color-by-type-override :app.specs/set-color-by-type-override!
+                   :app.specs/legend-pos :app.specs/set-legend-pos!
+                   :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
+                   :app.specs/legend-labels :app.specs/set-legend-labels!
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
@@ -312,6 +350,9 @@
         color-by-field              (uix/use-atom !color-by-field)
         color-by-palette            (uix/use-atom !color-by-palette)
         color-by-type-override   (uix/use-atom !color-by-type-override)
+        legend-pos                (uix/use-atom !legend-pos)
+        legend-collapsed?         (uix/use-atom !legend-collapsed?)
+        legend-labels             (uix/use-atom !legend-labels)
         app-state     {:newick-str           newick-str
                        :set-newick-str!      #(reset! !newick-str %)
                        :metadata-rows        metadata-rows
@@ -353,7 +394,13 @@
                        :color-by-palette     color-by-palette
                        :set-color-by-palette! #(reset! !color-by-palette %)
                        :color-by-type-override color-by-type-override
-                       :set-color-by-type-override! #(reset! !color-by-type-override %)}]
+                       :set-color-by-type-override! #(reset! !color-by-type-override %)
+                       :legend-pos legend-pos
+                       :set-legend-pos! #(reset! !legend-pos %)
+                       :legend-collapsed? legend-collapsed?
+                       :set-legend-collapsed! #(reset! !legend-collapsed? %)
+                       :legend-labels legend-labels
+                       :set-legend-labels! #(reset! !legend-labels %)}]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))
     ($ app-context {:value app-state}

@@ -19,9 +19,9 @@
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
+            [app.components.legend :refer [FloatingLegend]]
             [clojure.string :as str])
   (:require-macros [app.specs :refer [defui-with-spec]]))
-
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -117,8 +117,8 @@
   - `:scale-origin` - `:tips` or `:root` for tick placement"
   [{:keys [max-depth x-scale tree-height scale-origin]}]
   (let [{:keys [major-ticks]} (scale/scale-ticks {:max-depth max-depth
-                                                 :x-scale x-scale
-                                                 :origin scale-origin})
+                                                  :x-scale x-scale
+                                                  :origin scale-origin})
         ticks (or (seq major-ticks) [0])]
     ($ :g
        (for [t ticks]
@@ -157,7 +157,6 @@
   a box-select rather than an accidental click."
   5)
 
-
 (s/def :app.specs/tree-viewer-props
   (s/keys :req-un [:app.specs/tree
                    :app.specs/tips
@@ -178,7 +177,10 @@
                    :app.specs/metadata-panel-height
                    :app.specs/metadata-panel-last-drag-height
                    :app.specs/set-metadata-panel-height!
-                   :app.specs/set-metadata-panel-last-drag-height!]
+                   :app.specs/set-metadata-panel-last-drag-height!
+                   :app.specs/legend-pos :app.specs/set-legend-pos!
+                   :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
+                   :app.specs/legend-labels :app.specs/set-legend-labels!]
           :opt-un [:app.specs/highlights :app.specs/selected-ids
                    :app.specs/color-by-enabled? :app.specs/color-by-field
                    :app.specs/color-by-palette
@@ -221,6 +223,8 @@
            highlights selected-ids metadata-rows metadata-panel-collapsed
            metadata-panel-height metadata-panel-last-drag-height
            color-by-enabled? color-by-field color-by-palette color-by-type-override
+           legend-pos legend-collapsed? legend-labels
+           set-legend-pos! set-legend-collapsed! set-legend-labels!
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
@@ -244,6 +248,39 @@
                           (color/build-color-map tips color-by-field color-by-palette color-by-type-override)))
                       [color-by-enabled? color-by-field color-by-palette color-by-type-override tips])
         merged-highlights (merge (or color-by-map {}) (or highlights {}))
+
+        field-keys (into #{} (map :key) active-cols)
+        legend-field (when (contains? field-keys color-by-field) color-by-field)
+        field-label (when legend-field
+                      (some (fn [{:keys [key label]}]
+                              (when (= key legend-field) label))
+                            active-cols))
+        legend-auto (uix/use-memo
+                     (fn []
+                       (when (and color-by-enabled? legend-field (seq tips))
+                         (color/build-legend tips legend-field color-by-palette color-by-type-override)))
+                     [color-by-enabled? legend-field color-by-palette color-by-type-override tips])
+        auto-entries (or (:entries legend-auto) [])
+        custom-colors (->> (vals (or highlights {})) distinct sort)
+        custom-entries (->> custom-colors
+                            (mapv (fn [color]
+                                    (let [label (get legend-labels color "")
+                                          placeholder? (str/blank? label)
+                                          display (if placeholder? "Label..." label)]
+                                      {:id (str "custom-" color)
+                                       :color color
+                                       :label display
+                                       :editable? true
+                                       :placeholder? placeholder?}))))
+        legend-sections (cond-> []
+                          (seq auto-entries)
+                          (conj {:title (if field-label
+                                          (str "Auto: " field-label)
+                                          "Auto")
+                                 :entries auto-entries})
+                          (seq custom-entries)
+                          (conj {:title "Custom" :entries custom-entries}))
+        show-legend? (seq legend-sections)
 
         ;; Layout refs for sizing the metadata panel
         viewport-ref         (uix/use-ref nil)
@@ -470,7 +507,22 @@
                            :stroke "rgba(70, 130, 180, 0.6)"
                            :stroke-width 1
                            :stroke-dasharray "4 2"
-                           :pointer-events "none"})))))
+                           :pointer-events "none"})))
+
+             (when show-legend?
+               ($ FloatingLegend {:svg-ref svg-ref
+                                  :svg-width svg-width
+                                  :svg-height svg-height
+                                  :title "Legend"
+                                  :sections legend-sections
+                                  :pos legend-pos
+                                  :set-pos! set-legend-pos!
+                                  :collapsed? legend-collapsed?
+                                  :set-collapsed! set-legend-collapsed!
+                                  :labels legend-labels
+                                  :set-labels! set-legend-labels!})))
+
+          )
 
        ;; Selection bar (above the grid)
        ($ SelectionBar {:max-panel-height panel-max-height})
@@ -490,7 +542,9 @@
                              :selected-ids selected-ids
                              :on-cols-reordered set-active-cols!
                              :on-selection-changed set-selected-ids!
-                             :on-cell-edited handle-cell-edited}))))))
+                             :on-cell-edited handle-cell-edited}))))
+
+     ))
 
 (defui-with-spec TreeViewer
   [{:spec :app.specs/tree-viewer-props :props props}]
@@ -557,7 +611,6 @@
                        :margin 0}}
            "Load a Newick file using the toolbar above."))))
 
-
 (s/def :app.specs/tree-container-props
   (s/keys :req-un [:app.specs/width-px]
           :opt-un [:app.specs/component-height-px]))
@@ -576,6 +629,8 @@
                 col-spacing highlights selected-ids metadata-panel-collapsed
                 metadata-panel-height metadata-panel-last-drag-height
                 color-by-enabled? color-by-field color-by-palette color-by-type-override
+                legend-pos legend-collapsed? legend-labels
+                set-legend-pos! set-legend-collapsed! set-legend-labels!
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
@@ -602,6 +657,12 @@
                      :color-by-field color-by-field
                      :color-by-palette color-by-palette
                      :color-by-type-override color-by-type-override
+                     :legend-pos legend-pos
+                     :legend-collapsed? legend-collapsed?
+                     :legend-labels legend-labels
+                     :set-legend-pos! set-legend-pos!
+                     :set-legend-collapsed! set-legend-collapsed!
+                     :set-legend-labels! set-legend-labels!
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed
