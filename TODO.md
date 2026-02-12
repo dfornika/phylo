@@ -1,8 +1,7 @@
 # TODO — Upcoming Iterations
 
 Planning notes for future work sessions on Phylo.
-Last updated: 2026-02-06
-
+Last updated: 2026-02-011
 ---
 
 ## In Progress
@@ -46,24 +45,13 @@ while working on TypeScript counterparts. Preserve existing UIx components until
 
 ## Backlog
 
-### 2. Self-Contained HTML Export
+- [ ] CSV export from Metadata Grid (download grid contents)
+- [ ] Palette-based node coloring by metadata value (select column, auto-assign colors)
+- [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
+- [ ] Select sub-trees by clicking interior tree nodes
+- [ ] Storybook-based UI Component testing
 
-Add a button to serialize the full app + current data into a single offline HTML file.
 
-**Feasibility: confirmed.** The app is fully self-contained (no CDN deps, no external fetches, inline styles, empty CSS file). A release-build JS bundle would be ~800 KB–1.2 MB.
-
-**Approach:**
-- Do a release build (`shadow-cljs release app`)
-- Read `index.html` template and `main.js` bundle
-- Inline the JS into a `<script>` tag
-- Embed current app state (Newick string + metadata rows + active columns) as a JSON blob in a `<script id="phylo-data" type="application/json">` tag
-- On app init, check for `#phylo-data` element — if present, hydrate state from it instead of using defaults
-- Provide a "Download HTML" button in the Toolbar
-- The generated file would be ~1 MB — reasonable for sharing interactive visualizations
-
-**Open questions:**
-- Should the export include the Toolbar UI, or render a "static viewer" mode?
-- Could also generate a minimal HTML with just the SVG snapshot (much smaller, but not interactive)
 
 ---
 
@@ -78,3 +66,4 @@ Add a button to serialize the full app + current data into a single offline HTML
 - [x] PR #4 — GitHub Actions test workflow (`test-workflow` branch)
   - `.github/workflows/test.yml` — runs on push to main + PRs
   - Test badge in README
+- [x] Self-contained HTML Export
