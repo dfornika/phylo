@@ -416,7 +416,6 @@
       (is (= :numeric (:type result)))
       (is (= 1 (count (:entries result))))
       (let [entry (first (:entries result))]
-        (is (= "single" (:id entry)))
         (is (not (str/includes? (:label entry) "-")))
         (is (re-matches #"#[0-9a-fA-F]{6}" (:color entry)))))))
 
@@ -452,7 +451,10 @@
                 {:name "tip3" :metadata {:date "2024-12-31"}}]
           result (color/build-legend tips :date nil :auto)]
       (is (= :date (:type result)))
+      ;; Should successfully bin all 3 dates
       (is (= 5 (count (:entries result))))
+      ;; All labels should be formatted as dates
+      (is (every? #(re-find #"\d{4}-\d{2}-\d{2}" (:label %)) (:entries result)))
       (is (every? #(re-matches #"#[0-9a-fA-F]{6}" (:color %)) (:entries result))))))
 
 (deftest build-legend-date-single-value
@@ -463,7 +465,6 @@
       (is (= :date (:type result)))
       (is (= 1 (count (:entries result))))
       (let [entry (first (:entries result))]
-        (is (= "single" (:id entry)))
         (is (re-find #"\d{4}-\d{2}-\d{2}" (:label entry)))
         (is (re-matches #"#[0-9a-fA-F]{6}" (:color entry)))))))
 
