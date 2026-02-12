@@ -137,7 +137,8 @@
     (number? value) value
     (non-empty-string? value)
     (when-let [normalized (csv/parse-date value)]
-      (.getTime (js/Date. normalized)))
+      (let [timestamp (.getTime (js/Date. normalized))]
+        (when-not (js/isNaN timestamp) timestamp)))
     :else nil))
 
 (def ^:private parse-success-threshold
