@@ -154,7 +154,7 @@
 (s/def ::color-by-palette keyword?)
 (s/def ::set-color-by-palette! fn?)
 
-(s/def ::color-by-type-override keyword?)
+(s/def ::color-by-type-override #{:auto :categorical :numeric :date})
 (s/def ::set-color-by-type-override! fn?)
 
 (s/def ::metadata-panel-collapsed boolean?)
