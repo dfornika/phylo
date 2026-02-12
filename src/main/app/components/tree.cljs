@@ -137,8 +137,9 @@
                             (when (not show-internal-markers)
                               " internal-node-marker--hidden")
                             internal-state-class)
-        internal-fill (when show-internal-markers marker-fill)
-        internal-stroke (when show-internal-markers "#111")]
+        internal-fill (if show-internal-markers marker-fill "none")
+        internal-stroke (if show-internal-markers "#111" "none")
+        internal-visible-radius (max 1 (- marker-radius 1))]
     ($ :g
        ($ Branch {:x scaled-x :y scaled-y :parent-x p-x :parent-y p-y :line-color line-color :line-width line-width})
 
@@ -152,10 +153,13 @@
        (when internal-node?
          ($ :g
             ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 12)
+                        :fill "none"
+                        :stroke "none"
                         :class (str internal-class " internal-node-hit")
-                        :style (when internal-click {:cursor "pointer"})
+                        :style (merge {:pointer-events "all"}
+                                      (when internal-click {:cursor "pointer"}))
                         :on-click internal-click})
-            ($ :circle {:cx scaled-x :cy scaled-y :r marker-radius
+            ($ :circle {:cx scaled-x :cy scaled-y :r internal-visible-radius
                         :fill internal-fill
                         :stroke internal-stroke
                         :stroke-width (when show-internal-markers 1)
@@ -163,6 +167,9 @@
                         :style (when internal-click {:cursor "pointer"})
                         :on-click internal-click})
             ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 4)
+                        :fill "none"
+                        :stroke "none"
+                        :style {:pointer-events "none"}
                         :class "internal-node-hover-ring"})))
 
        ;; Selection ring for selected leaves
