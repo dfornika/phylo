@@ -60,7 +60,8 @@
           :opt-un [::title
                    ::sections
                    ::on-close
-                   :app.specs/legend-labels]))
+                   :app.specs/legend-labels
+                   :app.specs/legend-pos]))
 
 (defui FloatingLegend*
   [{:keys [svg-ref svg-width svg-height
