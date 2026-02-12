@@ -181,6 +181,7 @@
 (s/def ::marker-radius number?)
 (s/def ::marker-fill string?)
 (s/def ::on-toggle-selection (s/nilable fn?))
+(s/def ::on-select-subtree (s/nilable fn?))
 
 ;; Toolbar reads from context — no props spec needed.
 

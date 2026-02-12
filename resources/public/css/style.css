@@ -3,3 +3,40 @@ html, body, #app {
   padding: 0;
   height: 100%;
 }
+
+.internal-node-marker--hidden {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+
+.internal-node-marker--hidden:hover {
+  stroke: transparent;
+}
+
+.internal-node-hit {
+  fill: transparent;
+  stroke: transparent;
+  pointer-events: all;
+}
+
+.internal-node-hover-ring {
+  fill: none;
+  stroke: transparent;
+  pointer-events: none;
+}
+
+.internal-node-marker:hover ~ .internal-node-hover-ring,
+.internal-node-hit:hover ~ .internal-node-hover-ring {
+  stroke-width: 2;
+}
+
+.internal-node-marker.internal-node-marker--select:hover ~ .internal-node-hover-ring,
+.internal-node-hit.internal-node-marker--select:hover ~ .internal-node-hover-ring {
+  stroke: #6b9f85;
+}
+
+.internal-node-marker.internal-node-marker--deselect:hover ~ .internal-node-hover-ring,
+.internal-node-hit.internal-node-marker--deselect:hover ~ .internal-node-hover-ring {
+  stroke: #b27b7b;
+}

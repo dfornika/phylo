@@ -11,7 +11,8 @@ Phylo renders Newick-format trees as interactive SVGs with support for metadata 
 ## Features
 
 - Load Newick trees and CSV/TSV metadata
-- ArborView HTML import (tree + metadata)
+- [ArborView](https://github.com/phac-nml/ArborView) HTML import (tree + metadata)
+- [Nextstrain](https://nextstrain.org/) JSON import (tree only)
 - Adjustable layout (width, height, column spacing)
 - Scale bar with optional gridlines and origin toggle (tips/root)
 - Internal node distance labels and leaf selection/highlighting
