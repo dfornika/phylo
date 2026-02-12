@@ -3,6 +3,91 @@
   (:require [cljs.test :refer [deftest testing is]]
             [app.color :as color]))
 
+;; ===== categorical-options =====
+
+(deftest categorical-options-returns-ordered-palettes
+  (testing "Returns categorical palette options in order"
+    (let [options (color/categorical-options)]
+      (is (= 3 (count options)))
+      (is (= :bright (:id (first options))))
+      (is (= :contrast (:id (second options))))
+      (is (= :pastel (:id (nth options 2))))
+      (is (every? #(contains? % :id) options))
+      (is (every? #(contains? % :label) options))
+      (is (every? #(contains? % :colors) options)))))
+
+;; ===== gradient-options =====
+
+(deftest gradient-options-returns-ordered-palettes
+  (testing "Returns gradient palette options in order"
+    (let [options (color/gradient-options)]
+      (is (= 2 (count options)))
+      (is (= :blue-red (:id (first options))))
+      (is (= :teal-gold (:id (second options))))
+      (is (every? #(contains? % :id) options))
+      (is (every? #(contains? % :label) options))
+      (is (every? #(contains? % :colors) options)))))
+
+;; ===== palette-options =====
+
+(deftest palette-options-numeric-returns-gradients
+  (testing "Returns gradient palettes for numeric field type"
+    (let [options (color/palette-options :numeric)]
+      (is (= 2 (count options)))
+      (is (= :blue-red (:id (first options)))))))
+
+(deftest palette-options-date-returns-gradients
+  (testing "Returns gradient palettes for date field type"
+    (let [options (color/palette-options :date)]
+      (is (= 2 (count options)))
+      (is (= :blue-red (:id (first options)))))))
+
+(deftest palette-options-categorical-returns-categorical
+  (testing "Returns categorical palettes for categorical field type"
+    (let [options (color/palette-options :categorical)]
+      (is (= 3 (count options)))
+      (is (= :bright (:id (first options)))))))
+
+(deftest palette-options-string-returns-categorical
+  (testing "Returns categorical palettes for string field type"
+    (let [options (color/palette-options :string)]
+      (is (= 3 (count options)))
+      (is (= :bright (:id (first options)))))))
+
+;; ===== resolve-palette =====
+
+(deftest resolve-palette-numeric-with-valid-id
+  (testing "Resolves valid gradient palette for numeric type"
+    (let [result (color/resolve-palette :numeric :teal-gold)]
+      (is (= :teal-gold (:id result)))
+      (is (contains? (:palette result) :label))
+      (is (contains? (:palette result) :colors)))))
+
+(deftest resolve-palette-numeric-with-invalid-id-uses-default
+  (testing "Falls back to default gradient for invalid palette ID"
+    (let [result (color/resolve-palette :numeric :invalid-palette)]
+      (is (= :blue-red (:id result)))
+      (is (contains? (:palette result) :colors)))))
+
+(deftest resolve-palette-categorical-with-valid-id
+  (testing "Resolves valid categorical palette for categorical type"
+    (let [result (color/resolve-palette :categorical :contrast)]
+      (is (= :contrast (:id result)))
+      (is (contains? (:palette result) :label))
+      (is (contains? (:palette result) :colors)))))
+
+(deftest resolve-palette-categorical-with-invalid-id-uses-default
+  (testing "Falls back to default categorical for invalid palette ID"
+    (let [result (color/resolve-palette :categorical :invalid-palette)]
+      (is (= :bright (:id result)))
+      (is (contains? (:palette result) :colors)))))
+
+(deftest resolve-palette-date-uses-gradient
+  (testing "Uses gradient palette for date type"
+    (let [result (color/resolve-palette :date :blue-red)]
+      (is (= :blue-red (:id result)))
+      (is (contains? (:palette result) :colors)))))
+
 ;; ===== infer-value-type =====
 
 (deftest infer-value-type-numeric
