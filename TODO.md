@@ -9,6 +9,10 @@ Last updated: 2026-02-12
 ---
 
 ## Backlog
+- [ ] Show a user-facing warning when Nextstrain JSON parsing fails
+  - Use the {:error :invalid-json} return from nextstrain/parse-nextstrain-json
+  - Keep console warning for developer visibility
+  - UI could be a small inline message near the Nextstrain import control or a toast
 - [ ] Add left-side horizontal shift handle for tree/header alignment
   - UI: small vertical drag bar to the left of the scale in StickyHeader; stays pinned to the viewport (not the SVG)
   - State: add `:left-shift-px` atom in app.state with export/import, default 0; wire setter through context
