@@ -13,15 +13,27 @@
 
   Clicking a leaf node toggles its membership in `selected-ids`,
   which is reflected in both the tree and the AG-Grid table."
-  (:require [uix.core :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
-            [app.components.scale :as scale]))
+            [app.components.scale :as scale]
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
-(defui Branch
+
+(s/def :app.specs/branch-props
+  (s/keys :req-un [:app.specs/x
+                   :app.specs/y
+                   :app.specs/parent-x
+                   :app.specs/parent-y
+                   :app.specs/line-color
+                   :app.specs/line-width]))
+
+(defui Branch*
   "Renders a single tree branch as two SVG lines: a horizontal segment
   (the branch itself) and a vertical connector to the parent node.
 
-  Props (see `::app.specs/branch-props`):
+  Props (see `:app.specs/branch-props`):
   - `:x`, `:y`             - endpoint (child) coordinates
   - `:parent-x`, `:parent-y` - start (parent) coordinates
   - `:line-color`          - stroke color string
@@ -33,7 +45,30 @@
      ;; Vertical connector to siblings
      ($ :line {:x1 parent-x :y1 parent-y :x2 parent-x :y2 y :stroke line-color :stroke-width line-width})))
 
-(defui TreeNode
+(defui-with-spec Branch
+  [{:spec :app.specs/branch-props :props props}]
+  ($ Branch* props))
+#_(def Branch Branch*)
+
+(s/def :app.specs/tree-node-props
+  (s/keys :req-un [:app.specs/node
+                   :app.specs/parent-x
+                   :app.specs/parent-y
+                   :app.specs/x-scale
+                   :app.specs/y-scale
+                   :app.specs/show-internal-markers
+                   :app.specs/marker-radius
+                   :app.specs/marker-fill
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/max-depth]
+          :opt-un [:app.specs/highlights
+                   :app.specs/selected-ids
+                   :app.specs/on-toggle-selection]))
+
+(declare TreeNode)
+
+(defui TreeNode*
   "Recursively renders a tree node and all its descendants as SVG.
 
   Draws the branch connecting this node to its parent, renders a
@@ -50,7 +85,7 @@
      selection ring stroke
   3. **Default** — standard marker fill and radius
 
-  Props (see `::app.specs/tree-node-props`):
+  Props (see `:app.specs/tree-node-props`):
   - `:node`                   - positioned tree node map
   - `:parent-x`               - parent's x-coordinate (unscaled)
   - `:parent-y`               - parent's y-coordinate (unscaled)
@@ -122,28 +157,48 @@
        ;; Recurse into children
        (for [child (:children node)]
          ($ TreeNode {:key (:id child)
-                      :node child
-                      :parent-x (:x node)
-                      :parent-y (:y node)
-                      :x-scale x-scale
-                      :y-scale y-scale
-                      :show-internal-markers show-internal-markers
-                      :show-distance-from-origin show-distance-from-origin
-                      :scale-origin scale-origin
-                      :max-depth max-depth
-                      :marker-radius marker-radius
-                      :marker-fill marker-fill
-                      :highlights highlights
-                      :selected-ids selected-ids
-                      :on-toggle-selection on-toggle-selection})))))
+                       :node child
+                       :parent-x (:x node)
+                       :parent-y (:y node)
+                       :x-scale x-scale
+                       :y-scale y-scale
+                       :show-internal-markers show-internal-markers
+                       :show-distance-from-origin show-distance-from-origin
+                       :scale-origin scale-origin
+                       :max-depth max-depth
+                       :marker-radius marker-radius
+                       :marker-fill marker-fill
+                       :highlights highlights
+                       :selected-ids selected-ids
+                       :on-toggle-selection on-toggle-selection})))))
 
-(defui PhylogeneticTree
+(defui-with-spec TreeNode
+  [{:spec :app.specs/tree-node-props :props props}]
+  ($ TreeNode* props))
+#_(def TreeNode TreeNode*)
+
+
+(s/def :app.specs/phylogenetic-tree-props
+  (s/keys :req-un [:app.specs/tree
+                   :app.specs/x-scale
+                   :app.specs/y-scale
+                   :app.specs/show-internal-markers
+                   :app.specs/marker-radius
+                   :app.specs/marker-fill
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/max-depth]
+          :opt-un [:app.specs/highlights
+                   :app.specs/selected-ids
+                   :app.specs/on-toggle-selection]))
+
+(defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
 
   A thin wrapper that places a `<g>` with the standard SVG padding
   transform and delegates recursive node rendering to [[TreeNode]].
 
-  Props (see `::app.specs/phylogenetic-tree-props`):
+  Props (see `:app.specs/phylogenetic-tree-props`):
   - `:tree`                   - positioned root node (recursive map)
   - `:x-scale`                - horizontal scaling factor
   - `:y-scale`                - vertical tip spacing
@@ -171,3 +226,9 @@
                   :highlights highlights
                   :selected-ids selected-ids
                   :on-toggle-selection on-toggle-selection})))
+
+
+(defui-with-spec PhylogeneticTree
+  [{:spec :app.specs/phylogenetic-tree-props :props props}]
+  ($ PhylogeneticTree* props))
+#_(def PhylogeneticTree PhylogeneticTree*)

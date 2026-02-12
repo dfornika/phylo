@@ -19,8 +19,11 @@
   Wraps the component tree with [[state/AppStateProvider]] so all
   descendants can access shared state via context."
   []
-  ($ state/AppStateProvider
-     ($ TreeContainer {:width-px 1200})))
+  (let [component-height-px (when (exists? js/window)
+                              (.-innerHeight js/window))]
+    ($ state/AppStateProvider
+       ($ TreeContainer {:width-px 1200
+                         :component-height-px component-height-px}))))
 
 (defonce root
   (when (exists? js/document)
@@ -58,6 +61,8 @@
 (defn ^:export init
   "Exported entry point called by shadow-cljs on page load."
   []
+  (when ^boolean goog.DEBUG
+    (js/console.debug "goog.DEBUG = true\nDebug mode enabled"))
   (apply-embedded-export!)
   (render))
 

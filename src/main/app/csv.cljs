@@ -96,8 +96,9 @@
         first-line (first lines)
         delimiter (if (str/includes? first-line "\t") #"\t" #",")
         headers (->> (str/split first-line delimiter)
-                     (map #(-> % str/trim (str/replace #"^\"|\"$" "") keyword)))
-        data-rows (rest lines)]
+                     (map #(-> % str/trim (str/replace #"^\"|\"$" "") keyword))
+                     (into []))
+        data-rows (into [] (rest lines))]
     (keep (fn [line]
             (when (not (str/blank? line))
               (let [values (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
@@ -135,12 +136,12 @@
          raw-headers (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
                           (str/split first-line delimiter))
          header-keys (mapv keyword raw-headers)
-         data-rows (keep (fn [line]
-                           (when (not (str/blank? line))
-                             (let [values (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
-                                               (str/split line delimiter))]
-                               (zipmap header-keys values))))
-                         (rest lines))
+         data-rows (into [] (keep (fn [line]
+                                    (when (not (str/blank? line))
+                                      (let [values (map #(-> % str/trim (str/replace #"^\"|\"$" ""))
+                                                        (str/split line delimiter))]
+                                        (zipmap header-keys values))))
+                                  (rest lines)))
          header-configs (mapv (fn [h k]
                                 {:key   k
                                  :label h

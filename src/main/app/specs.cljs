@@ -8,7 +8,61 @@
 
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
-  (:require [cljs.spec.alpha :as s]))
+  (:require [cljs.spec.alpha :as s]
+            [clojure.set]
+            [camel-snake-kebab.core :as csk]))
+
+
+(defn get-allowed-keys
+  "Gets all allowed keys for a spec, including both required and optional."
+  [spec]
+  (when-let [form (s/form spec)]
+    (let [{:keys [req-un opt-un]} (apply hash-map (rest form))]
+      (set (concat (map #(keyword (name %)) req-un)
+                   (map #(keyword (name %)) opt-un))))))
+
+(comment
+  (get-allowed-keys ::app-state)
+)
+
+
+(defn validate-spec!
+  "Validates a value against a spec. Logs errors for invalid values
+  and warnings for unexpected keys. Returns the value unchanged (for threading).
+  
+  Options:
+  - check-unexpected-keys? (default false) - warn about keys not in spec"
+  ([value spec label]
+   (validate-spec! value spec label {}))
+  ([value spec label {:keys [check-unexpected-keys?]
+                      :or {check-unexpected-keys? false}}]
+   
+     ;; Check spec validity
+     (when-not (s/valid? spec value)
+       (js/console.error (str "Invalid " label ":")
+                         (s/explain-str spec value)))
+
+     ;; Check for unexpected keys (optional)
+     (when (and check-unexpected-keys?
+                (map? value))
+       (when-let [allowed (get-allowed-keys spec)]
+         (let [actual (set (keys value))
+               unexpected (clojure.set/difference actual allowed)]
+           (when (seq unexpected)
+             (js/console.warn (str "Unexpected keys in " label ":")
+                              (clj->js unexpected)
+                              "\nAllowed:"
+                              (clj->js allowed))))))
+     value))
+
+
+
+
+
+(comment
+  (let [test-props (clj->js {:helloThere "world"})]
+    (js->clj test-props :key-fn csk/->kebab-case-keyword))
+  )
 
 ;; ===== Tree Data Structures =====
 
@@ -100,26 +154,6 @@
 (s/def ::metadata-panel-last-drag-height number?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-;; Shape of the context map provided by `app.state/AppStateProvider`.
-(s/def ::app-state
-  (s/keys :req-un [::newick-str ::set-newick-str!
-                   ::metadata-rows ::set-metadata-rows!
-                   ::active-cols ::set-active-cols!
-                   ::x-mult ::set-x-mult!
-                   ::y-mult ::set-y-mult!
-                   ::show-internal-markers ::set-show-internal-markers!
-                   ::show-scale-gridlines ::set-show-scale-gridlines!
-                   ::show-distance-from-origin ::set-show-distance-from-origin!
-                   ::scale-origin ::set-scale-origin!
-                   ::show-pixel-grid ::set-show-pixel-grid!
-                   ::col-spacing ::set-col-spacing!
-                   ::highlight-color ::set-highlight-color!
-                   ::selected-ids ::set-selected-ids!
-                   ::highlights ::set-highlights!
-                   ::metadata-panel-collapsed ::set-metadata-panel-collapsed!
-                   ::metadata-panel-height ::set-metadata-panel-height!
-                   ::metadata-panel-last-drag-height ::set-metadata-panel-last-drag-height!]))
-
 ;; ===== Component Props =====
 
 (s/def ::columns (s/coll-of ::metadata-header))
@@ -129,13 +163,6 @@
 (s/def ::tip-count nat-int?)
 (s/def ::tree-height number?)
 
-(s/def ::sticky-header-props
-  (s/keys :req-un [::columns 
-                   ::start-offset
-                   ::max-depth
-                   ::x-scale 
-                   ::scale-origin]))
-
 (s/def ::tips (s/coll-of ::positioned-node))
 (s/def ::x-offset number?)
 (s/def ::y-scale number?)
@@ -143,27 +170,10 @@
 
 (s/def ::col-width number?)
 
-(s/def ::metadata-column-props
-  (s/keys :req-un [::tips 
-                   ::x-offset 
-                   ::y-scale 
-                   ::column-key 
-                   ::column-label 
-                   ::cell-height 
-                   ::col-width]))
-
 (s/def ::parent-x number?)
 (s/def ::parent-y number?)
 (s/def ::line-color string?)
 (s/def ::line-width number?)
-
-(s/def ::branch-props
-  (s/keys :req-un [::x 
-                   ::y 
-                   ::parent-x 
-                   ::parent-y 
-                   ::line-color 
-                   ::line-width]))
 
 (s/def ::node ::positioned-node)
 (s/def ::x-scale number?)
@@ -172,104 +182,24 @@
 (s/def ::marker-fill string?)
 (s/def ::on-toggle-selection (s/nilable fn?))
 
-(s/def ::tree-node-props
-  (s/keys :req-un [::node 
-                   ::parent-x 
-                   ::parent-y 
-                   ::x-scale 
-                   ::y-scale
-                   ::show-internal-markers 
-                   ::marker-radius 
-                   ::marker-fill
-                   ::show-distance-from-origin 
-                   ::scale-origin 
-                   ::max-depth]
-          :opt-un [::highlights 
-                   ::selected-ids 
-                   ::on-toggle-selection]))
-
 ;; Toolbar reads from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
 (s/def ::max-depth number?)
 (s/def ::width-px number?)
-(s/def ::component-height-px number?)
+(s/def ::component-height-px (s/nilable number?))
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::metadata-panel-height number?)
 (s/def ::metadata-panel-last-drag-height number?)
 (s/def ::set-metadata-panel-height! fn?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-(s/def ::tree-viewer-props
-  (s/keys :req-un [::tree 
-                   ::tips 
-                   ::max-depth 
-                   ::x-mult ::y-mult 
-                   ::show-internal-markers
-                   ::show-scale-gridlines 
-                   ::show-pixel-grid
-                   ::show-distance-from-origin
-                   ::scale-origin
-                   ::col-spacing 
-                   ::width-px
-                   ::component-height-px
-                   ::active-cols ::set-active-cols!
-                   ::metadata-rows ::set-metadata-rows!
-                   ::set-selected-ids!
-                   ::metadata-panel-collapsed
-                   ::metadata-panel-height
-                   ::metadata-panel-last-drag-height
-                   ::set-metadata-panel-height!
-                   ::set-metadata-panel-last-drag-height! ]
-          :opt-un [::highlights ::selected-ids]))
-
-(s/def ::phylogenetic-tree-props
-  (s/keys :req-un [::tree 
-                   ::x-scale 
-                   ::y-scale
-                   ::show-internal-markers
-                   ::marker-radius 
-                   ::marker-fill
-                   ::show-distance-from-origin 
-                   ::scale-origin
-                   ::max-depth]
-          :opt-un [::highlights 
-                   ::selected-ids 
-                   ::on-toggle-selection]))
-
-(s/def ::scale-gridlines-props
-  (s/keys :req-un [::max-depth 
-                   ::x-scale 
-                   ::tree-height
-                   ::scale-origin]))
-
-(s/def ::metadata-table-props
-  (s/keys :req-un [::active-cols 
-                   ::tips 
-                   ::start-offset 
-                   ::y-scale 
-                   ::col-spacing]))
-
-;; TreeContainer receives only layout dimensions.
-
-(s/def ::tree-container-props
-  (s/keys :req-un [::width-px 
-                   ::component-height-px]))
 
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
 (s/def ::on-cell-edited fn?)
 (s/def ::on-cols-reordered fn?)
 (s/def ::on-selection-changed fn?)
-
-(s/def ::metadata-grid-props
-  (s/keys :req-un [::metadata-rows 
-                   ::active-cols 
-                   ::tips
-                   ::on-cols-reordered 
-                   ::on-selection-changed]
-          :opt-un [::selected-ids 
-                   ::on-cell-edited]))
 
 ;; ResizablePanel — wrapper with draggable resize handle.
 
@@ -278,12 +208,6 @@
 (s/def ::max-height number?)
 (s/def ::height number?)
 (s/def ::on-height-change fn?)
-
-(s/def ::resizable-panel-props
-  (s/keys :req-un [::initial-height 
-                   ::min-height 
-                   ::max-height]
-          :opt-un [::height ::on-height-change]))
 
 ;; ===== Function Specs =====
 

@@ -57,6 +57,27 @@ The `app.specs` namespace defines specs for all core data structures and key fun
 ;; => true
 ```
 
+
+## Component Prop Validation (Dev Only)
+
+Component prop specs are colocated with their components, but the validation logic lives in `app.specs`:
+
+- `app.specs.clj` defines `defui-with-spec`, a macro that wraps `defui` and calls `validate-spec!` in dev.
+- `app.specs.cljs` defines the specs and the `validate-spec!` helper.
+
+Example usage:
+
+```clojure
+(defui-with-spec TreeNode
+  [{:spec :app.specs/tree-node-props :props props
+    :opts {:check-unexpected-keys? true}}]
+  ($ TreeNode* props))
+```
+
+Notes:
+- The macro keeps UIx prop handling intact, so props are still converted as usual.
+- Validation runs only under `goog.DEBUG`, so release builds are unaffected.
+
 ## Adding a New Metadata Column Feature
 
 1. If you need new column behavior, add it to `csv/parse-metadata` in `app.csv`

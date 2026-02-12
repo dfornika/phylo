@@ -155,6 +155,24 @@ Users can click and drag on the SVG background to draw a selection rectangle (la
 
 The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
 
+
+### Specs and Dev Validation
+
+Phylo uses clojure.spec in two layers:
+
+- **Core data + generic prop specs** live in `app.specs` (tree nodes, metadata, shared props).
+- **Component-specific prop specs** live next to their components (e.g. `app.components.tree`).
+
+For dev-time validation of component props, the project uses a macro-based wrapper:
+
+```clojure
+(defui-with-spec TreeNode
+  [{:spec :app.specs/tree-node-props :props props}]
+  ($ TreeNode* props))
+```
+
+`defui-with-spec` expands to a normal `defui` component and calls `validate-spec!` only when `goog.DEBUG` is true. This keeps production output clean while surfacing prop shape problems early in development. You can optionally pass an `:opts` map (for example `{:check-unexpected-keys? true}`) in the macro form.
+
 ### Fast Refresh
 
 The `:app` shadow-cljs build includes `uix.dev` as a preload, which integrates with `react-refresh`. Combined with the `defonce` atoms, this gives robust state preservation during development — both React component state and application data survive hot reloads.
@@ -198,9 +216,9 @@ exported HTML does not rely on external files.
 
 ## ArborView Import
 
-Phylo can ingest ArborView-style HTML exports. The toolbar accepts ArborView
-HTML, extracts the embedded Newick tree and metadata table, and loads them
-using the same parsing pipeline as regular Newick/CSV inputs.
+Phylo can ingest [ArborView](https://github.com/phac-nml/ArborView) HTML exports. 
+The toolbar accepts ArborView HTML, extracts the embedded Newick tree and metadata 
+table, and loads them using the same parsing pipeline as regular Newick/CSV inputs.
 
 
 ## Layout System

@@ -5,14 +5,25 @@
   the components that render CSV/TSV metadata alongside the phylogenetic
   tree. All data arrives via props; these components do not access
   React context."
-  (:require [uix.core :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
-            [app.components.scale :as scale]))
+            [app.components.scale :as scale]
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
-(defui StickyHeader
+
+(s/def :app.specs/sticky-header-props
+  (s/keys :req-un [:app.specs/columns
+                   :app.specs/start-offset
+                   :app.specs/max-depth
+                   :app.specs/x-scale
+                   :app.specs/scale-origin]))
+
+(defui StickyHeader*
   "Renders a sticky header row displaying metadata column labels.
 
-  Props (see `::app.specs/sticky-header-props`):
+  Props (see `:app.specs/sticky-header-props`):
   - `:columns`      - seq of column config maps with `:key`, `:label`, `:width`
   - `:start-offset` - pixel offset where metadata columns begin
   - `:col-spacing`  - extra horizontal gap between columns (default 0)
@@ -68,7 +79,22 @@
          ($ :div {:key key :style {:width (str (+ width (or col-spacing 0)) "px") :flex-shrink 0}}
             label)))))
 
-(defui MetadataColumn
+(defui-with-spec StickyHeader
+  [{:spec :app.specs/sticky-header-props :props props}]
+  ($ StickyHeader* props))
+#_(def StickyHeader StickyHeader*)
+
+
+(s/def :app.specs/metadata-column-props
+  (s/keys :req-un [:app.specs/tips
+                   :app.specs/x-offset
+                   :app.specs/y-scale
+                   :app.specs/column-key
+                   :app.specs/column-label
+                   :app.specs/cell-height
+                   :app.specs/col-width]))
+
+(defui MetadataColumn*
   "Renders one column of metadata values as SVG text elements,
   with an in-SVG header label and subtle cell borders.
 
@@ -112,7 +138,21 @@
                                 :font-size "12px"}}
                  (get-in tip [:metadata column-key] "N/A"))))))))
 
-(defui MetadataTable
+
+(defui-with-spec MetadataColumn
+  [{:spec :app.specs/metadata-column-props :props props}]
+  ($ MetadataColumn* props))
+#_(def MetadataColumn MetadataColumn*r*)
+
+
+(s/def :app.specs/metadata-table-props
+  (s/keys :req-un [:app.specs/active-cols
+                   :app.specs/tips
+                   :app.specs/start-offset
+                   :app.specs/y-scale
+                   :app.specs/col-spacing]))
+
+(defui MetadataTable*
   "Renders all metadata columns as a group, computing per-column offsets.
 
   Props (see `::app.specs/metadata-table-props`):
@@ -148,3 +188,7 @@
                                :cell-height y-scale
                                :col-width (+ (:width col) col-spacing)}))
           active-cols)))))
+
+(defui-with-spec MetadataTable
+  [{:spec :app.specs/metadata-table-props :props props}]
+  ($ MetadataTable* props))

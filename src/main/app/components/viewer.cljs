@@ -5,7 +5,9 @@
   [[TreeContainer]]. TreeContainer reads state from React context
   and derives the positioned tree, passing everything as props to
   the pure TreeViewer."
-  (:require [uix.core :as uix :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :as uix :refer [defui $]]
+            [app.specs :as specs]
             [app.state :as state]
             [app.layout :refer [LAYOUT]]
             [app.tree :as tree]
@@ -16,7 +18,9 @@
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
+
 
 (defui PixelGrid
   "SVG debug grid showing pixel coordinates.
@@ -91,7 +95,13 @@
                               :fill "#111"}}
                (scale/format-label scale-origin max-depth t)))))))
 
-(defui ScaleGridlines
+(s/def :app.specs/scale-gridlines-props
+  (s/keys :req-un [:app.specs/max-depth
+                   :app.specs/x-scale
+                   :app.specs/tree-height
+                   :app.specs/scale-origin]))
+
+(defui ScaleGridlines*
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
 
   Computes human-friendly tick intervals via [[tree/calculate-scale-unit]] and
@@ -118,6 +128,11 @@
                    :stroke-dasharray "4 4"
                    :stroke-width 1})))))
 
+(defui-with-spec ScaleGridlines
+  [{:spec :app.specs/scale-gridlines-props :props props}]
+  ($ ScaleGridlines* props))
+#_(def ScaleGridlines ScaleGridlines*)
+
 (defn- asset-src
   "Returns a data URL for bundled assets when present, falling back to the path."
   [path]
@@ -141,12 +156,36 @@
   a box-select rather than an accidental click."
   5)
 
-(defui TreeViewer
+
+(s/def :app.specs/tree-viewer-props
+  (s/keys :req-un [:app.specs/tree
+                   :app.specs/tips
+                   :app.specs/max-depth
+                   :app.specs/x-mult :app.specs/y-mult
+                   :app.specs/show-internal-markers
+                   :app.specs/show-scale-gridlines
+                   :app.specs/show-pixel-grid
+                   :app.specs/show-distance-from-origin
+                   :app.specs/scale-origin
+                   :app.specs/col-spacing
+                   :app.specs/width-px
+                   :app.specs/component-height-px
+                   :app.specs/active-cols :app.specs/set-active-cols!
+                   :app.specs/metadata-rows :app.specs/set-metadata-rows!
+                   :app.specs/set-selected-ids!
+                   :app.specs/metadata-panel-collapsed
+                   :app.specs/metadata-panel-height
+                   :app.specs/metadata-panel-last-drag-height
+                   :app.specs/set-metadata-panel-height!
+                   :app.specs/set-metadata-panel-last-drag-height!]
+          :opt-un [:app.specs/highlights :app.specs/selected-ids]))
+
+(defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
   and a scrollable SVG viewport containing the tree, gridlines, and
   metadata columns.
 
-  Props (see `::app.specs/tree-viewer-props`):
+  Props (see `:app.specs/tree-viewer-props`):
   - `:tree`                    - positioned root node
   - `:tips`                    - flat vector of enriched leaf nodes
   - `:max-depth`               - maximum x-coordinate in the tree
@@ -421,6 +460,11 @@
                              :on-selection-changed set-selected-ids!
                              :on-cell-edited handle-cell-edited}))))))
 
+(defui-with-spec TreeViewer
+  [{:spec :app.specs/tree-viewer-props :props props}]
+  ($ TreeViewer* props))
+#_(def TreeViewer TreeViewer*)
+
 (defui EmptyState
   "Placeholder shown when no tree is loaded.
   Displays a centered message with the app header and toolbar."
@@ -481,7 +525,12 @@
                        :margin 0}}
            "Load a Newick file using the toolbar above."))))
 
-(defui TreeContainer
+
+(s/def :app.specs/tree-container-props
+  (s/keys :req-un [:app.specs/width-px]
+          :opt-un [:app.specs/component-height-px]))
+
+(defui TreeContainer*
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
@@ -529,3 +578,8 @@
                      :set-metadata-rows! set-metadata-rows!
                      :component-height-px component-height-px})
       ($ EmptyState {:component-height-px component-height-px}))))
+
+(defui-with-spec TreeContainer
+  [{:spec :app.specs/tree-container-props :props props}]
+  ($ TreeContainer* props))
+#_(def TreeContainer TreeContainer*)

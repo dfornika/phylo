@@ -21,9 +21,12 @@
   propagated back to `metadata-rows` via the `:on-cell-edited`
   callback, which causes both the grid and the SVG metadata overlay
   to update in sync."
-  (:require [uix.core :as uix :refer [defui $]]
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :as uix :refer [defui $]]
             [ag-grid-community :refer [ModuleRegistry AllCommunityModule themeBalham]]
-            [ag-grid-react :refer [AgGridReact]]))
+            [ag-grid-react :refer [AgGridReact]]
+            [app.specs :as specs])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
 ;; Register AG-Grid community modules once at namespace load time.
 (.registerModules ModuleRegistry #js [AllCommunityModule])
@@ -131,7 +134,16 @@
     (when (and on-cell-edited id-value field)
       (on-cell-edited id-value (keyword field) (str (or new-value ""))))))
 
-(defui MetadataGrid
+(s/def :app.specs/metadata-grid-props
+  (s/keys :req-un [:app.specs/metadata-rows
+                   :app.specs/active-cols
+                   :app.specs/tips
+                   :app.specs/on-cols-reordered
+                   :app.specs/on-selection-changed]
+          :opt-un [:app.specs/selected-ids
+                   :app.specs/on-cell-edited]))
+
+(defui MetadataGrid*
   "Renders an AG-Grid table from metadata rows and column configs.
 
   Only renders when metadata is loaded (active-cols is non-empty).
@@ -238,3 +250,9 @@
              :onCellValueChanged (fn [params]
                                    (when (and id-field on-cell-edited)
                                      (handle-cell-value-changed id-field on-cell-edited params)))})))))
+
+
+(defui-with-spec MetadataGrid
+  [{:spec :app.specs/metadata-grid-props :props props}]
+  ($ MetadataGrid* props))
+#_(def MetadataGrid MetadataGrid*)
