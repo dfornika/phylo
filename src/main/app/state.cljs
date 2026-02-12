@@ -18,6 +18,8 @@
   - [[!scale-origin]]          - scale origin for labels (:tips or :root)
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
   - [[!col-spacing]]           - extra horizontal spacing between metadata columns
+  - [[!left-shift-px]]          - horizontal shift applied to tree + metadata overlay
+  - [[!tree-metadata-gap-px]]   - extra spacing between tree and metadata table
   - [[!metadata-panel-collapsed]] - whether the metadata grid panel is collapsed
   - [[!metadata-panel-height]] - current height of the metadata grid panel
   - [[!metadata-panel-last-drag-height]] - last height set via drag
@@ -84,6 +86,14 @@
 
 ;; "Atom holding extra horizontal spacing (in pixels) between metadata columns."
 (defonce !col-spacing
+  (atom 0))
+
+;; "Atom holding horizontal shift (in pixels) applied to tree + metadata overlay."
+(defonce !left-shift-px
+  (atom 0))
+
+;; "Atom holding extra spacing (in pixels) between tree and metadata table."
+(defonce !tree-metadata-gap-px
   (atom 0))
 
 ;; "Atom holding whether the metadata grid panel is collapsed."
@@ -160,6 +170,8 @@
    :scale-origin :tips
    :show-pixel-grid false
    :col-spacing 0
+   :left-shift-px 0
+   :tree-metadata-gap-px 0
    :metadata-panel-collapsed true
    :metadata-panel-height 250
    :metadata-panel-last-drag-height 250
@@ -192,6 +204,8 @@
            :scale-origin              @!scale-origin
            :show-pixel-grid           @!show-pixel-grid
            :col-spacing               @!col-spacing
+           :left-shift-px             @!left-shift-px
+           :tree-metadata-gap-px      @!tree-metadata-gap-px
            :metadata-panel-collapsed  @!metadata-panel-collapsed
            :metadata-panel-height     @!metadata-panel-height
            :metadata-panel-last-drag-height @!metadata-panel-last-drag-height
@@ -283,6 +297,8 @@
       (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
       (reset! !col-spacing (:col-spacing merged))
+      (reset! !left-shift-px (:left-shift-px merged))
+      (reset! !tree-metadata-gap-px (:tree-metadata-gap-px merged))
       (reset! !metadata-panel-collapsed (:metadata-panel-collapsed merged))
       (reset! !metadata-panel-height (:metadata-panel-height merged))
       (reset! !metadata-panel-last-drag-height (:metadata-panel-last-drag-height merged))
@@ -320,6 +336,8 @@
                    :app.specs/scale-origin    :app.specs/set-scale-origin!
                    :app.specs/show-pixel-grid :app.specs/set-show-pixel-grid!
                    :app.specs/col-spacing     :app.specs/set-col-spacing!
+                   :app.specs/left-shift-px   :app.specs/set-left-shift-px!
+                   :app.specs/tree-metadata-gap-px :app.specs/set-tree-metadata-gap-px!
                    :app.specs/highlight-color :app.specs/set-highlight-color!
                    :app.specs/selected-ids    :app.specs/set-selected-ids!
                    :app.specs/highlights      :app.specs/set-highlights!
@@ -354,6 +372,8 @@
         scale-origin                (uix/use-atom !scale-origin)
         show-pixel-grid             (uix/use-atom !show-pixel-grid)
         col-spacing                 (uix/use-atom !col-spacing)
+        left-shift-px               (uix/use-atom !left-shift-px)
+        tree-metadata-gap-px        (uix/use-atom !tree-metadata-gap-px)
         metadata-panel-collapsed    (uix/use-atom !metadata-panel-collapsed)
         metadata-panel-height       (uix/use-atom !metadata-panel-height)
         metadata-panel-last-drag-height (uix/use-atom !metadata-panel-last-drag-height)
@@ -390,6 +410,10 @@
                        :set-show-pixel-grid! #(reset! !show-pixel-grid %)
                        :col-spacing          col-spacing
                        :set-col-spacing!     #(reset! !col-spacing %)
+                       :left-shift-px        left-shift-px
+                       :set-left-shift-px!   #(reset! !left-shift-px %)
+                       :tree-metadata-gap-px tree-metadata-gap-px
+                       :set-tree-metadata-gap-px! #(reset! !tree-metadata-gap-px %)
                        :metadata-panel-collapsed             metadata-panel-collapsed
                        :set-metadata-panel-collapsed!        #(reset! !metadata-panel-collapsed %)
                        :metadata-panel-height                metadata-panel-height

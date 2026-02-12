@@ -168,6 +168,8 @@
                    :app.specs/show-distance-from-origin
                    :app.specs/scale-origin
                    :app.specs/col-spacing
+                   :app.specs/left-shift-px
+                   :app.specs/tree-metadata-gap-px
                    :app.specs/width-px
                    :app.specs/component-height-px
                    :app.specs/active-cols :app.specs/set-active-cols!
@@ -181,7 +183,8 @@
                    :app.specs/legend-pos :app.specs/set-legend-pos!
                    :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
                    :app.specs/legend-labels :app.specs/set-legend-labels!
-                   :app.specs/legend-visible? :app.specs/set-legend-visible!]
+                   :app.specs/legend-visible? :app.specs/set-legend-visible!
+                   :app.specs/set-left-shift-px!]
           :opt-un [:app.specs/highlights :app.specs/selected-ids
                    :app.specs/color-by-enabled? :app.specs/color-by-field
                    :app.specs/color-by-palette
@@ -220,12 +223,13 @@
   - `:set-metadata-panel-last-drag-height!` - setter for last drag height"
   [{:keys [tree tips max-depth active-cols x-mult y-mult
            show-internal-markers show-distance-from-origin scale-origin width-px component-height-px
-           show-scale-gridlines show-pixel-grid col-spacing
+           show-scale-gridlines show-pixel-grid col-spacing left-shift-px tree-metadata-gap-px
            highlights selected-ids metadata-rows metadata-panel-collapsed
            metadata-panel-height metadata-panel-last-drag-height
            color-by-enabled? color-by-field color-by-palette color-by-type-override
            legend-pos legend-collapsed? legend-labels legend-visible?
            set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
+           set-left-shift-px!
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
@@ -235,14 +239,19 @@
         tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
         metadata-start-x (+ (:svg-padding-x LAYOUT)
                             tree-end-x
-                            (:metadata-gap LAYOUT))
+                            (:metadata-gap LAYOUT)
+                            (or tree-metadata-gap-px 0))
+        left-shift      (or left-shift-px 0)
         tree-height     (* (count tips) y-mult)
         legend-right-pad 12
         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
                             (+ (:x legend-pos) legend-width legend-right-pad))
+        col-gaps        (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
+                                          active-cols)
         base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
-                           (* col-spacing (max 0 (dec (count active-cols))))
+                           (reduce + 0 col-gaps)
+                           (max 0 left-shift)
                            100)
         svg-width       (max base-svg-width (or legend-right-edge 0))
         svg-height      (+ tree-height 100)
@@ -410,7 +419,8 @@
                                             hit-ids (into #{}
                                                           (comp
                                                            (filter (fn [tip]
-                                                                     (let [lx (+ pad-x (* (:x tip) current-x-scale))
+                                                                     (let [shift-x left-shift
+                                                                           lx (+ pad-x shift-x (* (:x tip) current-x-scale))
                                                                            ly (+ pad-y (* (:y tip) y-mult))]
                                                                        (and (<= min-x lx max-x)
                                                                             (<= min-y ly max-y)))))
@@ -462,6 +472,9 @@
                            :max-depth max-depth
                            :x-scale current-x-scale
                            :scale-origin scale-origin
+                           :left-shift-px left-shift-px
+                           :set-left-shift-px! set-left-shift-px!
+                           :set-active-cols! set-active-cols!
                            :width svg-width})
 
           ($ :svg {:id "phylo-svg"
@@ -470,11 +483,12 @@
                    :height svg-height
                    :on-mouse-down handle-svg-mousedown
                    :style {:cursor (when drag-rect "crosshair")}}
-             ;; Scale bar
-             ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-                ($ ScaleBar {:max-depth max-depth
-                             :x-scale current-x-scale
-                             :scale-origin scale-origin}))
+             ($ :g {:transform (str "translate(" left-shift ", 0)")}
+                ;; Scale bar
+                ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+                   ($ ScaleBar {:max-depth max-depth
+                                :x-scale current-x-scale
+                                :scale-origin scale-origin}))
 
              ;; Debugging pixel grid
              (when show-pixel-grid
@@ -510,6 +524,8 @@
                                  :start-offset metadata-start-x
                                  :y-scale y-mult
                                  :col-spacing col-spacing}))
+
+             )
 
              ;; Drag-select rectangle overlay
              (when drag-rect
@@ -642,11 +658,12 @@
   (let [{:keys [newick-str metadata-rows active-cols
                 x-mult y-mult show-internal-markers show-distance-from-origin
                 scale-origin show-scale-gridlines show-pixel-grid
-                col-spacing highlights selected-ids metadata-panel-collapsed
+                col-spacing left-shift-px tree-metadata-gap-px highlights selected-ids metadata-panel-collapsed
                 metadata-panel-height metadata-panel-last-drag-height
                 color-by-enabled? color-by-field color-by-palette color-by-type-override
                 legend-pos legend-collapsed? legend-labels legend-visible?
                 set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
+                set-left-shift-px! set-tree-metadata-gap-px!
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
@@ -668,6 +685,9 @@
                      :show-scale-gridlines show-scale-gridlines
                      :show-pixel-grid show-pixel-grid
                      :col-spacing col-spacing
+                     :left-shift-px left-shift-px
+                     :tree-metadata-gap-px tree-metadata-gap-px
+                     :set-left-shift-px! set-left-shift-px!
                      :highlights highlights
                      :color-by-enabled? color-by-enabled?
                      :color-by-field color-by-field

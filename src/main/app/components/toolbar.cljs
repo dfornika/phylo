@@ -72,6 +72,7 @@
   (let [{:keys [x-mult set-x-mult!
                 y-mult set-y-mult!
                 col-spacing set-col-spacing!
+                tree-metadata-gap-px set-tree-metadata-gap-px!
                 show-internal-markers set-show-internal-markers!
                 show-scale-gridlines set-show-scale-gridlines!
                 show-distance-from-origin set-show-distance-from-origin!
@@ -162,6 +163,13 @@
                         :value y-mult
                         :style {:width "80px" :accent-color navy}
                         :on-change #(set-y-mult! (js/parseInt (.. % -target -value) 10))}))
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Tree-Metadata Gap")
+             ($ :input {:type "range"
+                        :min -50 :max 200 :step 1
+                        :value tree-metadata-gap-px
+                        :style {:width "80px" :accent-color navy}
+                        :on-change #(set-tree-metadata-gap-px! (js/parseInt (.. % -target -value) 10))}))
           ($ :div {:style section-style}
              ($ :label {:style label-style} "Metadata Columns")
              ($ :input {:type "range"

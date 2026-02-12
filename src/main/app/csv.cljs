@@ -161,6 +161,7 @@
                                 {:key   k
                                  :label h
                                  :width default-col-width
+                                 :spacing 0
                                  :type  (detect-column-type (map #(get % k) data-rows))})
                               raw-headers header-keys)]
      {:headers header-configs

@@ -86,11 +86,12 @@
 (s/def ::key keyword?)
 (s/def ::label string?)
 (s/def ::width number?)
+(s/def ::spacing number?)
 (s/def ::column-type #{:date :numeric :string})
 
 (s/def ::metadata-header
   (s/keys :req-un [::key ::label ::width]
-          :opt-un [::column-type]))
+          :opt-un [::column-type ::spacing]))
 
 (s/def ::metadata-row
   (s/map-of keyword? string?))
@@ -135,6 +136,12 @@
 
 (s/def ::col-spacing number?)
 (s/def ::set-col-spacing! fn?)
+
+(s/def ::left-shift-px number?)
+(s/def ::set-left-shift-px! fn?)
+
+(s/def ::tree-metadata-gap-px number?)
+(s/def ::set-tree-metadata-gap-px! fn?)
 
 (s/def ::highlight-color string?)
 (s/def ::set-highlight-color! fn?)
