@@ -257,11 +257,11 @@
     (let [tips [{:name "tip1" :metadata {:value "alpha"}}
                 {:name "tip2" :metadata {:value "beta"}}]
           ;; Without override, these would be categorical
-          result-auto (color/build-color-map tips :value nil :auto)
+          result-with-auto (color/build-color-map tips :value nil :auto)
           ;; With numeric override, non-numeric values should be excluded
-          result-numeric (color/build-color-map tips :value nil :numeric)]
-      (is (= 2 (count result-auto)))
-      (is (= 0 (count result-numeric))))))
+          result-with-numeric (color/build-color-map tips :value nil :numeric)]
+      (is (= 2 (count result-with-auto)))
+      (is (= 0 (count result-with-numeric))))))
 
 (deftest build-color-map-type-override-categorical
   (testing "Overrides type inference when type-override is :categorical"
@@ -286,26 +286,23 @@
   (testing "Uses specified categorical palette"
     (let [tips [{:name "tip1" :metadata {:group "A"}}
                 {:name "tip2" :metadata {:group "B"}}]
-          result-bright (color/build-color-map tips :group :bright :auto)
-          result-contrast (color/build-color-map tips :group :contrast :auto)]
-      ;; Both should produce color maps
-      (is (= 2 (count result-bright)))
-      (is (= 2 (count result-contrast)))
-      ;; Colors should be different between palettes
-      ;; (unless by chance they use the same colors for A and B)
-      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-bright)))
-      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-contrast))))))
+          result-with-bright (color/build-color-map tips :group :bright :auto)
+          result-with-contrast (color/build-color-map tips :group :contrast :auto)]
+      (is (= 2 (count result-with-bright)))
+      (is (= 2 (count result-with-contrast)))
+      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-with-bright)))
+      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-with-contrast))))))
 
 (deftest build-color-map-palette-id-gradient
   (testing "Uses specified gradient palette for numeric field"
     (let [tips [{:name "tip1" :metadata {:value "1.0"}}
                 {:name "tip2" :metadata {:value "5.0"}}]
-          result-blue-red (color/build-color-map tips :value :blue-red :auto)
-          result-teal-gold (color/build-color-map tips :value :teal-gold :auto)]
-      (is (= 2 (count result-blue-red)))
-      (is (= 2 (count result-teal-gold)))
-      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-blue-red)))
-      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-teal-gold))))))
+          result-with-blue-red (color/build-color-map tips :value :blue-red :auto)
+          result-with-teal-gold (color/build-color-map tips :value :teal-gold :auto)]
+      (is (= 2 (count result-with-blue-red)))
+      (is (= 2 (count result-with-teal-gold)))
+      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-with-blue-red)))
+      (is (every? #(re-matches #"#[0-9a-fA-F]{6}" %) (vals result-with-teal-gold))))))
 
 (deftest build-color-map-empty-tips
   (testing "Returns empty map for empty tips collection"
