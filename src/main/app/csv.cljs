@@ -20,7 +20,7 @@
   [value]
   (let [s (str (or value ""))
         needs-quotes? (re-find #"[\",\n\r]" s)
-        escaped (clojure.string/replace s "\"" "\"\"")]
+        escaped (str/replace s "\"" "\"\"")]
     (if needs-quotes?
       (str "\"" escaped "\"")
       escaped)))
@@ -40,11 +40,11 @@ d")
   [active-cols rows]
   (if (seq active-cols)
     (let [keys (mapv :key active-cols)
-          header (clojure.string/join "," (map csv-escape (map :label active-cols)))
+          header (str/join "," (map csv-escape (map :label active-cols)))
           data-lines (map (fn [row]
-                            (clojure.string/join "," (map (fn [k] (csv-escape (get row k ""))) keys)))
+                            (str/join "," (map (fn [k] (csv-escape (get row k ""))) keys)))
                           rows)]
-      (str (clojure.string/join "\n" (cons header data-lines)) "\n"))
+      (str (str/join "\n" (cons header data-lines)) "\n"))
     ""))
 
 
