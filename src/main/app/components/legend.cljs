@@ -43,7 +43,6 @@
 (s/def ::svg-height number?)
 (s/def ::title (s/nilable string?))
 (s/def ::sections (s/coll-of map?))
-(s/def ::set-pos! fn?)
 (s/def ::set-collapsed! fn?)
 (s/def ::set-labels! fn?)
 (s/def ::on-close (s/nilable fn?))
@@ -52,9 +51,9 @@
   (s/keys :req-un [::svg-ref
                    ::svg-width
                    ::svg-height
-                   ;; :app.specs/legend-pos
+                   :app.specs/position
                    :app.specs/collapsed?
-                   ::set-pos!
+                   :app.specs/set-position!
                    ::set-collapsed!
                    ::set-labels!]
           :opt-un [::title
@@ -66,11 +65,11 @@
 (defui FloatingLegend*
   [{:keys [svg-ref svg-width svg-height
            title sections
-           pos set-pos!
+           position set-position!
            collapsed? set-collapsed!
            labels set-labels!
            on-close]}]
-  (let [{:keys [x y]} pos
+  (let [{:keys [x y]} position
         pos-x (or x 0)
         pos-y (or y 0)
         legend-h (legend-height sections collapsed?)
@@ -90,7 +89,7 @@
                               (when-let [[mx my] (client->svg svg (.-clientX me) (.-clientY me))]
                                 (let [next-x (clamp (- mx offset-x) 0 max-x)
                                       next-y (clamp (- my offset-y) 0 max-y)]
-                                  (set-pos! {:x next-x :y next-y}))))
+                                  (set-position! {:x next-x :y next-y}))))
                     on-up (fn on-up-fn [_]
                             (.removeEventListener js/document "mousemove" on-move)
                             (.removeEventListener js/document "mouseup" on-up-fn))]
@@ -125,8 +124,8 @@
                                 {:x (max 0 (first svg-pos))
                                  :y (max 0 (second svg-pos))})))
                {:keys [x y]} (or default-pos {:x fallback-x :y fallback-y})]
-           (set-pos! {:x x :y y}))))
-     [x y svg-width svg-height svg-ref set-pos!])
+           (set-position! {:x x :y y}))))
+     [x y svg-width svg-height svg-ref set-position!])
 
     ($ :g {:transform (str "translate(" pos-x "," pos-y ")")
            :style {:pointer-events "all"}

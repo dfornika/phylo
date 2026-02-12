@@ -157,10 +157,8 @@
 (s/def ::color-by-type-override #{:auto :categorical :numeric :date})
 (s/def ::set-color-by-type-override! fn?)
 
-(s/def ::legend-x number?)
-(s/def ::legend-y number?)
-(s/def ::legend-pos (s/nilable (s/keys :req-un [::x ::y])))
-(s/def ::set-legend-pos! fn?)
+(s/def ::position (s/nilable (s/keys :req-un [::x ::y])))
+(s/def ::set-position! fn?)
 
 (s/def ::collapsed? boolean?)
 (s/def ::set-collapsed! fn?)

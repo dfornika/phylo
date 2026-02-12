@@ -530,8 +530,8 @@
                                   :svg-height svg-height
                                   :title "Legend"
                                   :sections legend-sections
-                                  :pos legend-pos
-                                  :set-pos! set-legend-pos!
+                                  :position legend-pos
+                                  :set-position! set-legend-pos!
                                   :collapsed? legend-collapsed?
                                   :set-collapsed! set-legend-collapsed!
                                   :labels legend-labels
