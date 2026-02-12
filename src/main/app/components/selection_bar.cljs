@@ -96,8 +96,8 @@
        ;; Auto-color controls
        ($ :label {:style {:font-size "11px" :display "flex" :align-items "center" :gap "4px"}}
           ($ :input {:type "checkbox"
-                     :checked (boolean color-by-enabled?)
-                     :disabled auto-color-disabled?
+                     :checked (boolean (and color-by-enabled? field-key))
+                     :disabled (not (seq field-cols))
                      :on-change (fn [e]
                                   (set-color-by-enabled! (.. e -target -checked)))})
           "Auto color")
