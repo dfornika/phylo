@@ -25,13 +25,6 @@
       (str "\"" escaped "\"")
       escaped)))
 
-(comment 
-  (csv-escape "hello,worl
-d")
-  (csv-escape "hello, world")
-  )
-
-
 (defn metadata->csv
   "Serializes metadata rows into a CSV string.
 
