@@ -43,7 +43,6 @@
 (s/def ::svg-height number?)
 (s/def ::title (s/nilable string?))
 (s/def ::sections (s/coll-of map?))
-(s/def ::set-collapsed! fn?)
 (s/def ::set-labels! fn?)
 (s/def ::on-close (s/nilable fn?))
 
@@ -52,9 +51,9 @@
                    ::svg-width
                    ::svg-height
                    :app.specs/position
-                   :app.specs/collapsed?
                    :app.specs/set-position!
-                   ::set-collapsed!
+                   :app.specs/collapsed?
+                   :app.specs/set-collapsed!
                    ::set-labels!]
           :opt-un [::title
                    ::sections
