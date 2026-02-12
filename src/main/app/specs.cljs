@@ -151,7 +151,7 @@
 (s/def ::color-by-field (s/nilable keyword?))
 (s/def ::set-color-by-field! fn?)
 
-(s/def ::color-by-palette keyword?)
+(s/def ::color-by-palette #{:bright :contrast :pastel :blue-red :teal-gold})
 (s/def ::set-color-by-palette! fn?)
 
 (s/def ::color-by-type-override #{:auto :categorical :numeric :date})
