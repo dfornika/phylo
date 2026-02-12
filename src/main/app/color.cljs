@@ -137,11 +137,6 @@
   [value]
   (and (string? value) (not (str/blank? value))))
 
-(defn- hierarchical-code?
-  [value]
-  (and (non-empty-string? value)
-       (re-matches #"\d+\.\d+(?:\.\d+)+" value)))
-
 (defn- parse-number
   [value]
   (cond
@@ -150,15 +145,6 @@
     (number? value) value
     (parse-long value) (parse-long value)
     (parse-double value) (parse-double value)
-    :else nil))
-
-(defn- parse-date
-  [value]
-  (cond
-    (number? value) value
-    (non-empty-string? value)
-    (let [t (js/Date.parse value)]
-      (when-not (js/isNaN t) t))
     :else nil))
 
 (def ^:private parse-success-threshold
@@ -183,26 +169,22 @@
   for numeric/date types (with non-parsing values ignored) or raw
   strings for categorical."
   [values]
-  (let [values           (->> values (filter non-empty-string?) vec)
-        has-hierarchical? (some hierarchical-code? values)]
+  (let [values          (->> values (filter non-empty-string?) vec)
+        nums            (map parse-number values)
+        num-success     (vec (keep identity nums))
+        num-ratio       (parse-success-ratio nums)
+        dates           (map date/parse-date-ms values)
+        date-success    (vec (keep identity dates))
+        date-ratio      (parse-success-ratio dates)
+        numeric-enough? (and (pos? (count num-success))
+                             (>= num-ratio parse-success-threshold))
+        date-enough?    (and (pos? (count date-success))
+                             (>= date-ratio parse-success-threshold))]
     (cond
       (empty? values) {:type :categorical :values []}
-      has-hierarchical? {:type :categorical :values values}
-      :else
-      (let [nums             (map parse-number values)
-            num-success      (vec (keep identity nums))
-            num-ratio        (parse-success-ratio nums)
-            dates            (map parse-date values)
-            date-success     (vec (keep identity dates))
-            date-ratio       (parse-success-ratio dates)
-            numeric-enough?  (and (pos? (count num-success))
-                                  (>= num-ratio parse-success-threshold))
-            date-enough?     (and (pos? (count date-success))
-                                  (>= date-ratio parse-success-threshold))]
-        (cond
-          numeric-enough? {:type :numeric :values num-success}
-          date-enough?    {:type :date :values date-success}
-          :else           {:type :categorical :values values})))))
+      numeric-enough? {:type :numeric :values num-success}
+      date-enough?    {:type :date :values date-success}
+      :else           {:type :categorical :values values})))
 
 (defn infer-field-type
   "Infers the field type from metadata rows for a given key."
@@ -232,7 +214,7 @@
     (cond
       (#{:numeric :date} type)
       (let [parsed (if (= type :date)
-                     (keep parse-date values)
+                     (keep date/parse-date-ms values)
                      (keep parse-number values))
             min-v (when (seq parsed) (apply min parsed))
             max-v (when (seq parsed) (apply max parsed))
@@ -244,7 +226,7 @@
         (into {}
               (keep (fn [tip]
                       (let [raw (get-in tip [:metadata field-key])
-                            v (if (= type :date) (parse-date raw) (parse-number raw))
+                            v (if (= type :date) (date/parse-date-ms raw) (parse-number raw))
                             color (to-color v)]
                         (when color
                           [(:name tip) color]))))

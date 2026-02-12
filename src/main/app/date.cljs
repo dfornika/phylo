@@ -65,3 +65,24 @@
              :else
              (or (parse-slash-date s true)
                  (parse-slash-date s false)))))))))
+
+(defn- yyyy-mm-dd->ms
+  [s]
+  (when-let [[_ year month day] (re-matches #"(\d{4})-(\d{2})-(\d{2})" s)]
+    (let [y (js/parseInt year)
+          m (js/parseInt month)
+          d (js/parseInt day)
+          date (js/Date. y (dec m) d)]
+      (when (and (= (.getFullYear date) y)
+                 (= (.getMonth date) (dec m))
+                 (= (.getDate date) d))
+        (.getTime date)))))
+
+(defn parse-date-ms
+  "Parse date string and return epoch milliseconds or nil.
+
+  Uses [[parse-date]] to normalize supported formats to YYYY-MM-DD,
+  then converts to a numeric timestamp for gradient calculations."
+  [s]
+  (when-let [normalized (parse-date s)]
+    (yyyy-mm-dd->ms normalized)))

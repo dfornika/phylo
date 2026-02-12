@@ -26,3 +26,16 @@
   (testing "Trims whitespace before parsing"
     (is (= "2024-01-01" (date/parse-date "  2024-01-01  ")))
     (is (= "2024-01-01" (date/parse-date " 01/01/2024 ")))))
+
+;; ===== parse-date-ms =====
+
+(deftest parse-date-ms-iso-format
+  (testing "Parses YYYY-MM-DD to epoch ms"
+    (is (number? (date/parse-date-ms "2024-03-15")))
+    (is (number? (date/parse-date-ms "2021-01-01")))))
+
+(deftest parse-date-ms-invalid-returns-nil
+  (testing "Returns nil for invalid dates"
+    (is (nil? (date/parse-date-ms "hello")))
+    (is (nil? (date/parse-date-ms "123")))))
+
