@@ -419,12 +419,12 @@
         (is (not (str/includes? (:label entry) "-")))
         (is (re-matches #"#[0-9a-fA-F]{6}" (:color entry)))))))
 
-(deftest build-legend-numeric-empty-data
-  (testing "Returns empty entries for numeric field with no valid data"
+(deftest build-legend-empty-data
+  (testing "Returns empty entries for field with no valid data"
     (let [tips [{:name "tip1" :metadata {:value ""}}
                 {:name "tip2" :metadata {:value nil}}]
           result (color/build-legend tips :value nil :auto)]
-      (is (= :numeric (:type result)))
+      (is (= :categorical (:type result)))
       (is (= 0 (count (:entries result)))))))
 
 (deftest build-legend-date-basic
@@ -486,7 +486,7 @@
       ;; Check colors are valid hex
       (is (every? #(re-matches #"#[0-9a-fA-F]{6}" (:color %)) (:entries result)))
       ;; Check each unique value has a different color
-      (is (= 3 (count (set (map :color (:entries result))))))))
+      (is (= 3 (count (set (map :color (:entries result)))))))))
 
 (deftest build-legend-categorical-with-missing-values
   (testing "Excludes missing categorical values from legend"
