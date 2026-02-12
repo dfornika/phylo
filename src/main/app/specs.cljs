@@ -157,6 +157,18 @@
 (s/def ::color-by-type-override #{:auto :categorical :numeric :date})
 (s/def ::set-color-by-type-override! fn?)
 
+(s/def ::position (s/nilable (s/keys :req-un [::x ::y])))
+(s/def ::set-position! fn?)
+
+(s/def ::collapsed? boolean?)
+(s/def ::set-collapsed! fn?)
+
+(s/def ::legend-labels (s/nilable (s/map-of string? string?)))
+(s/def ::set-legend-labels! fn?)
+
+(s/def ::legend-visible? boolean?)
+(s/def ::set-legend-visible! fn?)
+
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::set-metadata-panel-collapsed! fn?)
 
@@ -174,6 +186,7 @@
 (s/def ::cell-height number?)
 (s/def ::tip-count nat-int?)
 (s/def ::tree-height number?)
+(s/def ::sticky-header-width number?)
 
 (s/def ::tips (s/coll-of ::positioned-node))
 (s/def ::x-offset number?)

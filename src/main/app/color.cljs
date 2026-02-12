@@ -88,6 +88,7 @@
      :palette (get palettes id)}))
 
 (defn- normalize-hex
+  "Normalizes a hex color string to a 6-char lowercase hex without '#'."
   [hex]
   (let [s (str/replace (str hex) "#" "")]
     (cond
@@ -96,6 +97,7 @@
       :else "000000")))
 
 (defn- hex->rgb
+  "Converts a hex color string to an [r g b] vector."
   [hex]
   (let [s (normalize-hex hex)
         r (js/parseInt (subs s 0 2) 16)
@@ -104,6 +106,7 @@
     [r g b]))
 
 (defn- rgb->hex
+  "Converts RGB components to a hex color string."
   [r g b]
   (let [clamp (fn [n] (-> n js/Math.round (max 0) (min 255)))
         to-hex (fn [n]
@@ -112,10 +115,12 @@
     (str "#" (to-hex r) (to-hex g) (to-hex b))))
 
 (defn- lerp
+  "Linearly interpolates between a and b using t in [0,1]."
   [a b t]
   (+ a (* (- b a) t)))
 
 (defn- lerp-color
+  "Linearly interpolates between two hex colors at t in [0,1]."
   [c1 c2 t]
   (let [[r1 g1 b1] (hex->rgb c1)
         [r2 g2 b2] (hex->rgb c2)]
@@ -124,6 +129,7 @@
               (lerp b1 b2 t))))
 
 (defn- gradient-color
+  "Returns a color from a 2-3 stop gradient for t in [0,1]."
   [colors t]
   (let [t (-> t (max 0) (min 1))]
     (cond
@@ -133,11 +139,57 @@
                               (lerp-color (second colors) (nth colors 2) (/ (- t 0.5) 0.5)))
       :else "#333333")))
 
+(def ^:private legend-bin-count
+  "Default number of bins for numeric/date legend entries."
+  5)
+
 (defn- non-empty-string?
+  "True when value is a non-blank string."
   [value]
   (and (string? value) (not (str/blank? value))))
 
+(defn- trim-trailing-zeros
+  "Trims trailing fractional zeros from a numeric string."
+  [s]
+  (cond
+    (str/blank? s) ""
+    (str/includes? s ".") (-> s
+                              (str/replace #"(\.\d*?)0+$" "$1")
+                              (str/replace #"\.$" ""))
+    :else s))
+
+(defn- truncate-to
+  "Truncates a number to a fixed number of decimal places."
+  [n decimals]
+  (let [factor (js/Math.pow 10 decimals)]
+    (/ (js/Math.trunc (* n factor)) factor)))
+
+(defn- format-number
+  "Formats a number to a compact string with adaptive precision.
+
+  Uses truncation (not rounding) to avoid expanding upper bounds in ranges."
+  [n]
+  (let [abs (js/Math.abs n)
+        decimals (cond
+                   (>= abs 1000) 0
+                   (>= abs 100) 1
+                   (>= abs 1) 2
+                   :else 3)
+        truncated (truncate-to n decimals)
+        s (.toFixed truncated decimals)]
+    (trim-trailing-zeros s)))
+
+(defn- format-date-ms
+  "Formats epoch milliseconds as YYYY-MM-DD in UTC."
+  [ms]
+  (let [date (js/Date. ms)
+        year (.getUTCFullYear date)
+        month (-> (.getUTCMonth date) inc (str) (.padStart 2 "0"))
+        day (-> (.getUTCDate date) (str) (.padStart 2 "0"))]
+    (str year "-" month "-" day)))
+
 (defn- parse-number
+  "Parses a numeric value from a string or returns the number."
   [value]
   (cond
     (nil? value) nil
@@ -243,3 +295,63 @@
                         (when color
                           [(:name tip) color]))))
               tips)))))
+
+(defn- format-range
+  "Formats a legend range label for numeric or date values."
+  [field-type start end]
+  (let [fmt (if (= field-type :date) format-date-ms format-number)
+        start-label (fmt start)
+        end-label (fmt end)]
+    (if (= start-label end-label)
+      start-label
+      (str start-label "-" end-label))))
+
+(defn build-legend
+  "Builds legend entries for the given field.
+
+  Returns {:type <keyword> :entries <vector>} with entries of
+  {:id <string> :label <string> :color <hex>}.
+  Numeric/date fields are binned into ranges; categorical fields
+  list each unique value."
+  [tips field-key palette-id type-override]
+  (let [values (map #(get-in % [:metadata field-key]) tips)
+        field-type (resolve-field-type values type-override)
+        {:keys [palette]} (resolve-palette field-type palette-id)
+        colors (:colors palette)]
+    (cond
+      (#{:numeric :date} field-type)
+      (let [parsed (if (= field-type :date)
+                     (keep date/parse-date-ms values)
+                     (keep parse-number values))
+            min-v (when (seq parsed) (apply min parsed))
+            max-v (when (seq parsed) (apply max parsed))
+            span (when (and min-v max-v) (- max-v min-v))]
+        (if (and min-v max-v (pos? (or span 0)))
+          (let [step (/ span legend-bin-count)
+                entries (mapv (fn [idx]
+                                (let [start (+ min-v (* idx step))
+                                      end (if (= idx (dec legend-bin-count))
+                                            max-v
+                                            (+ min-v (* (inc idx) step)))
+                                      t (/ (+ idx 0.5) legend-bin-count)]
+                                  {:id (str "bin-" idx)
+                                   :label (format-range field-type start end)
+                                   :color (gradient-color colors t)}))
+                              (range legend-bin-count))]
+            {:type field-type :entries entries})
+          (let [fallback-color (gradient-color colors 0.5)
+                label (when min-v (format-range field-type min-v max-v))]
+            {:type field-type
+             :entries (if label
+                        [{:id "single" :label label :color fallback-color}]
+                        [])})))
+
+      :else
+      (let [unique-values (sort (set (filter non-empty-string? values)))
+            value->color (zipmap unique-values (cycle colors))
+            entries (mapv (fn [value]
+                            {:id (str value)
+                             :label value
+                             :color (get value->color value)})
+                          unique-values)]
+        {:type :categorical :entries entries}))))

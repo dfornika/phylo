@@ -9,12 +9,23 @@ Last updated: 2026-02-12
 ---
 
 ## Backlog
+- [ ] Show a user-facing warning when Nextstrain JSON parsing fails
+  - Use the {:error :invalid-json} return from nextstrain/parse-nextstrain-json
+  - Keep console warning for developer visibility
+  - UI could be a small inline message near the Nextstrain import control or a toast
+- [ ] Add left-side horizontal shift handle for tree/header alignment
+  - UI: small vertical drag bar to the left of the scale in StickyHeader; stays pinned to the viewport (not the SVG)
+  - State: add `:left-shift-px` atom in app.state with export/import, default 0; wire setter through context
+  - SVG: apply shift to the main translated group (tree, gridlines, metadata table, scale bar) while keeping the legend unshifted
+  - Header: apply the same shift to the StickyHeader scale SVG + spacer so column labels stay aligned with metadata columns
+  - Selection math: adjust box-select hit tests by subtracting left-shift when converting client coords to SVG or when computing leaf positions
+  - Bounds: clamp left-shift to a sensible range (e.g. [-200, 200]) so content cannot be dragged offscreen
+  - Interaction: on mousedown in the handle, track mousemove on document and update left-shift; stop on mouseup
+  - Add a small tooltip or cursor hint (e.g. `col-resize`) to make the affordance discoverable
 - [ ] Exclude metadata fields from SVG metadata table (toggle column visibility)
 - [ ] Storybook-based UI Component testing
 - [ ] Investigate use of `uix/use-memo` more extensively to improve performance on larger trees
 - [ ] Investigate using [chroma.js](https://github.com/gka/chroma.js) or similar library form more flexible color palettes.
-- [ ] Add floating legend to indicate what each color represents. Auto-populate for auto-colors.
-Allow users to enter labels for custom colors.
 - [ ] Refactor newick string parsing out of TreeContainer (TreeContainer should accept pre-parsed data structure)
 - [ ] Allow users to "merge/join" additional metadata from multiple files, joining on sample ID (or 
 custom field?), if other metadata has already been loaded.
@@ -44,6 +55,8 @@ of scale at root or tips based on auto-detection (origin at tips for ultrameric,
 - [x] CSV export from Metadata Grid (download grid contents)
 - [x] Select sub-trees by clicking interior tree nodes
 - [x] Palette-based node coloring by metadata value (select column, auto-assign colors)
+- [x] Add floating legend to indicate what each color represents. Auto-populate for auto-colors.
+Allow users to enter labels for custom colors.
 
 ---
 
