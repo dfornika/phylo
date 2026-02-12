@@ -1,7 +1,9 @@
 (ns app.components.legend
   "Floating SVG legend overlay for color mappings."
-  (:require [uix.core :as uix :refer [defui $]]
-            [clojure.string :as str]))
+  (:require [cljs.spec.alpha :as s]
+            [uix.core :as uix :refer [defui $]]
+            [clojure.string :as str])
+  (:require-macros [app.specs :refer [defui-with-spec]]))
 
 (def ^:private legend-width 200)
 (def ^:private header-height 20)
@@ -36,7 +38,31 @@
                  row-height)]
       (+ header-height padding body padding 2))))
 
-(defui FloatingLegend
+(s/def ::svg-ref any?)
+(s/def ::svg-width number?)
+(s/def ::svg-height number?)
+(s/def ::title (s/nilable string?))
+(s/def ::sections (s/coll-of map?))
+(s/def ::set-pos! fn?)
+(s/def ::set-collapsed! fn?)
+(s/def ::set-labels! fn?)
+(s/def ::on-close (s/nilable fn?))
+
+(s/def :app.specs/floating-legend-props
+  (s/keys :req-un [::svg-ref
+                   ::svg-width
+                   ::svg-height
+                   ;; :app.specs/legend-pos
+                   :app.specs/collapsed?
+                   ::set-pos!
+                   ::set-collapsed!
+                   ::set-labels!]
+          :opt-un [::title
+                   ::sections
+                   ::on-close
+                   :app.specs/legend-labels]))
+
+(defui FloatingLegend*
   [{:keys [svg-ref svg-width svg-height
            title sections
            pos set-pos!
@@ -241,3 +267,9 @@
                                   :font-size "10px"
                                   :fill "#666"}}
                    "No legend entries")))))))))
+
+
+(defui-with-spec FloatingLegend
+  [{:spec :app.specs/floating-legend-props :props props}]
+  ($ FloatingLegend* props))
+#_(def FloatingLegend FloatingLegend*)
