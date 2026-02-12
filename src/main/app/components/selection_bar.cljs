@@ -34,8 +34,8 @@
   [{:keys [max-panel-height]}]
   (let [{:keys [selected-ids highlights set-highlights!
                 highlight-color set-highlight-color!
-                color-by-enabled? color-by-field color-by-palette
-                set-color-by-enabled! set-color-by-field! set-color-by-palette!
+                color-by-enabled? color-by-field color-by-palette color-by-type-override
+                set-color-by-enabled! set-color-by-field! set-color-by-palette! set-color-by-type-override!
                 metadata-rows active-cols set-selected-ids!
                 metadata-panel-collapsed set-metadata-panel-collapsed!
                 metadata-panel-height metadata-panel-last-drag-height
@@ -56,11 +56,15 @@
         field-available? (seq field-cols)
         field-keys (into #{} (map :key) field-cols)
         field-key (when (contains? field-keys color-by-field) color-by-field)
-        field-type (if field-key
-                     (color/infer-field-type metadata-rows field-key)
-                     :categorical)
-        palette-options (color/palette-options field-type)
-        palette-id (:id (color/resolve-palette field-type color-by-palette))
+        detected-type (if field-key
+                       (color/infer-field-type metadata-rows field-key)
+                       :categorical)
+        type-override (if (#{:auto :categorical :numeric :date} color-by-type-override)
+                        color-by-type-override
+                        :auto)
+        effective-type (if (= type-override :auto) detected-type type-override)
+        palette-options (color/palette-options effective-type)
+        palette-id (:id (color/resolve-palette effective-type color-by-palette))
         auto-color-disabled? (or (not field-available?) (not field-key))
         max-panel-height (or max-panel-height 0)
         restore-height (or metadata-panel-last-drag-height 250)
@@ -106,17 +110,32 @@
                                      (if (seq v)
                                        (do
                                          (set-color-by-field! (keyword v))
-                                         (set-color-by-enabled! true))
+                                         (set-color-by-enabled! true)
+                                         (set-color-by-type-override! :auto))
                                        (do
                                          (set-color-by-field! nil)
-                                         (set-color-by-enabled! false)))))
+                                         (set-color-by-enabled! false)
+                                         (set-color-by-type-override! :auto)))))
                       :style select-style}
              ($ :option {:value ""} "None")
              (for [{:keys [key label]} field-cols]
                ($ :option {:key (name key) :value (name key)} label))))
        (when field-key
+         ($ :label {:style {:font-size "11px" :display "flex" :align-items "center" :gap "4px"}}
+            "Type:"
+            ($ :select {:value (name type-override)
+                        :disabled (not field-key)
+                        :on-change (fn [e]
+                                     (let [v (.. e -target -value)]
+                                       (set-color-by-type-override! (keyword v))))
+                        :style select-style}
+               ($ :option {:value "auto"} "Auto")
+               ($ :option {:value "categorical"} "Categorical")
+               ($ :option {:value "numeric"} "Numeric")
+               ($ :option {:value "date"} "Date"))))
+       (when field-key
          ($ :span {:style {:font-size "10px" :color "#556"}}
-            (str "Type: " (name field-type))))
+            (str "Detected: " (name detected-type))))
        ($ :label {:style {:font-size "11px" :display "flex" :align-items "center" :gap "4px"}}
           "Palette:"
           ($ :select {:value (name palette-id)

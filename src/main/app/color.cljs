@@ -166,14 +166,23 @@
   (let [values (map #(get % field-key) metadata-rows)]
     (:type (infer-value-type values))))
 
+(defn resolve-field-type
+  "Resolves the effective field type, honoring an override when present."
+  [values type-override]
+  (let [override (if (#{:auto :categorical :numeric :date} type-override)
+                   type-override
+                   :auto)
+        inferred (:type (infer-value-type values))]
+    (if (= override :auto) inferred override)))
+
 (defn build-color-map
   "Builds a map of {leaf-name -> color} for the given field.
 
   Tips are expected to include :metadata maps keyed by field keywords.
   Palette id is optional and will fall back to a default for the field type."
-  [tips field-key palette-id]
+  [tips field-key palette-id type-override]
   (let [values (map #(get-in % [:metadata field-key]) tips)
-        {:keys [type values]} (infer-value-type values)
+        type (resolve-field-type values type-override)
         {:keys [palette]} (resolve-palette type palette-id)
         colors (:colors palette)]
     (cond

@@ -118,6 +118,10 @@
 (defonce !color-by-palette
   (atom :bright))
 
+;; "Atom holding the type override for auto-coloring (:auto, :categorical, :numeric, :date)."
+(defonce !color-by-type-override
+  (atom :auto))
+
 ;; ===== Export / Import =====
 
 (def ^:private export-version
@@ -144,7 +148,8 @@
    :highlights {}
    :color-by-enabled? false
    :color-by-field nil
-   :color-by-palette :bright})
+   :color-by-palette :bright
+   :color-by-type-override :auto})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -171,7 +176,8 @@
            :highlights      @!highlights
            :color-by-enabled? @!color-by-enabled?
            :color-by-field     @!color-by-field
-           :color-by-palette   @!color-by-palette}})
+           :color-by-palette   @!color-by-palette
+           :color-by-type-override @!color-by-type-override}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -222,7 +228,8 @@
                             {}))
       (reset! !color-by-enabled? (boolean (:color-by-enabled? merged)))
       (reset! !color-by-field (:color-by-field merged))
-      (reset! !color-by-palette (:color-by-palette merged)))))
+      (reset! !color-by-palette (:color-by-palette merged))
+      (reset! !color-by-type-override (:color-by-type-override merged)))))
 
 ;; ===== Context =====
 
@@ -250,6 +257,7 @@
                    :app.specs/color-by-enabled? :app.specs/set-color-by-enabled!
                    :app.specs/color-by-field    :app.specs/set-color-by-field!
                    :app.specs/color-by-palette  :app.specs/set-color-by-palette!
+                   :app.specs/color-by-type-override :app.specs/set-color-by-type-override!
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
@@ -282,6 +290,7 @@
         color-by-enabled?           (uix/use-atom !color-by-enabled?)
         color-by-field              (uix/use-atom !color-by-field)
         color-by-palette            (uix/use-atom !color-by-palette)
+        color-by-type-override   (uix/use-atom !color-by-type-override)
         app-state     {:newick-str           newick-str
                        :set-newick-str!      #(reset! !newick-str %)
                        :metadata-rows        metadata-rows
@@ -321,7 +330,9 @@
                        :color-by-field       color-by-field
                        :set-color-by-field!  #(reset! !color-by-field %)
                        :color-by-palette     color-by-palette
-                       :set-color-by-palette! #(reset! !color-by-palette %)}]
+                       :set-color-by-palette! #(reset! !color-by-palette %)
+                       :color-by-type-override color-by-type-override
+                       :set-color-by-type-override! #(reset! !color-by-type-override %)}]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))
     ($ app-context {:value app-state}
