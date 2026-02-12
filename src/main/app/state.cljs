@@ -197,6 +197,27 @@
     (sequential? value) (set value)
     :else #{}))
 
+(defn- coerce-palette
+  "Coerces a palette value to a valid palette keyword.
+  
+  Returns `:bright` (the default) if the value is invalid or missing.
+  Valid palettes are: :bright, :contrast, :pastel (categorical),
+  :blue-red, :teal-gold (gradient)."
+  [value]
+  (if (#{:bright :contrast :pastel :blue-red :teal-gold} value)
+    value
+    :bright))
+
+(defn- coerce-type-override
+  "Coerces a type override value to a valid keyword.
+  
+  Returns `:auto` (the default) if the value is invalid or missing.
+  Valid values are: :auto, :categorical, :numeric, :date."
+  [value]
+  (if (#{:auto :categorical :numeric :date} value)
+    value
+    :auto))
+
 (defn apply-export-state!
   "Applies an exported state payload into the live atoms.
 
@@ -228,8 +249,8 @@
                             {}))
       (reset! !color-by-enabled? (boolean (:color-by-enabled? merged)))
       (reset! !color-by-field (:color-by-field merged))
-      (reset! !color-by-palette (:color-by-palette merged))
-      (reset! !color-by-type-override (:color-by-type-override merged)))))
+      (reset! !color-by-palette (coerce-palette (:color-by-palette merged)))
+      (reset! !color-by-type-override (coerce-type-override (:color-by-type-override merged))))))
 
 ;; ===== Context =====
 
