@@ -39,6 +39,7 @@
                 metadata-rows active-cols set-selected-ids!
                 metadata-panel-collapsed set-metadata-panel-collapsed!
                 metadata-panel-height metadata-panel-last-drag-height
+                legend-visible? set-legend-visible!
                 set-metadata-panel-height!]} (state/use-app-state)
         n-selected (count selected-ids)
         n-highlighted (count highlights)
@@ -147,6 +148,14 @@
                       :style select-style}
              (for [{:keys [id label]} palette-options]
                ($ :option {:key (name id) :value (name id)} label))))
+       ($ :div {:style {:height "16px" :border-left "1px solid #ccd"}})
+       ;; Legend toggle
+       ($ :label {:style {:font-size "11px" :display "flex" :align-items "center" :gap "4px"}}
+          ($ :input {:type "checkbox"
+                     :checked (boolean legend-visible?)
+                     :on-change (fn [e]
+                                  (set-legend-visible! (.. e -target -checked)))})
+          "Show Legend")
        ($ :div {:style {:height "16px" :border-left "1px solid #ccd"}})
        ;; Color picker
        ($ :label {:style {:font-size "11px" :display "flex" :align-items "center" :gap "4px"}}

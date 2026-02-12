@@ -26,7 +26,8 @@
   - [[!highlights]]            - map of {leaf-id -> color} for persistent highlights
   - [[!legend-pos]]            - top-left legend position in SVG user space
   - [[!legend-collapsed?]]     - whether the legend is collapsed
-  - [[!legend-labels]]         - map of {color-hex -> label} for custom colors"
+  - [[!legend-labels]]         - map of {color-hex -> label} for custom colors
+  - [[!legend-visible?]]       - whether the legend is visible"
   (:require [cljs.spec.alpha :as s]
             [app.specs :as specs]
             [uix.core :as uix :refer [defui $]]))
@@ -137,6 +138,10 @@
 (defonce !legend-labels
   (atom {}))
 
+;; "Atom holding whether the legend is visible."
+(defonce !legend-visible?
+  (atom false))
+
 ;; ===== Export / Import =====
 
 (def ^:private export-version
@@ -167,7 +172,8 @@
    :color-by-type-override :auto
    :legend-pos nil
    :legend-collapsed? false
-   :legend-labels {}})
+   :legend-labels {}
+   :legend-visible? false})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -198,7 +204,8 @@
            :color-by-type-override @!color-by-type-override
            :legend-pos @!legend-pos
            :legend-collapsed? @!legend-collapsed?
-           :legend-labels @!legend-labels}})
+           :legend-labels @!legend-labels
+           :legend-visible? @!legend-visible?}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -250,6 +257,11 @@
   [value]
   (if (map? value) value {}))
 
+(defn- coerce-legend-visible
+  "Coerces legend visibility to a boolean."
+  [value]
+  (boolean value))
+
 (defn apply-export-state!
   "Applies an exported state payload into the live atoms.
 
@@ -285,7 +297,8 @@
       (reset! !color-by-type-override (coerce-type-override (:color-by-type-override merged)))
       (reset! !legend-pos (coerce-legend-pos (:legend-pos merged)))
       (reset! !legend-collapsed? (boolean (:legend-collapsed? merged)))
-      (reset! !legend-labels (coerce-legend-labels (:legend-labels merged))))))
+      (reset! !legend-labels (coerce-legend-labels (:legend-labels merged)))
+      (reset! !legend-visible? (coerce-legend-visible (:legend-visible? merged))))))
 
 ;; ===== Context =====
 
@@ -317,6 +330,7 @@
                    :app.specs/legend-pos :app.specs/set-legend-pos!
                    :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
                    :app.specs/legend-labels :app.specs/set-legend-labels!
+                   :app.specs/legend-visible? :app.specs/set-legend-visible!
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
@@ -353,6 +367,7 @@
         legend-pos                (uix/use-atom !legend-pos)
         legend-collapsed?         (uix/use-atom !legend-collapsed?)
         legend-labels             (uix/use-atom !legend-labels)
+        legend-visible?           (uix/use-atom !legend-visible?)
         app-state     {:newick-str           newick-str
                        :set-newick-str!      #(reset! !newick-str %)
                        :metadata-rows        metadata-rows
@@ -400,7 +415,9 @@
                        :legend-collapsed? legend-collapsed?
                        :set-legend-collapsed! #(reset! !legend-collapsed? %)
                        :legend-labels legend-labels
-                       :set-legend-labels! #(reset! !legend-labels %)}]
+                       :set-legend-labels! #(reset! !legend-labels %)
+                       :legend-visible? legend-visible?
+                       :set-legend-visible! #(reset! !legend-visible? %)}]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))
     ($ app-context {:value app-state}

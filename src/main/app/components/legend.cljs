@@ -31,7 +31,9 @@
           titles-height (* section-count 12)
           entries-height (* entry-count row-height)
           gaps (if (pos? section-count) (* (dec section-count) section-gap) 0)
-          body (+ titles-height entries-height gaps)]
+          body (if (pos? section-count)
+                 (+ titles-height entries-height gaps)
+                 row-height)]
       (+ header-height padding body padding 2))))
 
 (defui FloatingLegend
@@ -39,7 +41,8 @@
            title sections
            pos set-pos!
            collapsed? set-collapsed!
-           labels set-labels!]}]
+           labels set-labels!
+           on-close]}]
   (let [{:keys [x y]} pos
         pos-x (or x 0)
         pos-y (or y 0)
@@ -83,11 +86,37 @@
 
     (uix/use-effect
      (fn []
-       (when (or (nil? x) (nil? y))
-         (let [default-x (max 0 (- (or svg-width 0) legend-width padding))
-               default-y (max 0 padding)]
-           (set-pos! {:x default-x :y default-y}))))
-     [x y svg-width svg-height set-pos!])
+       (let [fallback-x (max 0 (- (or svg-width 0) legend-width padding))
+             fallback-y (max 0 padding)
+             default-pos (when-let [^js svg @svg-ref]
+                          (let [rect (.getBoundingClientRect svg)
+                                client-x (- (.-right rect) padding legend-width)
+                                client-y (+ (.-top rect) padding)
+                                svg-pos (client->svg svg client-x client-y)]
+                            (when (and svg-pos (number? (first svg-pos)) (number? (second svg-pos)))
+                              {:x (max 0 (first svg-pos))
+                               :y (max 0 (second svg-pos))})))
+             base-pos (or default-pos {:x fallback-x :y fallback-y})
+             base-x (if (and (number? x) (number? y)) pos-x (:x base-pos))
+             base-y (if (and (number? x) (number? y)) pos-y (:y base-pos))
+             adjusted-pos (if-let [^js svg @svg-ref]
+                            (let [rect (.getBoundingClientRect svg)
+                                  [vx1 vy1] (client->svg svg (.-left rect) (.-top rect))
+                                  [vx2 vy2] (client->svg svg (.-right rect) (.-bottom rect))
+                                  min-x (min vx1 vx2)
+                                  max-x (max vx1 vx2)
+                                  min-y (min vy1 vy2)
+                                  max-y (max vy1 vy2)
+                                  max-x (max min-x (- max-x legend-width))
+                                  max-y (max min-y (- max-y legend-h))]
+                              {:x (clamp base-x min-x max-x)
+                               :y (clamp base-y min-y max-y)})
+                            {:x base-x :y base-y})]
+         (when (or (nil? x) (nil? y)
+                   (not= (:x adjusted-pos) pos-x)
+                   (not= (:y adjusted-pos) pos-y))
+           (set-pos! adjusted-pos))))
+     [pos-y pos-x x y svg-width svg-height svg-ref legend-h set-pos!])
 
     ($ :g {:transform (str "translate(" pos-x "," pos-y ")")
            :style {:pointer-events "all"}
@@ -119,7 +148,7 @@
                             :fill "#111"}}
              (or title "Legend"))
           ;; Collapse button
-          ($ :g {:transform (str "translate(" (- legend-width 20) ",4)")
+          ($ :g {:transform (str "translate(" (- legend-width 36) ",4)")
                  :on-mouse-down (fn [^js e]
                                   (.stopPropagation e)
                                   (.preventDefault e)
@@ -128,71 +157,87 @@
                        :fill "#efefef" :stroke "#000" :stroke-width 1})
              ($ :line {:x1 3 :y1 6 :x2 9 :y2 6 :stroke "#000" :stroke-width 1})
              (when collapsed?
-               ($ :line {:x1 6 :y1 3 :x2 6 :y2 9 :stroke "#000" :stroke-width 1}))))
+               ($ :line {:x1 6 :y1 3 :x2 6 :y2 9 :stroke "#000" :stroke-width 1})))
+          ;; Close button
+          ($ :g {:transform (str "translate(" (- legend-width 20) ",4)")
+                 :on-mouse-down (fn [^js e]
+                                  (.stopPropagation e)
+                                  (.preventDefault e)
+                                  (when on-close (on-close)))}
+             ($ :rect {:x 0 :y 0 :width 12 :height 12
+                       :fill "#efefef" :stroke "#000" :stroke-width 1})
+             ($ :line {:x1 3 :y1 3 :x2 9 :y2 9 :stroke "#000" :stroke-width 1})
+             ($ :line {:x1 9 :y1 3 :x2 3 :y2 9 :stroke "#000" :stroke-width 1}))
 
        ;; Body
-       (when (and (not collapsed?) (seq sections))
+       (when (not collapsed?)
          (let [body-x padding
                body-y (+ header-height padding)]
            ($ :g {:transform (str "translate(" body-x "," body-y ")")}
-              (loop [section-idx 0
-                     y-offset 0
-                     section-items sections
-                     nodes []]
-                (if-let [{:keys [title entries]} (first section-items)]
-                  (let [title-node
-                        ($ :text {:key (str "section-title-" section-idx)
-                                  :x 0 :y (+ y-offset 10)
-                                  :style {:font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"
-                                          :font-size "10px"
-                                          :font-weight 600
-                                          :fill "#333"}}
-                           title)
-                        entry-nodes
-                        (map-indexed
-                         (fn [idx {:keys [id color label editable? placeholder?]}]
-                           (let [row-y (+ y-offset 16 (* idx row-height))
-                                 label-x (+ swatch-size 8)
-                                 label-style {:font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"
-                                              :font-size "10px"
-                                              :fill (if placeholder? "#777" "#111")}
-                                 editing? (= editing-color color)]
-                             ($ :g {:key (str "entry-" id)
-                                    :transform (str "translate(0," row-y ")")}
-                                ($ :rect {:x 0 :y 2 :width swatch-size :height swatch-size
-                                          :fill color :stroke "#111" :stroke-width 0.5})
-                                (if editing?
-                                  ($ :foreignObject {:x label-x :y -1 :width (- legend-width 40) :height 18}
-                                     ($ :input {:type "text"
-                                                :value editing-text
-                                                :auto-focus true
-                                                :on-change (fn [e] (set-editing-text! (.. e -target -value)))
-                                                :on-blur (fn [_] (commit-edit))
-                                                :on-key-down (fn [e]
-                                                               (when (= "Enter" (.-key e))
-                                                                 (commit-edit))
-                                                               (when (= "Escape" (.-key e))
-                                                                 (set-editing-color! nil)
-                                                                 (set-editing-text! "")))
-                                                :style {:font-size "10px"
-                                                        :height "16px"
-                                                        :width "100%"
-                                                        :border "1px solid #999"
-                                                        :padding "0 3px"
-                                                        :font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"}}))
-                                  ($ :text {:x label-x :y 10
-                                            :style (merge label-style (when editable? {:cursor "text"}))
-                                            :on-mouse-down (fn [^js e]
-                                                             (.stopPropagation e)
-                                                             (.preventDefault e)
-                                                             (when editable?
-                                                               (set-editing-color! color)
-                                                               (set-editing-text! (or (get labels color) ""))))}
-                                     label)))))
-                         entries)
-                        next-nodes (into nodes (cons title-node entry-nodes))]
-                    (recur (inc section-idx)
-                           (+ y-offset 12 (* (count entries) row-height) section-gap)
-                           (rest section-items)
-                           next-nodes))
-                  ($ :g nodes)))))))))
+              (if (seq sections)
+                (loop [section-idx 0
+                       y-offset 0
+                       section-items sections
+                       nodes []]
+                  (if-let [{:keys [title entries]} (first section-items)]
+                    (let [title-node
+                          ($ :text {:key (str "section-title-" section-idx)
+                                    :x 0 :y (+ y-offset 10)
+                                    :style {:font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"
+                                            :font-size "10px"
+                                            :font-weight 600
+                                            :fill "#333"}}
+                             title)
+                          entry-nodes
+                          (map-indexed
+                           (fn [idx {:keys [id color label editable? placeholder?]}]
+                             (let [row-y (+ y-offset 16 (* idx row-height))
+                                   label-x (+ swatch-size 8)
+                                   label-style {:font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"
+                                                :font-size "10px"
+                                                :fill (if placeholder? "#777" "#111")}
+                                   editing? (= editing-color color)]
+                               ($ :g {:key (str "entry-" id)
+                                      :transform (str "translate(0," row-y ")")}
+                                  ($ :rect {:x 0 :y 2 :width swatch-size :height swatch-size
+                                            :fill color :stroke "#111" :stroke-width 0.5})
+                                  (if editing?
+                                    ($ :foreignObject {:x label-x :y -1 :width (- legend-width 40) :height 18}
+                                       ($ :input {:type "text"
+                                                  :value editing-text
+                                                  :auto-focus true
+                                                  :on-change (fn [e] (set-editing-text! (.. e -target -value)))
+                                                  :on-blur (fn [_] (commit-edit))
+                                                  :on-key-down (fn [e]
+                                                                 (when (= "Enter" (.-key e))
+                                                                   (commit-edit))
+                                                                 (when (= "Escape" (.-key e))
+                                                                   (set-editing-color! nil)
+                                                                   (set-editing-text! "")))
+                                                  :style {:font-size "10px"
+                                                          :height "16px"
+                                                          :width "100%"
+                                                          :border "1px solid #999"
+                                                          :padding "0 3px"
+                                                          :font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"}}))
+                                    ($ :text {:x label-x :y 10
+                                              :style (merge label-style (when editable? {:cursor "text"}))
+                                              :on-mouse-down (fn [^js e]
+                                                               (.stopPropagation e)
+                                                               (.preventDefault e)
+                                                               (when editable?
+                                                                 (set-editing-color! color)
+                                                                 (set-editing-text! (or (get labels color) ""))))}
+                                       label)))))
+                           entries)
+                          next-nodes (into nodes (cons title-node entry-nodes))]
+                      (recur (inc section-idx)
+                             (+ y-offset 12 (* (count entries) row-height) section-gap)
+                             (rest section-items)
+                             next-nodes))
+                    ($ :g nodes)))
+                ($ :text {:x 0 :y 10
+                          :style {:font-family "Geneva, Chicago, 'Helvetica Neue', Arial, sans-serif"
+                                  :font-size "10px"
+                                  :fill "#666"}}
+                   "No legend entries")))))))))

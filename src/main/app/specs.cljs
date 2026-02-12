@@ -168,6 +168,9 @@
 (s/def ::legend-labels (s/nilable (s/map-of string? string?)))
 (s/def ::set-legend-labels! fn?)
 
+(s/def ::legend-visible? boolean?)
+(s/def ::set-legend-visible! fn?)
+
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::set-metadata-panel-collapsed! fn?)
 

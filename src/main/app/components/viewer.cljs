@@ -180,7 +180,8 @@
                    :app.specs/set-metadata-panel-last-drag-height!
                    :app.specs/legend-pos :app.specs/set-legend-pos!
                    :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
-                   :app.specs/legend-labels :app.specs/set-legend-labels!]
+                   :app.specs/legend-labels :app.specs/set-legend-labels!
+                   :app.specs/legend-visible? :app.specs/set-legend-visible!]
           :opt-un [:app.specs/highlights :app.specs/selected-ids
                    :app.specs/color-by-enabled? :app.specs/color-by-field
                    :app.specs/color-by-palette
@@ -223,8 +224,8 @@
            highlights selected-ids metadata-rows metadata-panel-collapsed
            metadata-panel-height metadata-panel-last-drag-height
            color-by-enabled? color-by-field color-by-palette color-by-type-override
-           legend-pos legend-collapsed? legend-labels
-           set-legend-pos! set-legend-collapsed! set-legend-labels!
+           legend-pos legend-collapsed? legend-labels legend-visible?
+           set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
@@ -280,7 +281,16 @@
                                  :entries auto-entries})
                           (seq custom-entries)
                           (conj {:title "Custom" :entries custom-entries}))
-        show-legend? (seq legend-sections)
+        show-legend? (boolean legend-visible?)
+
+        _auto-show-legend
+        (uix/use-effect
+         (fn []
+           (when (and (not legend-visible?)
+                      (seq legend-sections)
+                      (nil? legend-pos))
+             (set-legend-visible! true)))
+         [legend-visible? legend-sections legend-pos set-legend-visible!])
 
         ;; Layout refs for sizing the metadata panel
         viewport-ref         (uix/use-ref nil)
@@ -520,7 +530,8 @@
                                   :collapsed? legend-collapsed?
                                   :set-collapsed! set-legend-collapsed!
                                   :labels legend-labels
-                                  :set-labels! set-legend-labels!})))
+                                  :set-labels! set-legend-labels!
+                                  :on-close (fn [] (set-legend-visible! false))})))
 
           )
 
@@ -629,8 +640,8 @@
                 col-spacing highlights selected-ids metadata-panel-collapsed
                 metadata-panel-height metadata-panel-last-drag-height
                 color-by-enabled? color-by-field color-by-palette color-by-type-override
-                legend-pos legend-collapsed? legend-labels
-                set-legend-pos! set-legend-collapsed! set-legend-labels!
+                legend-pos legend-collapsed? legend-labels legend-visible?
+                set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
@@ -660,9 +671,11 @@
                      :legend-pos legend-pos
                      :legend-collapsed? legend-collapsed?
                      :legend-labels legend-labels
+                     :legend-visible? legend-visible?
                      :set-legend-pos! set-legend-pos!
                      :set-legend-collapsed! set-legend-collapsed!
                      :set-legend-labels! set-legend-labels!
+                     :set-legend-visible! set-legend-visible!
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed
