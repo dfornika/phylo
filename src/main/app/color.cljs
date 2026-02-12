@@ -8,14 +8,34 @@
 
 (def ^:private categorical-palettes
   {:bright {:label "Bright"
-            :colors ["#e41a1c" "#377eb8" "#4daf4a" "#ff7f00"
-                     "#984ea3" "#a65628" "#f781bf" "#999999"]}
+            :colors ["#e41a1c"
+                     "#377eb8"
+                     "#4daf4a"
+                     "#ff7f00"
+                     "#984ea3"
+                     "#a65628"
+                     "#f781bf"
+                     "#999999"]}
+   
    :contrast {:label "High Contrast"
-              :colors ["#000000" "#d55e00" "#0072b2" "#009e73"
-                       "#cc79a7" "#e69f00" "#56b4e9" "#f0e442"]}
+              :colors ["#000000"
+                       "#d55e00"
+                       "#0072b2"
+                       "#009e73"
+                       "#cc79a7"
+                       "#e69f00"
+                       "#56b4e9"
+                       "#f0e442"]}
+   
    :pastel {:label "Pastel"
-            :colors ["#fbb4ae" "#b3cde3" "#ccebc5" "#decbe4"
-                     "#fed9a6" "#ffffcc" "#e5d8bd" "#fddaec"]}})
+            :colors ["#fbb4ae"
+                     "#b3cde3"
+                     "#ccebc5"
+                     "#decbe4"
+                     "#fed9a6"
+                     "#ffffcc"
+                     "#e5d8bd"
+                     "#fddaec"]}})
 
 (def ^:private gradient-palettes
   {:blue-red {:label "Blue-Red"
@@ -119,15 +139,16 @@
 (defn- hierarchical-code?
   [value]
   (and (non-empty-string? value)
-       (re-matches #"\d+(?:\.\d+)+" value)))
+       (re-matches #"\d+\.\d+(?:\.\d+)+" value)))
 
 (defn- parse-number
   [value]
   (cond
+    (nil? value) nil
+    (js/isNaN value) nil
     (number? value) value
-    (non-empty-string? value)
-    (let [n (js/parseFloat value)]
-      (when-not (js/isNaN n) n))
+    (parse-long value) (parse-long value)
+    (parse-double value) (parse-double value)
     :else nil))
 
 (defn- parse-date
