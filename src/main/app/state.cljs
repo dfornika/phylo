@@ -86,7 +86,7 @@
 
 ;; "Atom holding extra horizontal spacing (in pixels) between metadata columns."
 (defonce !col-spacing
-  (atom 0))
+  (atom 4))
 
 ;; "Atom holding horizontal shift (in pixels) applied to tree + metadata overlay."
 (defonce !left-shift-px
@@ -169,7 +169,7 @@
    :show-distance-from-origin false
    :scale-origin :tips
    :show-pixel-grid false
-   :col-spacing 0
+   :col-spacing 4
    :left-shift-px 0
    :tree-metadata-gap-px 0
    :metadata-panel-collapsed true

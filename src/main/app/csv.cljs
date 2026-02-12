@@ -72,6 +72,56 @@
           (>= num-count threshold)  :numeric
           :else                     :string)))))
 
+
+
+(def ^:private min-col-width
+  "Minimum allowed column width (px)."
+  40)
+
+(def ^:private cell-font
+  "Font used for metadata cell text measurements."
+  "12px monospace")
+
+(def ^:private header-font
+  "Font used for metadata header measurements."
+  "bold 12px sans-serif")
+
+(def ^:private cell-padding
+  "Horizontal padding (px) added to measured text width."
+  12)
+
+(defn- measure-text-width
+  "Measures the pixel width of `s` using a canvas 2D context and font.
+
+  Returns nil when `document` is unavailable (e.g., in Node tests)."
+  [ctx font s]
+  (when (and ctx font (string? s))
+    (set! (.-font ctx) font)
+    (.-width (.measureText ctx s))))
+
+(defn- measure-column-width
+  "Computes a data-driven column width for a header + values.
+
+  Falls back to `default-width` when canvas measurement isn't available."
+  [header values default-width]
+  (let [doc (when (exists? js/document) js/document)
+        canvas (when doc (.createElement doc "canvas"))
+        ctx (when canvas (.getContext canvas "2d"))
+        header-w (measure-text-width ctx header-font (str header))
+        value-w (when ctx
+                  (reduce
+                   (fn [m v]
+                     (let [w (measure-text-width ctx cell-font (str (or v "")))]
+                       (if w (max m w) m)))
+                   0
+                   values))
+        measured (when (or header-w value-w)
+                   (+ cell-padding (max (or header-w 0) (or value-w 0))))]
+    (if measured
+      (max min-col-width (js/Math.ceil measured))
+      default-width)))
+
+
 ;; ===== CSV Parsing =====
 
 (defn- parse-delimited-line
@@ -160,7 +210,7 @@
          header-configs (mapv (fn [h k]
                                 {:key   k
                                  :label h
-                                 :width default-col-width
+                                 :width (measure-column-width h (map #(get % k) data-rows) default-col-width)
                                  :spacing 0
                                  :type  (detect-column-type (map #(get % k) data-rows))})
                               raw-headers header-keys)]
