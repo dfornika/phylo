@@ -18,7 +18,7 @@
   "Generator for parsed tree maps matching the `::tree-node` spec.
 
   Produces trees with the given maximum depth and branching factor.
-  Leaf nodes have nil children vectors (empty `[]`), optional names,
+  Leaf nodes have empty children vectors (`[]`), optional names,
   and optional branch lengths.
 
   Options:
