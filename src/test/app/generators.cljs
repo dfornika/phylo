@@ -1,10 +1,14 @@
 (ns app.generators
   "Shared test.check generators for generative testing.
 
-  Provides generators for Newick tree structures, metadata rows,
-  CSV content, date strings, and other domain types used across
-  the Phylo test suite."
-  (:require [clojure.test.check.generators :as gen]))
+  Where possible generators are derived from specs via `s/gen`,
+  keeping them in sync with the spec definitions. Hand-written
+  generators remain for Newick serialization, CSV rows, dates,
+  and other domain types where spec-derived generation is not
+  practical."
+  (:require [clojure.test.check.generators :as gen]
+            [cljs.spec.alpha :as s]
+            [app.specs :as specs]))
 
 ;; ===== Leaf Names =====
 
@@ -12,19 +16,15 @@
   "Generator for simple leaf/taxon names (1-8 alphanumeric characters)."
   (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 1 8)))
 
-;; ===== Tree Maps =====
+;; ===== Tree Maps (derived from spec) =====
 
 (defn gen-tree-map
   "Generator for parsed tree maps matching the `::tree-node` spec.
 
-  Produces trees with the given maximum depth and branching factor.
-  Leaf nodes have empty children vectors (`[]`), optional names,
-  and optional branch lengths.
-
-  Options:
-  - `max-depth`       - maximum nesting depth (default 4)
-  - `max-branching`   - maximum children per internal node (default 3)"
-  ([] (gen-tree-map 4 3))
+  Delegates to the custom generator attached to `::specs/tree-node`
+  when called with no arguments.  The (max-depth, max-branching)
+  arity remains for tests that need explicit control over tree shape."
+  ([] (s/gen ::specs/tree-node))
   ([max-depth max-branching]
    (if (<= max-depth 0)
      ;; Leaf node
@@ -47,6 +47,12 @@
                   len  (gen/double* {:min 0.0001 :max 10.0 :NaN? false :infinite? false})]
           {:name name :branch-length len :children []})]]))))
 
+;; ===== Positioned Tree (derived from spec) =====
+
+(def gen-positioned-node
+  "Generator for a positioned node, derived from ::specs/positioned-node."
+  (s/gen ::specs/positioned-node))
+
 ;; ===== Newick Strings =====
 
 (defn tree-map->newick
@@ -63,14 +69,15 @@
   Produces trees with 2-8 tips and branch lengths."
   (gen/fmap #(str (tree-map->newick %) ";") (gen-tree-map 3 3)))
 
-;; ===== Metadata =====
+;; ===== Metadata (derived from spec) =====
 
 (def gen-metadata-row
-  "Generator for a single metadata row (map of keyword->string)."
-  (gen/let [id    gen-leaf-name
-            val1  (gen/fmap str gen/nat)
-            val2  gen-leaf-name]
-    {:id id :col-a val1 :col-b val2}))
+  "Generator for a single metadata row, derived from ::specs/metadata-row."
+  (s/gen ::specs/metadata-row))
+
+(def gen-metadata-header
+  "Generator for a metadata header, derived from ::specs/metadata-header."
+  (s/gen ::specs/metadata-header))
 
 ;; ===== CSV/TSV =====
 
