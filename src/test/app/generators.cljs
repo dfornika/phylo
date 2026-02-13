@@ -49,8 +49,8 @@
 
 ;; ===== Newick Strings =====
 
-(defn- tree-map->newick
-  "Serializes a generated tree map to a Newick string."
+(defn tree-map->newick
+  "Serializes a generated tree map to a Newick string (no trailing semicolon)."
   [{:keys [name branch-length children]}]
   (let [children-str (when (seq children)
                        (str "(" (clojure.string/join "," (map tree-map->newick children)) ")"))
