@@ -7,7 +7,7 @@
   React context."
   (:require [cljs.spec.alpha :as s]
             [uix.core :as uix :refer [defui $]]
-            [app.layout :refer [LAYOUT]]
+            [app.layout :refer [LAYOUT compute-col-gaps]]
             [app.scale :as scale]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
@@ -328,8 +328,7 @@
   - `:y-scale`          - vertical tip spacing
   - `:col-spacing`      - extra horizontal gap between columns"
   [{:keys [active-cols tips start-offset y-scale col-spacing]}]
-  (let [col-gaps (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
-                       active-cols)
+  (let [col-gaps (compute-col-gaps active-cols col-spacing)
         offsets (reductions (fn [acc [col gap]] (+ acc (:width col) gap))
                             start-offset
                             (map vector active-cols col-gaps))]

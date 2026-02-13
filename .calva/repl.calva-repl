@@ -7750,3 +7750,44 @@ cljs꞉app.color-test꞉> 
 ; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.34s)
 ; [:app] Compiling ...
 ; [:app] Build completed. (202 files, 4 compiled, 0 warnings, 0.31s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.38s)
+; shadow-cljs runtime disconnected: 556 Firefox 147.0 [Win32]
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.41s)
+; shadow-cljs runtime connected: 557, Firefox 147.0 [Win32]
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 5 compiled, 0 warnings, 0.34s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.27s)
+; [:app] Compiling ...
+; [:app] Build failure:
+; ------ ERROR -------------------------------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/components/viewer.cljs:241:43
+; --------------------------------------------------------------------------------
+;  238 |         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
+;  239 |                             (+ (:x legend-pos) legend-width legend-right-pad))
+;  240 |         col-gaps        (compute-col-gaps active-cols col-spacing)
+;  241 |                               active-cols)
+; -------------------------------------------------^------------------------------
+; app/components/viewer.cljs [line 241, col 43] Unmatched delimiter ).
+; 
+; --------------------------------------------------------------------------------
+;  242 |         base-svg-width  (+ metadata-start-x
+;  243 |                            (reduce + 0 (map :width active-cols))
+;  244 |                            (reduce + 0 col-gaps)
+;  245 |                            (max 0 left-shift)
+; --------------------------------------------------------------------------------
+; 
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 1 compiled, 0 warnings, 0.25s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.26s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.26s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.34s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.36s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 4 compiled, 0 warnings, 0.32s)

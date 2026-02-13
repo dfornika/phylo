@@ -9,7 +9,7 @@
             [uix.core :as uix :refer [defui $]]
             [app.specs :as specs]
             [app.state :as state]
-            [app.layout :refer [LAYOUT]]
+            [app.layout :refer [LAYOUT compute-col-gaps]]
             [app.tree :as tree]
             [app.color :as color]
             [app.components.tree :refer [PhylogeneticTree]]
@@ -237,8 +237,7 @@
         legend-right-pad 12
         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
                             (+ (:x legend-pos) legend-width legend-right-pad))
-        col-gaps        (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
-                              active-cols)
+        col-gaps        (compute-col-gaps active-cols col-spacing)
         base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
                            (reduce + 0 col-gaps)
@@ -265,26 +264,11 @@
                        (when (and color-by-enabled? legend-field (seq tips))
                          (color/build-legend tips legend-field color-by-palette color-by-type-override)))
                      [color-by-enabled? legend-field color-by-palette color-by-type-override tips])
-        auto-entries (or (:entries legend-auto) [])
-        custom-colors (->> (vals (or highlights {})) distinct sort)
-        custom-entries (->> custom-colors
-                            (mapv (fn [color]
-                                    (let [label (get legend-labels color "")
-                                          placeholder? (str/blank? label)
-                                          display (if placeholder? "Label..." label)]
-                                      {:id (str "custom-" color)
-                                       :color color
-                                       :label display
-                                       :editable? true
-                                       :placeholder? placeholder?}))))
-        legend-sections (cond-> []
-                          (seq auto-entries)
-                          (conj {:title (if field-label
-                                          (str "Auto: " field-label)
-                                          "Auto")
-                                 :entries auto-entries})
-                          (seq custom-entries)
-                          (conj {:title "Custom" :entries custom-entries}))
+        {:keys [sections]} (uix/use-memo
+                            (fn []
+                              (color/build-legend-sections legend-auto field-label highlights legend-labels))
+                            [legend-auto field-label highlights legend-labels])
+        legend-sections sections
         show-legend? (boolean legend-visible?)
 
         _auto-show-legend
@@ -403,20 +387,13 @@
                                   (let [dx (- ex sx)
                                         dy (- ey sy)]
                                     (when (> (+ (js/Math.abs dx) (js/Math.abs dy)) drag-threshold)
-                                      (let [min-x  (min sx ex) max-x (max sx ex)
-                                            min-y  (min sy ey) max-y (max sy ey)
-                                            pad-x  (:svg-padding-x LAYOUT)
-                                            pad-y  (:svg-padding-y LAYOUT)
-                                            hit-ids (into #{}
-                                                          (comp
-                                                           (filter (fn [tip]
-                                                                     (let [shift-x left-shift
-                                                                           lx (+ pad-x shift-x (* (:x tip) current-x-scale))
-                                                                           ly (+ pad-y (* (:y tip) y-mult))]
-                                                                       (and (<= min-x lx max-x)
-                                                                            (<= min-y ly max-y)))))
-                                                           (map :name))
-                                                          tips)]
+                                      (let [hit-ids (tree/leaves-in-rect
+                                                     tips
+                                                     {:min-x (min sx ex) :max-x (max sx ex)
+                                                      :min-y (min sy ey) :max-y (max sy ey)}
+                                                     current-x-scale y-mult
+                                                     (:svg-padding-x LAYOUT) (:svg-padding-y LAYOUT)
+                                                     left-shift)]
                                         (if shift?
                                           (set-selected-ids! (fn [ids] (into (or ids #{}) hit-ids)))
                                           (set-selected-ids! hit-ids))))))

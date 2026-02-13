@@ -138,3 +138,30 @@
     {:tree root
      :tips enriched-leaves
      :max-depth (get-max-x root)}))
+
+;; ===== Spatial Selection =====
+
+(defn leaves-in-rect
+  "Returns a set of tip names whose positioned coordinates fall inside a
+  bounding rectangle.
+
+  Arguments:
+  - `tips`     - positioned leaf nodes (each with `:x`, `:y`, `:name`)
+  - `rect`     - map `{:min-x :max-x :min-y :max-y}` in SVG user-space
+  - `x-scale`  - horizontal scaling factor (pixels per branch-length unit)
+  - `y-mult`   - vertical scaling factor (pixels per tip)
+  - `pad-x`    - horizontal padding offset (px)
+  - `pad-y`    - vertical padding offset (px)
+  - `left-shift` - additional horizontal shift (px)
+
+  Used by box-select / lasso selection in the viewer."
+  [tips {:keys [min-x max-x min-y max-y]} x-scale y-mult pad-x pad-y left-shift]
+  (into #{}
+        (comp
+         (filter (fn [tip]
+                   (let [lx (+ pad-x left-shift (* (:x tip) x-scale))
+                         ly (+ pad-y (* (:y tip) y-mult))]
+                     (and (<= min-x lx max-x)
+                          (<= min-y ly max-y)))))
+         (map :name))
+        tips))
