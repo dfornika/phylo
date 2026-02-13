@@ -41,15 +41,16 @@
 
 (def ^:private gap-handle-width
   "Width of the tree-metadata gap handle (px)."
-  4)
+  2)
 
 (def ^:private gap-min
   "Minimum tree-metadata gap (px)."
-  -50)
+  -100)
 
 (def ^:private gap-max
   "Maximum tree-metadata gap (px)."
   200)
+
 (s/def :app.specs/sticky-header-props
   (s/keys :req-un [:app.specs/columns
                    :app.specs/start-offset
@@ -81,7 +82,7 @@
   - `:width`       - optional width for the sticky header"
   [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin width
            left-shift-px tree-metadata-gap-px set-left-shift-px! set-tree-metadata-gap-px! set-active-cols!]}]
-  (let [scale-width (max 0 (- start-offset (:svg-padding-x LAYOUT)))
+  (let [scale-width (max 0 (* max-depth x-scale))
         {:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                               :x-scale x-scale
                                                               :origin scale-origin})
@@ -104,11 +105,6 @@
 
 
     
-    (uix/use-effect
-     (fn []
-       (reset! gap-start-ref (or tree-metadata-gap-px 0))
-       js/undefined)
-     [tree-metadata-gap-px])
 
     (uix/use-effect
      (fn []
