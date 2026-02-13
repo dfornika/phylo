@@ -17,7 +17,6 @@
             [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
             [app.scale :as scale]
-            [app.tree :as tree]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
@@ -122,7 +121,7 @@
         distance-label (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
                          (scale/format-label scale-origin max-depth node-depth))
         leaf-names (when internal-node?
-                     (into #{} (keep :name) (tree/get-leaves node)))
+                     (:leaf-names node))
         any-selected? (and (seq leaf-names) (some selected-ids leaf-names))
         internal-state-class (when (seq leaf-names)
                                (if any-selected?

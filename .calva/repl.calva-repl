@@ -7791,3 +7791,55 @@ cljs꞉app.color-test꞉> 
 ; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.36s)
 ; [:app] Compiling ...
 ; [:app] Build completed. (202 files, 4 compiled, 0 warnings, 0.32s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.35s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 1 warnings, 0.37s)
+; 
+; ------ WARNING #1 - :redef-in-file ---------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/tree.cljs:129:1
+; --------------------------------------------------------------------------------
+;  126 | 
+;  127 | 
+;  128 | 
+;  129 | (defn assign-leaf-names
+; -------^------------------------------------------------------------------------
+;  assign-leaf-names at line 114 is being replaced
+; --------------------------------------------------------------------------------
+;  130 |   "Precomputes a `:leaf-names` set on every node containing the names of
+;  131 |   all descendant leaves.  For leaf nodes the set contains only that leaf's
+;  132 |   name (when non-nil).  For internal nodes it is the union of the children's
+;  133 |   sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
+; --------------------------------------------------------------------------------
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 1 warnings, 0.36s)
+; 
+; ------ WARNING #1 - :redef-in-file ---------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/tree.cljs:127:1
+; --------------------------------------------------------------------------------
+;  124 |           names (into #{} (mapcat :leaf-names) updated-children)]
+;  125 |       (assoc node :leaf-names names :children updated-children))))
+;  126 | 
+;  127 | (defn assign-leaf-names
+; -------^------------------------------------------------------------------------
+;  assign-leaf-names at line 114 is being replaced
+; --------------------------------------------------------------------------------
+;  128 |   "Precomputes a `:leaf-names` set on every node containing the names of
+;  129 |   all descendant leaves.  For leaf nodes the set contains only that leaf's
+;  130 |   name (when non-nil).  For internal nodes it is the union of the children's
+;  131 |   sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
+; --------------------------------------------------------------------------------
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 3 compiled, 0 warnings, 0.35s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.31s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.25s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.25s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.35s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.28s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.28s)

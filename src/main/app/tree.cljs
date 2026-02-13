@@ -111,14 +111,28 @@
                                 (:children node))]
      [(assoc node :id current-id :children updated-children) @next-id])))
 
+(defn assign-leaf-names
+  "Precomputes a `:leaf-names` set on every node containing the names of
+  all descendant leaves.  For leaf nodes the set contains only that leaf's
+  name (when non-nil).  For internal nodes it is the union of the children's
+  sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
+  during rendering."
+  [node]
+  (if (empty? (:children node))
+    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))
+    (let [updated-children (mapv assign-leaf-names (:children node))
+          names (into #{} (mapcat :leaf-names) updated-children)]
+      (assoc node :leaf-names names :children updated-children))))
+
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.
 
-  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned,
-  then collects leaves and merges metadata from uploaded CSV/TSV rows.
+  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned ->
+  node-ids -> leaf-names, then collects leaves and merges metadata from
+  uploaded CSV/TSV rows.
 
   Returns a map with:
-  - `:tree`      - root node with `:x` and `:y` on every node
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names` on every node
   - `:tips`      - flat vector of leaf nodes with `:metadata` merged
   - `:max-depth` - maximum x-coordinate (for scale calculations)"
   [newick-str metadata-rows active-cols]
@@ -126,7 +140,8 @@
                  (assign-y-coords (atom 0))
                  first
                  assign-x-coords
-                 assign-node-ids)
+                 assign-node-ids
+                 assign-leaf-names)
         leaves (get-leaves root)
         id-key (-> active-cols first :key)
         metadata-index (when (and id-key (seq metadata-rows))

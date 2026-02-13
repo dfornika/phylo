@@ -313,9 +313,7 @@
         ;; Toggle subtree selection: if any selected, clear all; else select all
         select-subtree (uix/use-callback
                         (fn [node]
-                          (let [leaf-names (into #{}
-                                                 (keep :name)
-                                                 (tree/get-leaves node))]
+                          (let [leaf-names (:leaf-names node)]
                             (when (seq leaf-names)
                               (set-selected-ids!
                                (fn [ids]
