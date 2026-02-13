@@ -233,7 +233,7 @@
         date-enough?    (and (pos? (count date-success))
                              (>= date-ratio parse-success-threshold))]
     (cond
-      (empty? values) {:type :categorical :values []}
+      (not (seq values)) {:type :categorical :values []}
       numeric-enough? {:type :numeric :values num-success}
       date-enough?    {:type :date :values date-success}
       :else           {:type :categorical :values values})))

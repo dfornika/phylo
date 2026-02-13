@@ -1,10 +1,10 @@
 (ns app.components.viewer
   "Top-level viewer components that compose the tree visualization.
 
-  Contains [[PixelGrid]], [[ScaleGridlines]], [[TreeViewer]], and
-  [[TreeContainer]]. TreeContainer reads state from React context
-  and derives the positioned tree, passing everything as props to
-  the pure TreeViewer."
+  Contains [[PixelGrid]], [[ScaleBar]], [[ScaleGridlines]], [[TreeViewer]],
+  [[TreeContainer]], and [[EmptyState]]. TreeContainer reads state from
+  React context and derives the positioned tree, passing everything as
+  props to the pure TreeViewer."
   (:require [cljs.spec.alpha :as s]
             [uix.core :as uix :refer [defui $]]
             [app.specs :as specs]
@@ -224,7 +224,7 @@
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
-        current-x-scale (if (> max-depth 0)
+        current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
         tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
@@ -613,11 +613,14 @@
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
-  the positioned tree via [[tree/prepare-tree]] (memoized), and passes
-  everything as props to [[TreeViewer]].
-  When no Newick string is loaded, renders [[EmptyState]] instead."
+  the positioned tree via [[tree/parse-and-position]] or
+  [[tree/position-tree]] (when a pre-parsed tree is available, e.g.
+  from Nextstrain import), and enriches leaves via
+  [[tree/enrich-leaves]]. Both stages are memoized separately so that
+  metadata changes don't re-parse the Newick string.
+  When no tree is available, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
-  (let [{:keys [newick-str metadata-rows active-cols
+  (let [{:keys [newick-str parsed-tree metadata-rows active-cols
                 x-mult y-mult show-internal-markers show-distance-from-origin
                 scale-origin show-scale-gridlines show-pixel-grid
                 col-spacing left-shift-px tree-metadata-gap-px highlights selected-ids metadata-panel-collapsed
@@ -629,11 +632,26 @@
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
-        {:keys [tree tips max-depth]} (uix/use-memo
-                                       (fn [] (when (and (string? newick-str)
-                                                         (not (str/blank? newick-str)))
-                                                (tree/prepare-tree newick-str metadata-rows active-cols)))
-                                       [newick-str metadata-rows active-cols])]
+        ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
+        ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
+        ;; via position-tree, skipping the Newick parse step.
+        {:keys [tree raw-tips max-depth]}
+        (uix/use-memo
+         (fn [] (cond
+                  parsed-tree
+                  (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
+                    {:tree tree :raw-tips tips :max-depth max-depth})
+
+                  (and (string? newick-str) (not (str/blank? newick-str)))
+                  (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
+                    {:tree tree :raw-tips tips :max-depth max-depth})))
+         [newick-str parsed-tree])
+
+        ;; Stage 2: enrich leaves with metadata — re-runs when metadata or cols change
+        tips (uix/use-memo
+              (fn [] (when raw-tips
+                       (tree/enrich-leaves raw-tips metadata-rows active-cols)))
+              [raw-tips metadata-rows active-cols])]
     (if tree
       ($ TreeViewer {:tree tree
                      :tips tips

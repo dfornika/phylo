@@ -26,9 +26,9 @@
   Recursively traverses the tree comparing `:x` values. Used to determine
   the horizontal extent of the tree for scaling calculations."
   [node]
-  (if (empty? (:children node))
-    (:x node)
-    (apply max (:x node) (map get-max-x (:children node)))))
+  (if (seq (:children node))
+    (apply max (:x node) (map get-max-x (:children node)))
+    (:x node)))
 
 (defn count-tips
   "Counts the number of leaf nodes (tips) in a tree.
@@ -36,9 +36,9 @@
   A tip is any node with an empty `:children` vector. Internal nodes
   contribute the sum of their children's tip counts."
   [node]
-  (if (empty? (:children node))
-    1
-    (reduce + (map count-tips (:children node)))))
+  (if (seq (:children node))
+    (reduce + (map count-tips (:children node)))
+    1))
 
 (defn assign-y-coords
   "Assigns vertical (y) coordinates to every node in the tree.
@@ -54,12 +54,12 @@
   It is shared across the entire traversal to ensure leaves are
   evenly spaced."
   [node next-y]
-  (if (empty? (:children node))
-    [(assoc node :y @next-y) (swap! next-y inc)]
+  (if (seq (:children node))
     (let [processed-children (mapv #(first (assign-y-coords % next-y)) (:children node))
           avg-y (/ (+ (:y (first processed-children))
                       (:y (last processed-children))) 2)]
-      [(assoc node :children processed-children :y avg-y) @next-y])))
+      [(assoc node :children processed-children :y avg-y) @next-y])
+    [(assoc node :y @next-y) (swap! next-y inc)]))
 
 (defn assign-x-coords
   "Assigns horizontal (x) coordinates by accumulating branch lengths.
@@ -87,9 +87,9 @@
   Traverses the tree depth-first and returns only nodes whose
   `:children` vector is empty. Preserves left-to-right order."
   [n]
-  (if (empty? (:children n))
-    [n]
-    (into [] (mapcat get-leaves (:children n)))))
+  (if (seq (:children n))
+    (into [] (mapcat get-leaves (:children n)))
+    [n]))
 
 ;; ===== Tree Preparation =====
 
@@ -118,41 +118,86 @@
   sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
   during rendering."
   [node]
-  (if (empty? (:children node))
-    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))
+  (if (seq (:children node))
     (let [updated-children (mapv assign-leaf-names (:children node))
           names (into #{} (mapcat :leaf-names) updated-children)]
-      (assoc node :leaf-names names :children updated-children))))
+      (assoc node :leaf-names names :children updated-children))
+    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))))
+
+(defn position-tree
+  "Assigns layout coordinates to a parsed tree map.
+
+  Pipeline: y-positioned → x-positioned → node-ids → leaf-names →
+  collect leaves.
+
+  Accepts the output of [[newick->map]] or any equivalent tree map
+  (e.g. from [[app.import.nextstrain/to-tree-map]]). Useful when
+  the tree map is already available and Newick parsing can be skipped.
+
+  Returns a map with:
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names`
+  - `:tips`      - flat vector of leaf nodes (no metadata yet)
+  - `:max-depth` - maximum x-coordinate (for scale calculations)"
+  [parsed-tree]
+  (let [root (-> parsed-tree
+                 (assign-y-coords (atom 0))
+                 first
+                 assign-x-coords
+                 assign-node-ids
+                 assign-leaf-names)]
+    {:tree root
+     :tips (get-leaves root)
+     :max-depth (get-max-x root)}))
+
+(defn parse-and-position
+  "Parses a Newick string and produces a fully positioned tree.
+
+  Pipeline: Newick string → parsed tree → [[position-tree]].
+
+  This is the geometry-only stage — it depends solely on the Newick
+  string and does not touch metadata. Memoize on `newick-str` to
+  avoid re-parsing when only metadata changes.
+
+  Returns a map with:
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names`
+  - `:tips`      - flat vector of leaf nodes (no metadata yet)
+  - `:max-depth` - maximum x-coordinate (for scale calculations)"
+  [newick-str]
+  (position-tree (newick/newick->map newick-str)))
+
+(defn enrich-leaves
+  "Merges metadata from uploaded CSV/TSV rows onto positioned leaf nodes.
+
+  Looks up each leaf's `:name` in `metadata-rows` using the first
+  column of `active-cols` as the join key, and attaches the matching
+  row under `:metadata`.
+
+  Returns the enriched tips vector (same length as input `tips`)."
+  [tips metadata-rows active-cols]
+  (let [id-key (-> active-cols first :key)
+        metadata-index (when (and id-key (seq metadata-rows))
+                         (into {} (map (fn [r] [(get r id-key) r]) metadata-rows)))]
+    (if metadata-index
+      (mapv #(assoc % :metadata (get metadata-index (:name %))) tips)
+      tips)))
 
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.
 
-  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned ->
-  node-ids -> leaf-names, then collects leaves and merges metadata from
-  uploaded CSV/TSV rows.
+  Combines [[parse-and-position]] (geometry) and [[enrich-leaves]]
+  (metadata join) into a single call.  Prefer the two-stage API in
+  performance-sensitive paths so that Newick parsing can be memoized
+  independently of metadata changes.
 
   Returns a map with:
   - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names` on every node
   - `:tips`      - flat vector of leaf nodes with `:metadata` merged
   - `:max-depth` - maximum x-coordinate (for scale calculations)"
   [newick-str metadata-rows active-cols]
-  (let [root (-> (newick/newick->map newick-str)
-                 (assign-y-coords (atom 0))
-                 first
-                 assign-x-coords
-                 assign-node-ids
-                 assign-leaf-names)
-        leaves (get-leaves root)
-        id-key (-> active-cols first :key)
-        metadata-index (when (and id-key (seq metadata-rows))
-                         (into {} (map (fn [r] [(get r id-key) r]) metadata-rows)))
-        enriched-leaves (if metadata-index
-                          (mapv #(assoc % :metadata (get metadata-index (:name %)))
-                                leaves)
-                          leaves)]
-    {:tree root
-     :tips enriched-leaves
-     :max-depth (get-max-x root)}))
+  (let [{:keys [tree tips max-depth]} (parse-and-position newick-str)]
+    {:tree tree
+     :tips (enrich-leaves tips metadata-rows active-cols)
+     :max-depth max-depth}))
 
 ;; ===== Spatial Selection =====
 

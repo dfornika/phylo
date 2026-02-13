@@ -65,6 +65,7 @@
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-newick-str!
+                set-parsed-tree!
                 set-metadata-rows! set-active-cols!
                 set-selected-ids! set-highlights!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
@@ -87,6 +88,7 @@
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
                            :on-change #(io/read-file! % (fn [content]
                                                           (set-newick-str! (.trim content))
+                                                          (set-parsed-tree! nil)
                                                           (set-metadata-rows! [])
                                                           (set-active-cols! [])
                                                           (set-selected-ids! #{})
@@ -110,6 +112,7 @@
                                                           (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
                                                             (when newick-str
                                                               (set-newick-str! (str/trim newick-str)))
+                                                            (set-parsed-tree! nil)
                                                             (if metadata-raw
                                                               (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
                                                                 (set-metadata-rows! data)
@@ -125,9 +128,10 @@
                            :accept ".json"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
                            :on-change #(io/read-file! % (fn [content]
-                                                          (let [{:keys [newick-str]} (nextstrain/parse-nextstrain-json content)]
+                                                          (let [{:keys [newick-str parsed-tree]} (nextstrain/parse-nextstrain-json content)]
                                                             (when newick-str
                                                               (set-newick-str! (str/trim newick-str))
+                                                              (set-parsed-tree! parsed-tree)
                                                               (set-metadata-rows! [])
                                                               (set-active-cols! [])
                                                               (set-selected-ids! #{})

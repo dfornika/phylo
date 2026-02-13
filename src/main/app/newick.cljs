@@ -15,17 +15,14 @@
   taxon labels, and branch length numbers. Trailing semicolons
   are stripped before tokenization.
 
-  Returns an empty list for nil or empty input."
+  Returns nil for nil input, and an empty sequence for blank input."
   [newick-str]
-  (cond (nil? newick-str)
-        '()
-        :else
-        (-> newick-str
-            (str/replace #";$" "")
-            (str/split #"(?=[(),:])|(?<=[(),:])")
-            (->> (map str/trim)
-                 (remove empty?)))))
-
+  (when newick-str
+    (-> newick-str
+        (str/replace #";$" "")
+        (str/split #"(?=[(),:])|(?<=[(),:])")
+        (->> (map str/trim)
+             (filter seq)))))
 (comment
   (tokenize nil)
   (tokenize "")
@@ -108,7 +105,7 @@
 
   Returns a recursive map with keys:
   - `:name`          - node label (string or nil)
-  - `:branch-length` - distance to parent (number or NaN)
+  - `:branch-length` - distance to parent (number or nil if missing/unparseable)
   - `:children`      - vector of child node maps (empty for leaves)"
   [s]
   (first (parse-node (tokenize s))))
