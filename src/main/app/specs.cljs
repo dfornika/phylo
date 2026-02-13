@@ -6,10 +6,16 @@
   context. These specs serve as living documentation and can be used
   for validation and generative testing.
 
+  Custom generators are attached to recursive specs (::tree-node,
+  ::positioned-node) and domain-specific specs (::metadata-row,
+  ::metadata-header) so that `s/gen`, `s/exercise`, and `stest/check`
+  work out of the box.
+
   Require this namespace in the REPL or in dev preloads to
   enable `cljs.spec.test.alpha/instrument` on key functions."
   (:require [cljs.spec.alpha :as s]
             [clojure.set]
+            [clojure.test.check.generators :as gen]
             [camel-snake-kebab.core :as csk]))
 
 (defn get-allowed-keys
@@ -62,8 +68,35 @@
 (s/def ::branch-length (s/nilable (s/and number? #(not (js/isNaN %)))))
 (s/def ::children (s/coll-of ::tree-node :kind vector?))
 
+;; Custom generator for the recursive ::tree-node spec.
+;; Produces trees with 2-4 depth and 2-3 branching factor.
+(defn- gen-tree-node
+  "Recursive generator for tree-node maps.  `depth` limits nesting."
+  [depth]
+  (if (<= depth 0)
+    ;; Leaf
+    (gen/let [nm  (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 1 6))
+              len (gen/double* {:min 0.0001 :max 10.0 :NaN? false :infinite? false})]
+      {:name nm :branch-length len :children []})
+    ;; Internal or leaf (biased toward leaves to keep trees small)
+    (gen/frequency
+     [[1 (gen/let [n   (gen/choose 2 3)
+                   cs  (gen/vector (gen-tree-node (dec depth)) n n)
+                   nm  (gen/one-of [(gen/return nil)
+                                    (gen/fmap #(apply str %)
+                                             (gen/vector gen/char-alphanumeric 1 6))])
+                   len (gen/one-of [(gen/return nil)
+                                    (gen/double* {:min 0.0001 :max 10.0
+                                                  :NaN? false :infinite? false})])]
+          {:name nm :branch-length len :children cs})]
+      [2 (gen/let [nm  (gen/fmap #(apply str %) (gen/vector gen/char-alphanumeric 1 6))
+                   len (gen/double* {:min 0.0001 :max 10.0 :NaN? false :infinite? false})]
+           {:name nm :branch-length len :children []})]])))
+
 (s/def ::tree-node
-  (s/keys :req-un [::name ::branch-length ::children]))
+  (s/with-gen
+    (s/keys :req-un [::name ::branch-length ::children])
+    #(gen-tree-node 3)))
 
 ;; Positioned nodes have x/y coordinates assigned by layout algorithms
 (s/def ::x (s/and number? #(not (js/isNaN %))))
@@ -72,9 +105,16 @@
 
 (s/def ::leaf-names (s/coll-of string? :kind set?))
 
+;; Custom generator for positioned-node: layers x/y/id onto a tree-node.
 (s/def ::positioned-node
-  (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]
-          :opt-un [::leaf-names]))
+  (s/with-gen
+    (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]
+            :opt-un [::leaf-names])
+    #(gen/let [node (gen-tree-node 2)
+               x    (gen/double* {:min 0.0 :max 100.0 :NaN? false :infinite? false})
+               y    (gen/double* {:min 0.0 :max 100.0 :NaN? false :infinite? false})
+               id   gen/nat]
+       (assoc node :x x :y y :id id))))
 
 ;; ===== Bounding Rectangle (for lasso selection) =====
 
@@ -97,11 +137,27 @@
 (s/def ::column-type #{:date :numeric :string})
 
 (s/def ::metadata-header
-  (s/keys :req-un [::key ::label ::width]
-          :opt-un [::column-type ::spacing]))
+  (s/with-gen
+    (s/keys :req-un [::key ::label ::width]
+            :opt-un [::column-type ::spacing])
+    #(gen/let [k    (gen/fmap keyword (gen/fmap (fn [cs] (apply str cs))
+                                               (gen/vector gen/char-alpha 2 8)))
+               lbl  (gen/fmap (fn [cs] (apply str cs))
+                              (gen/vector gen/char-alphanumeric 2 12))
+               w    (gen/double* {:min 40.0 :max 300.0 :NaN? false :infinite? false})
+               ct   (gen/elements [:date :numeric :string])
+               sp   (gen/double* {:min 0.0 :max 20.0 :NaN? false :infinite? false})]
+       {:key k :label lbl :width w :column-type ct :spacing sp})))
 
 (s/def ::metadata-row
-  (s/map-of keyword? string?))
+  (s/with-gen
+    (s/map-of keyword? string?)
+    #(gen/let [id   (gen/fmap (fn [cs] (apply str cs))
+                              (gen/vector gen/char-alphanumeric 1 8))
+               val1 (gen/fmap str gen/nat)
+               val2 (gen/fmap (fn [cs] (apply str cs))
+                              (gen/vector gen/char-alphanumeric 1 8))]
+       {:id id :col-a val1 :col-b val2})))
 
 (s/def ::headers (s/coll-of ::metadata-header))
 (s/def ::data (s/coll-of ::metadata-row))
