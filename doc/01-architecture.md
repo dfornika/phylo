@@ -277,7 +277,20 @@ use the same origin-aware mapping so they stay consistent with the scale.
 - `::parsed-metadata` — result of `csv/parse-metadata`
 - `::app-state` — shape of the context map from `AppStateProvider`
 - Component prop specs (`::branch-props`, `::tree-node-props`, `::metadata-grid-props`, `::resizable-panel-props`, etc.)
-- `s/fdef` specs for key functions (`newick->map`, `count-tips`, `prepare-tree`, etc.)
+- `s/fdef` specs for key functions (`newick->map`, `count-tips`, `prepare-tree`, `parse-date`, `calculate-scale-unit`, etc.)
+
+### Dev-Time Instrumentation
+
+The `app.dev-preload` namespace (loaded as a shadow-cljs preload) provides automatic dev-time validation:
+
+1. **Expound** — Sets `s/*explain-out*` to `expound/printer` for human-readable spec error messages.
+2. **Instrumentation** — Calls `stest/instrument` on all fdef'd functions at load time, so argument specs are checked on every call during development. Instrumentation is stripped from release builds.
+
+### Custom Generators
+
+Custom `test.check` generators for recursive and domain specs live in `src/dev/app/spec_generators.cljs` (dev-only, not on the production classpath). These provide generators for specs like `::tree-node` (depth-limited recursive trees), `::positioned-node`, `::metadata-header`, and `::metadata-row`. The generators are registered via `s/with-gen` and are automatically available to `s/exercise`, `s/gen`, and `stest/check`.
+
+**Important:** `clojure.test.check` is only on the `:dev` and `:test` classpath aliases. Never require it from namespaces under `src/main/`.
 
 ## TSX Component Extraction (Work in Progress)
 
@@ -357,4 +370,9 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `ScaleBar`, `PixelGrid` — top-level composition |
 | `app.components.grid` | `MetadataGrid` — AG-Grid table with bidirectional selection sync |
 | `app.components.selection_bar` | `SelectionBar` — highlight color picker and assign/clear actions |
+| `app.components.legend` | `ColorLegend` — color legend display for auto-coloring |
 | `app.components.resizable_panel` | `ResizablePanel` — draggable-resize wrapper for bottom panel |
+| `app.export.html` | Standalone HTML export pipeline |
+| `app.export.svg` | Standalone SVG export helper |
+| `app.import.arborview` | ArborView HTML import parser |
+| `app.import.nextstrain` | Nextstrain JSON import parser |
