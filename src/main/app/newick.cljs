@@ -105,7 +105,7 @@
 
   Returns a recursive map with keys:
   - `:name`          - node label (string or nil)
-  - `:branch-length` - distance to parent (number or NaN)
+  - `:branch-length` - distance to parent (number or nil if missing/unparseable)
   - `:children`      - vector of child node maps (empty for leaves)"
   [s]
   (first (parse-node (tokenize s))))

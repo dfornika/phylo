@@ -1,4 +1,9 @@
 (ns app.date
+  "Date parsing utilities for metadata fields.
+
+  Provides [[parse-date]] which attempts to parse a date string in
+  several common formats (YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY, etc.)
+  and returns the original string on success or nil on failure."
   (:require [clojure.string :as str]))
 
 (defn- parse-yyyy-mm-dd [s]

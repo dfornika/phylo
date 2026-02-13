@@ -1,10 +1,10 @@
 (ns app.components.viewer
   "Top-level viewer components that compose the tree visualization.
 
-  Contains [[PixelGrid]], [[ScaleGridlines]], [[TreeViewer]], and
-  [[TreeContainer]]. TreeContainer reads state from React context
-  and derives the positioned tree, passing everything as props to
-  the pure TreeViewer."
+  Contains [[PixelGrid]], [[ScaleBar]], [[ScaleGridlines]], [[TreeViewer]],
+  [[TreeContainer]], and [[EmptyState]]. TreeContainer reads state from
+  React context and derives the positioned tree, passing everything as
+  props to the pure TreeViewer."
   (:require [cljs.spec.alpha :as s]
             [uix.core :as uix :refer [defui $]]
             [app.specs :as specs]

@@ -3,10 +3,7 @@
 
   Contains pure functions for computing tick positions, formatting
   labels, and calculating human-friendly scale intervals. Used by
-  viewer, tree, and metadata components.
-
-  Moved from `app.components.scale` — these are pure utility functions,
-  not UI components.")
+  viewer, tree, and metadata components.")
 
 ;; ===== Scale Unit Calculation =====
 
