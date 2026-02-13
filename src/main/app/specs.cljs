@@ -59,15 +59,15 @@
 ;; ===== Tree Data Structures =====
 
 (s/def ::name (s/nilable string?))
-(s/def ::branch-length (s/nilable number?))
+(s/def ::branch-length (s/nilable (s/and number? #(not (js/isNaN %)))))
 (s/def ::children (s/coll-of ::tree-node :kind vector?))
 
 (s/def ::tree-node
   (s/keys :req-un [::name ::branch-length ::children]))
 
 ;; Positioned nodes have x/y coordinates assigned by layout algorithms
-(s/def ::x number?)
-(s/def ::y number?)
+(s/def ::x (s/and number? #(not (js/isNaN %))))
+(s/def ::y (s/and number? #(not (js/isNaN %))))
 (s/def ::id nat-int?)
 
 (s/def ::leaf-names (s/coll-of string? :kind set?))
@@ -78,10 +78,10 @@
 
 ;; ===== Bounding Rectangle (for lasso selection) =====
 
-(s/def ::min-x number?)
-(s/def ::max-x number?)
-(s/def ::min-y number?)
-(s/def ::max-y number?)
+(s/def ::min-x (s/and number? #(not (js/isNaN %))))
+(s/def ::max-x (s/and number? #(not (js/isNaN %))))
+(s/def ::min-y (s/and number? #(not (js/isNaN %))))
+(s/def ::max-y (s/and number? #(not (js/isNaN %))))
 
 ;; ===== Scale Tick Output =====
 
@@ -92,8 +92,8 @@
 
 (s/def ::key keyword?)
 (s/def ::label string?)
-(s/def ::width number?)
-(s/def ::spacing number?)
+(s/def ::width (s/and number? pos?))
+(s/def ::spacing (s/and number? #(not (neg? %))))
 (s/def ::column-type #{:date :numeric :string})
 
 (s/def ::metadata-header
@@ -123,10 +123,10 @@
 (s/def ::active-cols (s/coll-of ::metadata-header :kind vector?))
 (s/def ::set-active-cols! fn?)
 
-(s/def ::x-mult number?)
+(s/def ::x-mult (s/and number? pos?))
 (s/def ::set-x-mult! fn?)
 
-(s/def ::y-mult number?)
+(s/def ::y-mult (s/and number? pos?))
 (s/def ::set-y-mult! fn?)
 
 (s/def ::show-internal-markers boolean?)
@@ -144,19 +144,19 @@
 (s/def ::show-pixel-grid boolean?)
 (s/def ::set-show-pixel-grid! fn?)
 
-(s/def ::col-spacing number?)
+(s/def ::col-spacing (s/and number? #(not (neg? %))))
 (s/def ::set-col-spacing! fn?)
 
-(s/def ::left-shift-px number?)
+(s/def ::left-shift-px (s/and number? #(not (js/isNaN %))))
 (s/def ::set-left-shift-px! fn?)
 
-(s/def ::tree-metadata-gap-px number?)
+(s/def ::tree-metadata-gap-px (s/and number? #(not (neg? %))))
 (s/def ::set-tree-metadata-gap-px! fn?)
 
 (s/def ::highlight-color string?)
 (s/def ::set-highlight-color! fn?)
 
-(s/def ::selected-ids (s/nilable set?))
+(s/def ::selected-ids (s/nilable (s/coll-of string? :kind set?)))
 (s/def ::set-selected-ids! fn?)
 
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
@@ -189,38 +189,38 @@
 (s/def ::metadata-panel-collapsed boolean?)
 (s/def ::set-metadata-panel-collapsed! fn?)
 
-(s/def ::metadata-panel-height number?)
+(s/def ::metadata-panel-height (s/and number? #(not (neg? %))))
 (s/def ::set-metadata-panel-height! fn?)
 
-(s/def ::metadata-panel-last-drag-height number?)
+(s/def ::metadata-panel-last-drag-height (s/and number? #(not (neg? %))))
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
 ;; ===== Component Props =====
 
 (s/def ::columns (s/coll-of ::metadata-header))
-(s/def ::start-offset number?)
+(s/def ::start-offset (s/and number? #(not (js/isNaN %))))
 (s/def ::column-label string?)
-(s/def ::cell-height number?)
+(s/def ::cell-height (s/and number? pos?))
 (s/def ::tip-count nat-int?)
-(s/def ::tree-height number?)
-(s/def ::sticky-header-width number?)
+(s/def ::tree-height (s/and number? pos?))
+(s/def ::sticky-header-width (s/and number? pos?))
 
 (s/def ::tips (s/coll-of ::positioned-node))
-(s/def ::x-offset number?)
-(s/def ::y-scale number?)
+(s/def ::x-offset (s/and number? #(not (js/isNaN %))))
+(s/def ::y-scale (s/and number? pos?))
 (s/def ::column-key keyword?)
 
-(s/def ::col-width number?)
+(s/def ::col-width (s/and number? pos?))
 
-(s/def ::parent-x number?)
-(s/def ::parent-y number?)
+(s/def ::parent-x (s/and number? #(not (js/isNaN %))))
+(s/def ::parent-y (s/and number? #(not (js/isNaN %))))
 (s/def ::line-color string?)
-(s/def ::line-width number?)
+(s/def ::line-width (s/and number? pos?))
 
 (s/def ::node ::positioned-node)
-(s/def ::x-scale number?)
+(s/def ::x-scale (s/and number? pos?))
 
-(s/def ::marker-radius number?)
+(s/def ::marker-radius (s/and number? pos?))
 (s/def ::marker-fill string?)
 (s/def ::on-toggle-selection (s/nilable fn?))
 (s/def ::on-select-subtree (s/nilable fn?))
@@ -228,14 +228,12 @@
 ;; Toolbar reads from context — no props spec needed.
 
 (s/def ::tree ::positioned-node)
-(s/def ::max-depth number?)
-(s/def ::width-px number?)
-(s/def ::component-height-px (s/nilable number?))
-(s/def ::metadata-panel-collapsed boolean?)
-(s/def ::metadata-panel-height number?)
-(s/def ::metadata-panel-last-drag-height number?)
-(s/def ::set-metadata-panel-height! fn?)
-(s/def ::set-metadata-panel-last-drag-height! fn?)
+(s/def ::max-depth (s/and number? #(not (neg? %))))
+(s/def ::width-px (s/and number? pos?))
+(s/def ::component-height-px (s/nilable (s/and number? pos?)))
+;; ::metadata-panel-collapsed, ::metadata-panel-height,
+;; ::metadata-panel-last-drag-height, ::set-metadata-panel-height!,
+;; ::set-metadata-panel-last-drag-height! defined in App State section above.
 
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
@@ -245,10 +243,10 @@
 
 ;; ResizablePanel — wrapper with draggable resize handle.
 
-(s/def ::initial-height number?)
-(s/def ::min-height number?)
-(s/def ::max-height number?)
-(s/def ::height number?)
+(s/def ::initial-height (s/and number? pos?))
+(s/def ::min-height (s/and number? #(not (neg? %))))
+(s/def ::max-height (s/and number? pos?))
+(s/def ::height (s/and number? #(not (neg? %))))
 (s/def ::on-height-change fn?)
 
 ;; ===== Function Specs =====
