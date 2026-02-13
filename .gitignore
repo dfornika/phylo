@@ -7,6 +7,7 @@
 .lsp
 /.DS_Store
 .DS_Store
+/tmp
 /classes
 /lib
 /target
