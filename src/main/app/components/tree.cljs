@@ -122,7 +122,9 @@
                          (scale/format-label scale-origin max-depth node-depth))
         leaf-names (when internal-node?
                      (:leaf-names node))
-        any-selected? (and (seq leaf-names) (some selected-ids leaf-names))
+        any-selected? (and (seq selected-ids)
+                           (seq leaf-names)
+                           (some leaf-names selected-ids))
         internal-state-class (when (seq leaf-names)
                                (if any-selected?
                                  " internal-node-marker--deselect"
