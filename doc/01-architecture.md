@@ -21,6 +21,12 @@ Phylo is a single-page ClojureScript application that renders phylogenetic trees
 ┌─────────────────┐
 │ Positioned tree │  Same structure with :x and :y added to every node
 └────────┬────────┘
+         │ assign-node-ids + assign-leaf-names
+         ▼
+┌─────────────────┐
+│ Enriched tree   │  :id, :leaf-names (set of descendant leaf names)
+│                 │  precomputed on every node
+└────────┬────────┘
          │ get-leaves → merge metadata from CSV
          ▼
 ┌─────────────────┐
@@ -163,7 +169,7 @@ Users can click and drag on the SVG background to draw a selection rectangle (la
 
 ### Derived State
 
-The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: parse Newick → assign coordinates → collect leaves → merge metadata. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
+The `prepare-tree` function (in `app.tree`) encapsulates the full pipeline: parse Newick → assign coordinates → assign node IDs → precompute leaf-names → collect leaves → merge metadata. The `assign-leaf-names` step does a single bottom-up traversal attaching a `:leaf-names` set to every node, so rendering components can check descendant membership in O(1) instead of re-walking subtrees. `TreeContainer` calls it inside a `use-memo`, recomputing only when `newick-str`, `metadata-rows`, or `active-cols` change. The result (`{:tree :tips :max-depth}`) is passed as props to `PhylogeneticTree`, which is a pure rendering component.
 
 
 ### Specs and Dev Validation
@@ -335,16 +341,19 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 |-----------|---------|
 | `app.core` | Thin app shell — mounts root component, provides `init` / `re-render` entry points |
 | `app.state` | Shared state atoms, React context provider, `use-app-state` hook |
-| `app.layout` | `LAYOUT` constant — spacing, padding, marker sizes used across all component namespaces |
-| `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `prepare-tree`, `get-leaves`, etc.) |
+| `app.layout` | `LAYOUT` constant and `compute-col-gaps` — spacing, padding, marker sizes used across all component namespaces |
+| `app.tree` | Pure tree layout functions (`assign-y/x-coords`, `assign-leaf-names`, `prepare-tree`, `get-leaves`, `leaves-in-rect`, etc.) |
 | `app.newick` | Recursive descent Newick parser |
 | `app.csv` | CSV/TSV parsing with column metadata and data type detection |
 | `app.date` | Date parsing helpers (normalize to YYYY-MM-DD, convert to epoch ms) |
+| `app.color` | Color palette helpers, gradient/legend builders, `build-color-map`, `build-legend-sections` |
+| `app.scale` | Scale tick calculation, origin-aware label formatting, shared by viewer, metadata header, and gridlines |
+| `app.util` | Small shared helpers (`client->svg`, `clamp`) |
+| `app.io` | Browser file I/O utilities (`save-blob!`, `read-file!`) used by export and toolbar |
 | `app.specs` | Spec definitions for data structures & functions |
 | `app.components.tree` | `Branch`, `TreeNode`, `PhylogeneticTree` — SVG tree rendering |
 | `app.components.metadata` | `StickyHeader`, `MetadataColumn`, `MetadataTable` — SVG metadata overlay |
-| `app.components.scale` | Scale tick helpers and origin-aware label mapping |
-| `app.components.toolbar` | `Toolbar`, `read-file!` — user controls |
+| `app.components.toolbar` | `Toolbar` — user controls for file loading, zoom, display toggles |
 | `app.components.viewer` | `TreeContainer`, `TreeViewer`, `ScaleGridlines`, `ScaleBar`, `PixelGrid` — top-level composition |
 | `app.components.grid` | `MetadataGrid` — AG-Grid table with bidirectional selection sync |
 | `app.components.selection_bar` | `SelectionBar` — highlight color picker and assign/clear actions |

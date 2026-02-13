@@ -17,7 +17,7 @@
                      "#a65628"
                      "#f781bf"
                      "#999999"]}
-   
+
    :contrast {:label "High Contrast"
               :colors ["#000000"
                        "#d55e00"
@@ -27,7 +27,7 @@
                        "#e69f00"
                        "#56b4e9"
                        "#f0e442"]}
-   
+
    :pastel {:label "Pastel"
             :colors ["#fbb4ae"
                      "#b3cde3"
@@ -355,3 +355,43 @@
                              :color (get value->color value)})
                           unique-values)]
         {:type :categorical :entries entries}))))
+
+;; ===== Legend Section Assembly =====
+
+(defn build-legend-sections
+  "Assembles legend sections for display from auto-coloring and custom highlights.
+
+  Takes the legend built by `build-legend`, along with custom highlight data,
+  and returns a vector of `{:title string :entries [...]}` section maps.
+
+  Arguments:
+  - `auto-legend`    - result of `build-legend` (may be nil)
+  - `field-label`    - display label for the auto-colored field (e.g. \"Lineage\")
+  - `highlights`     - map of `{leaf-name -> color}` for custom highlights
+  - `legend-labels`  - map of `{color -> user-label}` for custom legend entries
+
+  Returns `{:sections [...] :show? bool}` where `:show?` is true when
+  any legend sections exist."
+  [auto-legend field-label highlights legend-labels]
+  (let [auto-entries (or (:entries auto-legend) [])
+        custom-colors (->> (vals (or highlights {})) distinct sort)
+        custom-entries (->> custom-colors
+                            (mapv (fn [color]
+                                    (let [label (get legend-labels color "")
+                                          placeholder? (str/blank? label)
+                                          display (if placeholder? "Label..." label)]
+                                      {:id (str "custom-" color)
+                                       :color color
+                                       :label display
+                                       :editable? true
+                                       :placeholder? placeholder?}))))
+        sections (cond-> []
+                   (seq auto-entries)
+                   (conj {:title (if field-label
+                                   (str "Auto: " field-label)
+                                   "Auto")
+                          :entries auto-entries})
+                   (seq custom-entries)
+                   (conj {:title "Custom" :entries custom-entries}))]
+    {:sections sections
+     :show? (boolean (seq sections))}))

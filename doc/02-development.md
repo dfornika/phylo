@@ -116,9 +116,13 @@ TSX sources live in `src/tsx/components/` and compile to `src/gen/components/` (
 
 ## Modifying Tree Layout
 
-The layout algorithm is a two-pass process:
+The layout algorithm in `app.tree/prepare-tree` is a multi-step pipeline:
 
 1. `assign-y-coords` — depth-first traversal assigning sequential y values to leaves
 2. `assign-x-coords` — depth-first traversal accumulating branch lengths as x values
+3. `assign-node-ids` — depth-first traversal assigning unique `:id` integers for stable React keys
+4. `assign-leaf-names` — bottom-up traversal precomputing a `:leaf-names` set (descendant leaf names) on every node
 
 To change spacing, modify the `LAYOUT` constant in `app.layout`. To change the algorithm itself, modify the `assign-*` functions in `app.tree` and update corresponding tests in `app.tree-test`.
+
+Scale tick calculations (shared by the scale bar, sticky header, and gridlines) live in `app.scale`. Browser file I/O helpers (`save-blob!`, `read-file!`) live in `app.io`. Small shared utilities (`client->svg`, `clamp`) live in `app.util`.

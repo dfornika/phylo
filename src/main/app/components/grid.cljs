@@ -31,7 +31,7 @@
 ;; Register AG-Grid community modules once at namespace load time.
 (.registerModules ModuleRegistry #js [AllCommunityModule])
 
-(defn- date-comparator
+(defn date-comparator
   "Comparator for AG-Grid's date filter.
 
   Parses the cell value as a YYYY-MM-DD string and compares it to
@@ -47,7 +47,7 @@
         (> cell-ts filter-ts) 1
         :else 0))))
 
-(defn- col-def-for-type
+(defn col-def-for-type
   "Returns AG-Grid columnDef properties appropriate for the detected column type.
 
   - `:string`  -> text filter
@@ -65,7 +65,7 @@
     ;; default: :string or anything else
     {:filter "agTextColumnFilter"}))
 
-(defn- cols->col-defs
+(defn cols->col-defs
   "Converts active-cols (vector of `{:key :label :width :type}` maps)
   into AG-Grid columnDefs format.
 
@@ -84,7 +84,7 @@
                      (col-def-for-type type field-name))))
           active-cols)))
 
-(defn- tree-ordered-rows
+(defn tree-ordered-rows
   "Reorders metadata-rows to match the tree tip traversal order.
 
   Builds an index from the ID column values to the original rows,
@@ -250,7 +250,6 @@
              :onCellValueChanged (fn [params]
                                    (when (and id-field on-cell-edited)
                                      (handle-cell-value-changed id-field on-cell-edited params)))})))))
-
 
 (defui-with-spec MetadataGrid
   [{:spec :app.specs/metadata-grid-props :props props}]

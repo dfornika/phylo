@@ -27,3 +27,14 @@
    :toolbar-gap 20
    :node-marker-radius 3
    :node-marker-fill "#333"})
+
+;; ===== Derived Layout Helpers =====
+
+(defn compute-col-gaps
+  "Computes per-column gap widths by merging global `col-spacing` with
+  each column's own `:spacing` value.
+
+  Returns a vector of gap widths (one per column in `active-cols`)."
+  [active-cols col-spacing]
+  (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
+        active-cols))

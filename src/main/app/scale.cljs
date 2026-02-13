@@ -1,6 +1,50 @@
-(ns app.components.scale
-  "Shared scale tick calculation helpers for viewer and sticky header."
-  (:require [app.tree :as tree]))
+(ns app.scale
+  "Scale bar calculation helpers for the phylogenetic tree viewer.
+
+  Contains pure functions for computing tick positions, formatting
+  labels, and calculating human-friendly scale intervals. Used by
+  viewer, tree, and metadata components.
+
+  Moved from `app.components.scale` — these are pure utility functions,
+  not UI components.")
+
+;; ===== Scale Unit Calculation =====
+
+(defn calculate-scale-unit
+  "Calculates a human-friendly tick interval for a scale bar.
+
+  Given a maximum value, returns a 'nice' unit size based on the
+  order of magnitude. The algorithm picks the largest round number
+  that produces a reasonable number of ticks:
+  - ratio < 2 -> 10% of magnitude
+  - ratio < 5 -> 50% of magnitude
+  - otherwise  -> full magnitude
+
+  For example, `(calculate-scale-unit 0.37)` returns `0.05`."
+  [max-x]
+  (let [log10 (js/Math.log10 max-x)
+        magnitude (js/Math.pow 10 (js/Math.floor log10))
+        ratio (/ max-x magnitude)]
+    (cond
+      (< ratio 2) (* magnitude 0.1)
+      (< ratio 5) (* magnitude 0.5)
+      :else magnitude)))
+
+(defn get-ticks
+  "Generates a lazy sequence of tick positions from 0 to `max-x` in
+  increments of `unit`. Used to render scale bar gridlines and labels.
+
+  Guards against non-positive `unit` to avoid a non-terminating sequence:
+  - If `max-x` is <= 0, returns a single tick at 0.
+  - If `unit` is <= 0 (and `max-x` is > 0), returns an empty sequence."
+  [max-x unit]
+  (cond
+    (<= max-x 0) [0]
+    (<= unit 0)  []
+    :else        (take-while #(<= % max-x)
+                             (iterate #(+ % unit) 0))))
+
+;; ===== Tick Position & Label Helpers =====
 
 (defn- every-nth
   "Returns every Nth element from `xs`, starting at index 0."
@@ -43,7 +87,7 @@
   [max-depth]
   (let [depth (or max-depth 0)
         unit (if (pos? depth)
-               (tree/calculate-scale-unit (/ depth 5))
+               (calculate-scale-unit (/ depth 5))
                1)]
     (decimals-for-unit unit)))
 
@@ -71,8 +115,8 @@
          minor-count 4
          origin :tips}}]
   (if (pos? max-depth)
-    (let [unit         (tree/calculate-scale-unit (/ max-depth 5))
-          label-ticks  (tree/get-ticks max-depth unit)
+    (let [unit         (calculate-scale-unit (/ max-depth 5))
+          label-ticks  (get-ticks max-depth unit)
           width-px     (* max-depth (max 0 (or x-scale 0)))
           max-labels   (max 1 (int (js/Math.floor (/ width-px min-label-px))))
           every-n      (max 1 (int (js/Math.ceil (/ (count label-ticks) max-labels))))
@@ -105,16 +149,3 @@
      :minor-ticks []
      :base-ticks [0]
      :unit 0}))
-
-(comment
-  (let [max-depth 10]
-    (scale-ticks {:max-depth max-depth
-                  :x-scale 100
-                  :origin :tips}))
-  
-  (let [max-depth 10]
-    (scale-ticks {:max-depth max-depth
-                  :x-scale 100
-                  :origin :root}))
-  
-  )

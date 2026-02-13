@@ -1,9 +1,13 @@
 *~
+.vscode
+.calva
+.portal
 .idea
 .clj-kondo
 .lsp
 /.DS_Store
 .DS_Store
+/tmp
 /classes
 /lib
 /target

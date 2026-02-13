@@ -1,8 +1,7 @@
 (ns app.scale-test
-  "Tests for scale tick calculation functions in [[app.components.scale]]."
+  "Tests for scale tick calculation functions in [[app.scale]]."
   (:require [cljs.test :refer [deftest testing is]]
-            [app.components.scale :as scale]
-            [app.tree :as tree]
+            [app.scale :as scale]
             [clojure.string :as str]))
 
 ;; ===== tick-position =====
@@ -84,8 +83,8 @@
 (deftest scale-ticks-basic-root-origin
   (testing "scale-ticks generates ticks for :root origin"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 50
-                                      :origin :root})]
+                                     :x-scale 50
+                                     :origin :root})]
       ;; Should have ticks
       (is (pos? (count (:major-ticks result))))
       (is (pos? (:unit result)))
@@ -97,8 +96,8 @@
 (deftest scale-ticks-basic-tips-origin
   (testing "scale-ticks generates ticks for :tips origin"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 50
-                                      :origin :tips})]
+                                     :x-scale 50
+                                     :origin :tips})]
       ;; Should have ticks
       (is (pos? (count (:major-ticks result))))
       (is (pos? (:unit result)))
@@ -116,9 +115,9 @@
 (deftest scale-ticks-minor-ticks-count
   (testing "scale-ticks generates correct number of minor ticks between majors"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 500  ; Large scale to ensure multiple major ticks
-                                      :minor-count 4
-                                      :origin :root})]
+                                     :x-scale 500  ; Large scale to ensure multiple major ticks
+                                     :minor-count 4
+                                     :origin :root})]
       ;; With minor-count=4, we should have 4 minor ticks between each pair of major ticks
       ;; (if we have at least 2 major ticks)
       (when (>= (count (:major-ticks result)) 2)
@@ -129,16 +128,16 @@
 (deftest scale-ticks-no-minor-ticks-when-count-zero
   (testing "scale-ticks generates no minor ticks when minor-count is 0"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 100
-                                      :minor-count 0
-                                      :origin :root})]
+                                     :x-scale 100
+                                     :minor-count 0
+                                     :origin :root})]
       (is (= [] (:minor-ticks result))))))
 
 (deftest scale-ticks-base-ticks-complete
   (testing "base-ticks contains all ticks computed from unit interval"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 100
-                                      :origin :root})]
+                                     :x-scale 100
+                                     :origin :root})]
       ;; base-ticks should be comprehensive set before filtering
       (is (pos? (count (:base-ticks result))))
       ;; major-ticks should be a subset of base-ticks
@@ -147,8 +146,8 @@
 (deftest scale-ticks-all-ticks-sorted
   (testing "All tick arrays are sorted"
     (let [result (scale/scale-ticks {:max-depth 10
-                                      :x-scale 100
-                                      :origin :tips})]
+                                     :x-scale 100
+                                     :origin :tips})]
       (is (= (:major-ticks result) (sort (:major-ticks result))))
       (is (= (:minor-ticks result) (sort (:minor-ticks result))))
       (is (= (:base-ticks result) (sort (:base-ticks result)))))))
@@ -177,11 +176,11 @@
       (is (= 10 (last (:major-ticks result-tips)))))))
 
 (deftest scale-ticks-unit-calculation
-  (testing "scale-ticks unit is calculated via tree/calculate-scale-unit"
+  (testing "scale-ticks unit is calculated via scale/calculate-scale-unit"
     (let [max-depth 10
           result (scale/scale-ticks {:max-depth max-depth :x-scale 100})]
       ;; Unit should match what calculate-scale-unit returns for max-depth/5
-      (is (= (tree/calculate-scale-unit (/ max-depth 5)) (:unit result))))))
+      (is (= (scale/calculate-scale-unit (/ max-depth 5)) (:unit result))))))
 
 (deftest scale-ticks-min-label-px-affects-major-count
   (testing "Smaller min-label-px allows more major ticks"
@@ -200,8 +199,8 @@
 (deftest scale-ticks-small-values
   (testing "scale-ticks works with very small max-depth values"
     (let [result (scale/scale-ticks {:max-depth 0.05
-                                      :x-scale 100
-                                      :origin :root})]
+                                     :x-scale 100
+                                     :origin :root})]
       (is (pos? (count (:major-ticks result))))
       (is (pos? (:unit result)))
       (is (every? #(and (>= % 0) (<= % 0.05)) (:major-ticks result))))))
@@ -209,8 +208,8 @@
 (deftest scale-ticks-large-values
   (testing "scale-ticks works with large max-depth values"
     (let [result (scale/scale-ticks {:max-depth 1000
-                                      :x-scale 1
-                                      :origin :root})]
+                                     :x-scale 1
+                                     :origin :root})]
       (is (pos? (count (:major-ticks result))))
       (is (pos? (:unit result)))
       (is (every? #(and (>= % 0) (<= % 1000)) (:major-ticks result))))))
@@ -272,11 +271,11 @@
   (testing "label-decimals returns appropriate precision for typical max-depth values"
     ;; max-depth 10 -> unit = calculate-scale-unit(2) = 0.5 -> decimals = 1
     (let [max-depth 10
-          unit (tree/calculate-scale-unit (/ max-depth 5))]
+          unit (scale/calculate-scale-unit (/ max-depth 5))]
       (is (= (#'scale/decimals-for-unit unit) (scale/label-decimals max-depth))))
     ;; max-depth 1 -> unit = calculate-scale-unit(0.2) = 0.1 -> decimals = 1
     (let [max-depth 1
-          unit (tree/calculate-scale-unit (/ max-depth 5))]
+          unit (scale/calculate-scale-unit (/ max-depth 5))]
       (is (= (#'scale/decimals-for-unit unit) (scale/label-decimals max-depth))))))
 
 (deftest label-decimals-very-small-max-depth
@@ -375,3 +374,41 @@
                               (count (second parts))
                               0)]
         (is (= decimals actual-decimals))))))
+
+;; ===== calculate-scale-unit =====
+
+(deftest calculate-scale-unit-small-values
+  (testing "Scale unit for small max-x values"
+    ;; 0.37 has magnitude 0.1, ratio 3.7 -> 50% of magnitude -> 0.05
+    (let [unit (scale/calculate-scale-unit 0.37)]
+      (is (pos? unit))
+      (is (< unit 0.37)))))
+
+(deftest calculate-scale-unit-larger-values
+  (testing "Scale unit for larger values"
+    (let [unit (scale/calculate-scale-unit 5.2)]
+      ;; 5.2 has magnitude 1, ratio 5.2 -> full magnitude -> 1
+      (is (== 1 unit)))))
+
+(deftest calculate-scale-unit-very-small
+  (testing "Scale unit for very small max-x"
+    (let [unit (scale/calculate-scale-unit 0.012)]
+      (is (pos? unit))
+      (is (< unit 0.012)))))
+
+;; ===== get-ticks =====
+
+(deftest get-ticks-basic
+  (testing "Ticks from 0 to max-x in increments of unit"
+    (let [ticks (scale/get-ticks 1.0 0.25)]
+      (is (= [0 0.25 0.5 0.75 1.0] ticks)))))
+
+(deftest get-ticks-doesnt-exceed-max
+  (testing "Ticks never exceed max-x"
+    (let [ticks (scale/get-ticks 0.9 0.5)]
+      (is (every? #(<= % 0.9) ticks))
+      (is (= [0 0.5] ticks)))))
+
+(deftest get-ticks-starts-at-zero
+  (testing "Ticks always start at 0"
+    (is (= 0 (first (scale/get-ticks 10 1))))))

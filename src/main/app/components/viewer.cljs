@@ -9,18 +9,19 @@
             [uix.core :as uix :refer [defui $]]
             [app.specs :as specs]
             [app.state :as state]
-            [app.layout :refer [LAYOUT]]
+            [app.layout :refer [LAYOUT compute-col-gaps]]
             [app.tree :as tree]
             [app.color :as color]
             [app.components.tree :refer [PhylogeneticTree]]
             [app.components.metadata :refer [StickyHeader MetadataTable]]
-            [app.components.scale :as scale]
+            [app.scale :as scale]
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
             [app.components.legend :refer [FloatingLegend legend-width]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [app.util :as util])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
 (defui PixelGrid
@@ -105,8 +106,8 @@
 (defui ScaleGridlines*
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
 
-  Computes human-friendly tick intervals via [[tree/calculate-scale-unit]] and
-  [[tree/get-ticks]], then draws one dashed line per tick across the full
+  Computes human-friendly tick intervals via [[scale/calculate-scale-unit]] and
+  [[scale/get-ticks]], then draws one dashed line per tick across the full
   `tree-height`. Intended to be placed as a sibling of the tree and
   metadata in the SVG, inside the translated coordinate group.
 
@@ -141,17 +142,6 @@
     (or (and assets (aget assets path)) path)))
 
 ;; ---- Helpers for SVG coordinate conversion ----
-
-(defn- client->svg
-  "Convert client (screen) coordinates to SVG user-space coordinates.
-  Returns [svg-x svg-y] or nil if the SVG's CTM is unavailable."
-  [^js svg client-x client-y]
-  (when-let [^js ctm (.getScreenCTM svg)]
-    (let [^js pt (.matrixTransform
-                  (js/DOMPoint. client-x client-y)
-                  (.inverse ctm))]
-      [(.-x pt) (.-y pt)])))
-
 (def ^:private drag-threshold
   "Minimum manhattan-distance (px) before a mousedown→move is treated as
   a box-select rather than an accidental click."
@@ -247,8 +237,7 @@
         legend-right-pad 12
         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
                             (+ (:x legend-pos) legend-width legend-right-pad))
-        col-gaps        (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
-                                          active-cols)
+        col-gaps        (uix/use-memo #(compute-col-gaps active-cols col-spacing) [active-cols col-spacing])
         base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
                            (reduce + 0 col-gaps)
@@ -262,7 +251,7 @@
                         (when (and color-by-enabled? color-by-field (seq tips))
                           (color/build-color-map tips color-by-field color-by-palette color-by-type-override)))
                       [color-by-enabled? color-by-field color-by-palette color-by-type-override tips])
-        merged-highlights (merge (or color-by-map {}) (or highlights {}))
+        merged-highlights (uix/use-memo #(merge (or color-by-map {}) (or highlights {})) [color-by-map highlights])
 
         field-keys (into #{} (map :key) active-cols)
         legend-field (when (contains? field-keys color-by-field) color-by-field)
@@ -275,26 +264,11 @@
                        (when (and color-by-enabled? legend-field (seq tips))
                          (color/build-legend tips legend-field color-by-palette color-by-type-override)))
                      [color-by-enabled? legend-field color-by-palette color-by-type-override tips])
-        auto-entries (or (:entries legend-auto) [])
-        custom-colors (->> (vals (or highlights {})) distinct sort)
-        custom-entries (->> custom-colors
-                            (mapv (fn [color]
-                                    (let [label (get legend-labels color "")
-                                          placeholder? (str/blank? label)
-                                          display (if placeholder? "Label..." label)]
-                                      {:id (str "custom-" color)
-                                       :color color
-                                       :label display
-                                       :editable? true
-                                       :placeholder? placeholder?}))))
-        legend-sections (cond-> []
-                          (seq auto-entries)
-                          (conj {:title (if field-label
-                                          (str "Auto: " field-label)
-                                          "Auto")
-                                 :entries auto-entries})
-                          (seq custom-entries)
-                          (conj {:title "Custom" :entries custom-entries}))
+        {:keys [sections]} (uix/use-memo
+                            (fn []
+                              (color/build-legend-sections legend-auto field-label highlights legend-labels))
+                            [legend-auto field-label highlights legend-labels])
+        legend-sections sections
         show-legend? (boolean legend-visible?)
 
         _auto-show-legend
@@ -339,9 +313,7 @@
         ;; Toggle subtree selection: if any selected, clear all; else select all
         select-subtree (uix/use-callback
                         (fn [node]
-                          (let [leaf-names (into #{}
-                                                 (keep :name)
-                                                 (tree/get-leaves node))]
+                          (let [leaf-names (:leaf-names node)]
                             (when (seq leaf-names)
                               (set-selected-ids!
                                (fn [ids]
@@ -403,30 +375,23 @@
                      ;; Don't hijack clicks on interactive leaf elements
                      (not (#{"circle" "text"} (.-tagName (.-target e)))))
             (when-let [^js svg @svg-ref]
-              (when-let [[sx sy] (client->svg svg (.-clientX e) (.-clientY e))]
+              (when-let [[sx sy] (util/client->svg svg (.-clientX e) (.-clientY e))]
                 (let [shift?  (.-shiftKey e)
                       on-move (fn [^js me]
-                                (when-let [[mx my] (client->svg svg (.-clientX me) (.-clientY me))]
+                                (when-let [[mx my] (util/client->svg svg (.-clientX me) (.-clientY me))]
                                   (set-drag-rect! {:x1 sx :y1 sy :x2 mx :y2 my})))
                       on-up   (fn on-up-fn [^js ue]
-                                (when-let [[ex ey] (client->svg svg (.-clientX ue) (.-clientY ue))]
+                                (when-let [[ex ey] (util/client->svg svg (.-clientX ue) (.-clientY ue))]
                                   (let [dx (- ex sx)
                                         dy (- ey sy)]
                                     (when (> (+ (js/Math.abs dx) (js/Math.abs dy)) drag-threshold)
-                                      (let [min-x  (min sx ex) max-x (max sx ex)
-                                            min-y  (min sy ey) max-y (max sy ey)
-                                            pad-x  (:svg-padding-x LAYOUT)
-                                            pad-y  (:svg-padding-y LAYOUT)
-                                            hit-ids (into #{}
-                                                          (comp
-                                                           (filter (fn [tip]
-                                                                     (let [shift-x left-shift
-                                                                           lx (+ pad-x shift-x (* (:x tip) current-x-scale))
-                                                                           ly (+ pad-y (* (:y tip) y-mult))]
-                                                                       (and (<= min-x lx max-x)
-                                                                            (<= min-y ly max-y)))))
-                                                           (map :name))
-                                                          tips)]
+                                      (let [hit-ids (tree/leaves-in-rect
+                                                     tips
+                                                     {:min-x (min sx ex) :max-x (max sx ex)
+                                                      :min-y (min sy ey) :max-y (max sy ey)}
+                                                     current-x-scale y-mult
+                                                     (:svg-padding-x LAYOUT) (:svg-padding-y LAYOUT)
+                                                     left-shift)]
                                         (if shift?
                                           (set-selected-ids! (fn [ids] (into (or ids #{}) hit-ids)))
                                           (set-selected-ids! hit-ids))))))
@@ -494,39 +459,39 @@
                                 :scale-origin scale-origin}))
 
              ;; Debugging pixel grid
-             (when show-pixel-grid
-               ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
+                (when show-pixel-grid
+                  ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
              ;; Scale gridlines
-             (when show-scale-gridlines
-               ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-                  ($ ScaleGridlines {:max-depth max-depth
-                                     :x-scale current-x-scale
-                                     :tree-height tree-height
-                                     :scale-origin scale-origin})))
+                (when show-scale-gridlines
+                  ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+                     ($ ScaleGridlines {:max-depth max-depth
+                                        :x-scale current-x-scale
+                                        :tree-height tree-height
+                                        :scale-origin scale-origin})))
 
              ;; The tree itself
-             ($ PhylogeneticTree {:tree tree
-                                  :x-scale current-x-scale
-                                  :y-scale y-mult
-                                  :show-internal-markers show-internal-markers
-                                  :show-distance-from-origin show-distance-from-origin
-                                  :scale-origin scale-origin
-                                  :max-depth max-depth
-                                  :marker-radius (:node-marker-radius LAYOUT)
-                                  :marker-fill (:node-marker-fill LAYOUT)
-                                  :highlights merged-highlights
-                                  :selected-ids selected-ids
-                                  :on-toggle-selection toggle-selection
-                                  :on-select-subtree select-subtree})
+                ($ PhylogeneticTree {:tree tree
+                                     :x-scale current-x-scale
+                                     :y-scale y-mult
+                                     :show-internal-markers show-internal-markers
+                                     :show-distance-from-origin show-distance-from-origin
+                                     :scale-origin scale-origin
+                                     :max-depth max-depth
+                                     :marker-radius (:node-marker-radius LAYOUT)
+                                     :marker-fill (:node-marker-fill LAYOUT)
+                                     :highlights merged-highlights
+                                     :selected-ids selected-ids
+                                     :on-toggle-selection toggle-selection
+                                     :on-select-subtree select-subtree})
 
              ;; Metadata columns
-             (when (seq active-cols)
-               ($ MetadataTable {:active-cols active-cols
-                                 :tips tips
-                                 :start-offset metadata-start-x
-                                 :y-scale y-mult
-                                 :col-spacing col-spacing})))
+                (when (seq active-cols)
+                  ($ MetadataTable {:active-cols active-cols
+                                    :tips tips
+                                    :start-offset metadata-start-x
+                                    :y-scale y-mult
+                                    :col-spacing col-spacing})))
 
              ;; Drag-select rectangle overlay
              (when drag-rect
@@ -573,9 +538,7 @@
                              :selected-ids selected-ids
                              :on-cols-reordered set-active-cols!
                              :on-selection-changed set-selected-ids!
-                             :on-cell-edited handle-cell-edited}))))
-
-     ))
+                             :on-cell-edited handle-cell-edited}))))))
 
 (defui-with-spec TreeViewer
   [{:spec :app.specs/tree-viewer-props :props props}]

@@ -12,6 +12,9 @@
   unless callers treat the atom as part of the input/output state (e.g. by
   passing a fresh atom when purity is required).
 
+  Scale-related helpers (`calculate-scale-unit`, `get-ticks`) now live
+  in [[app.scale]].
+
   See [[app.specs]] for function specs."
   (:require [app.newick :as newick]))
 
@@ -76,42 +79,6 @@
             :children (mapv #(assign-x-coords % new-x false)
                             (:children node))))))
 
-;; ===== Scale Bar Helpers =====
-
-(defn calculate-scale-unit
-  "Calculates a human-friendly tick interval for a scale bar.
-
-  Given a maximum value, returns a 'nice' unit size based on the
-  order of magnitude. The algorithm picks the largest round number
-  that produces a reasonable number of ticks:
-  - ratio < 2 -> 10% of magnitude
-  - ratio < 5 -> 50% of magnitude
-  - otherwise  -> full magnitude
-
-  For example, `(calculate-scale-unit 0.37)` returns `0.05`."
-  [max-x]
-  (let [log10 (js/Math.log10 max-x)
-        magnitude (js/Math.pow 10 (js/Math.floor log10))
-        ratio (/ max-x magnitude)]
-    (cond
-      (< ratio 2) (* magnitude 0.1)
-      (< ratio 5) (* magnitude 0.5)
-      :else magnitude)))
-
-(defn get-ticks
-  "Generates a lazy sequence of tick positions from 0 to `max-x` in
-  increments of `unit`. Used to render scale bar gridlines and labels.
-
-  Guards against non-positive `unit` to avoid a non-terminating sequence:
-  - If `max-x` is <= 0, returns a single tick at 0.
-  - If `unit` is <= 0 (and `max-x` is > 0), returns an empty sequence."
-  [max-x unit]
-  (cond
-    (<= max-x 0) [0]
-    (<= unit 0)  []
-    :else        (take-while #(<= % max-x)
-                             (iterate #(+ % unit) 0))))
-
 ;; ===== Tree Traversal Helpers =====
 
 (defn get-leaves
@@ -144,14 +111,28 @@
                                 (:children node))]
      [(assoc node :id current-id :children updated-children) @next-id])))
 
+(defn assign-leaf-names
+  "Precomputes a `:leaf-names` set on every node containing the names of
+  all descendant leaves.  For leaf nodes the set contains only that leaf's
+  name (when non-nil).  For internal nodes it is the union of the children's
+  sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
+  during rendering."
+  [node]
+  (if (empty? (:children node))
+    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))
+    (let [updated-children (mapv assign-leaf-names (:children node))
+          names (into #{} (mapcat :leaf-names) updated-children)]
+      (assoc node :leaf-names names :children updated-children))))
+
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.
 
-  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned,
-  then collects leaves and merges metadata from uploaded CSV/TSV rows.
+  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned ->
+  node-ids -> leaf-names, then collects leaves and merges metadata from
+  uploaded CSV/TSV rows.
 
   Returns a map with:
-  - `:tree`      - root node with `:x` and `:y` on every node
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names` on every node
   - `:tips`      - flat vector of leaf nodes with `:metadata` merged
   - `:max-depth` - maximum x-coordinate (for scale calculations)"
   [newick-str metadata-rows active-cols]
@@ -159,7 +140,8 @@
                  (assign-y-coords (atom 0))
                  first
                  assign-x-coords
-                 assign-node-ids)
+                 assign-node-ids
+                 assign-leaf-names)
         leaves (get-leaves root)
         id-key (-> active-cols first :key)
         metadata-index (when (and id-key (seq metadata-rows))
@@ -171,3 +153,30 @@
     {:tree root
      :tips enriched-leaves
      :max-depth (get-max-x root)}))
+
+;; ===== Spatial Selection =====
+
+(defn leaves-in-rect
+  "Returns a set of tip names whose positioned coordinates fall inside a
+  bounding rectangle.
+
+  Arguments:
+  - `tips`     - positioned leaf nodes (each with `:x`, `:y`, `:name`)
+  - `rect`     - map `{:min-x :max-x :min-y :max-y}` in SVG user-space
+  - `x-scale`  - horizontal scaling factor (pixels per branch-length unit)
+  - `y-mult`   - vertical scaling factor (pixels per tip)
+  - `pad-x`    - horizontal padding offset (px)
+  - `pad-y`    - vertical padding offset (px)
+  - `left-shift` - additional horizontal shift (px)
+
+  Used by box-select / lasso selection in the viewer."
+  [tips {:keys [min-x max-x min-y max-y]} x-scale y-mult pad-x pad-y left-shift]
+  (into #{}
+        (comp
+         (filter (fn [tip]
+                   (let [lx (+ pad-x left-shift (* (:x tip) x-scale))
+                         ly (+ pad-y (* (:y tip) y-mult))]
+                     (and (<= min-x lx max-x)
+                          (<= min-y ly max-y)))))
+         (map :name))
+        tips))

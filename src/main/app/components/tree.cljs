@@ -16,11 +16,9 @@
   (:require [cljs.spec.alpha :as s]
             [uix.core :refer [defui $]]
             [app.layout :refer [LAYOUT]]
-            [app.components.scale :as scale]
-            [app.tree :as tree]
+            [app.scale :as scale]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
-
 
 (s/def :app.specs/branch-props
   (s/keys :req-un [:app.specs/x
@@ -123,8 +121,10 @@
         distance-label (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
                          (scale/format-label scale-origin max-depth node-depth))
         leaf-names (when internal-node?
-                     (into #{} (keep :name) (tree/get-leaves node)))
-        any-selected? (and (seq leaf-names) (some selected-ids leaf-names))
+                     (:leaf-names node))
+        any-selected? (and (seq selected-ids)
+                           (seq leaf-names)
+                           (some leaf-names selected-ids))
         internal-state-class (when (seq leaf-names)
                                (if any-selected?
                                  " internal-node-marker--deselect"
@@ -201,27 +201,26 @@
        ;; Recurse into children
        (for [child (:children node)]
          ($ TreeNode {:key (:id child)
-                       :node child
-                       :parent-x (:x node)
-                       :parent-y (:y node)
-                       :x-scale x-scale
-                       :y-scale y-scale
-                       :show-internal-markers show-internal-markers
-                       :show-distance-from-origin show-distance-from-origin
-                       :scale-origin scale-origin
-                       :max-depth max-depth
-                       :marker-radius marker-radius
-                       :marker-fill marker-fill
-                       :highlights highlights
-                       :selected-ids selected-ids
-                       :on-toggle-selection on-toggle-selection
-                       :on-select-subtree on-select-subtree})))))
+                      :node child
+                      :parent-x (:x node)
+                      :parent-y (:y node)
+                      :x-scale x-scale
+                      :y-scale y-scale
+                      :show-internal-markers show-internal-markers
+                      :show-distance-from-origin show-distance-from-origin
+                      :scale-origin scale-origin
+                      :max-depth max-depth
+                      :marker-radius marker-radius
+                      :marker-fill marker-fill
+                      :highlights highlights
+                      :selected-ids selected-ids
+                      :on-toggle-selection on-toggle-selection
+                      :on-select-subtree on-select-subtree})))))
 
 (defui-with-spec TreeNode
   [{:spec :app.specs/tree-node-props :props props}]
   ($ TreeNode* props))
 #_(def TreeNode TreeNode*)
-
 
 (s/def :app.specs/phylogenetic-tree-props
   (s/keys :req-un [:app.specs/tree
@@ -274,7 +273,6 @@
                   :selected-ids selected-ids
                   :on-toggle-selection on-toggle-selection
                   :on-select-subtree on-select-subtree})))
-
 
 (defui-with-spec PhylogeneticTree
   [{:spec :app.specs/phylogenetic-tree-props :props props}]

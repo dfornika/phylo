@@ -8,7 +8,7 @@
   Reads state from React context via [[app.state/use-app-state]]."
   (:require [uix.core :as uix :refer [defui $]]
             [app.csv :as csv]
-            [app.export.html :as export-html]
+            [app.io :as io]
             [app.color :as color]
             [app.state :as state]))
 
@@ -58,8 +58,8 @@
         field-keys (into #{} (map :key) field-cols)
         field-key (when (contains? field-keys color-by-field) color-by-field)
         detected-type (if field-key
-                       (color/infer-field-type metadata-rows field-key)
-                       :categorical)
+                        (color/infer-field-type metadata-rows field-key)
+                        :categorical)
         type-override (if (#{:auto :categorical :numeric :date} color-by-type-override)
                         color-by-type-override
                         :auto)
@@ -73,11 +73,11 @@
                          (min restore-height max-panel-height)
                          restore-height)
         restore-disabled? (or (not (pos? restore-target))
-                               (and (not metadata-panel-collapsed)
-                                    (= metadata-panel-height restore-target)))
+                              (and (not metadata-panel-collapsed)
+                                   (= metadata-panel-height restore-target)))
         maximize-disabled? (or (not (pos? max-panel-height))
-                                (and (not metadata-panel-collapsed)
-                                     (>= metadata-panel-height max-panel-height)))
+                               (and (not metadata-panel-collapsed)
+                                    (>= metadata-panel-height max-panel-height)))
         id-key (-> active-cols first :key)
         all-ids (if id-key
                   (into #{} (keep (fn [row] (get row id-key))) metadata-rows)
@@ -195,7 +195,7 @@
                    :disabled (zero? n-highlighted)
                    :on-click (fn [_] (set-highlights! {}))}
           "Clear All Colors")
-       
+
        ;; Selection shortcuts
        ($ :button {:style (merge button-style
                                  (when select-all-disabled?
@@ -215,32 +215,32 @@
        ;; Minimize/restore/maximize controls (far right)
        ($ :div {:style {:margin-left "auto" :display "flex" :gap "6px"}}
           ($ :button {:style (merge button-style
-                                   {:padding "3px 8px"}
-                                   (when export-disabled?
-                                     {:opacity "0.5" :cursor "default"}))
+                                    {:padding "3px 8px"}
+                                    (when export-disabled?
+                                      {:opacity "0.5" :cursor "default"}))
                       :title "Download metadata as CSV"
                       :disabled export-disabled?
                       :on-click (fn [_]
                                   (when (seq active-cols)
                                     (let [csv-text (csv/metadata->csv active-cols metadata-rows)
                                           blob (js/Blob. (clj->js [csv-text])
-                                                        #js {:type "text/csv;charset=utf-8"})]
-                                      (export-html/save-blob!
+                                                         #js {:type "text/csv;charset=utf-8"})]
+                                      (io/save-blob!
                                        blob
                                        "metadata.csv"
                                        [{:description "CSV File"
                                          :accept {"text/csv" [".csv"]}}]))))}
              "CSV")
           ($ :button {:style (merge icon-button-style
-                                   (when metadata-panel-collapsed
-                                     {:opacity "0.4" :cursor "default"}))
+                                    (when metadata-panel-collapsed
+                                      {:opacity "0.4" :cursor "default"}))
                       :title "Collapse metadata grid"
                       :disabled metadata-panel-collapsed
                       :on-click (fn [_] (set-metadata-panel-collapsed! true))}
              "▼")
           ($ :button {:style (merge icon-button-style
-                                   (when restore-disabled?
-                                     {:opacity "0.4" :cursor "default"}))
+                                    (when restore-disabled?
+                                      {:opacity "0.4" :cursor "default"}))
                       :title "Restore last dragged height"
                       :disabled restore-disabled?
                       :on-click (fn [_]
@@ -249,13 +249,12 @@
                                     (set-metadata-panel-collapsed! false)))}
              "●")
           ($ :button {:style (merge icon-button-style
-                                   (when maximize-disabled?
-                                     {:opacity "0.4" :cursor "default"}))
+                                    (when maximize-disabled?
+                                      {:opacity "0.4" :cursor "default"}))
                       :title "Expand metadata grid"
                       :disabled maximize-disabled?
                       :on-click (fn [_]
                                   (when (pos? max-panel-height)
                                     (set-metadata-panel-height! max-panel-height)
                                     (set-metadata-panel-collapsed! false)))}
-             "▲"))
-       )))
+             "▲")))))

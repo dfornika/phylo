@@ -11,22 +11,8 @@
             [app.state :as state]
             [app.export.html :as export-html]
             [app.export.svg :as export-svg]
-            [app.layout :refer [LAYOUT]]))
-
-;; ===== File I/O =====
-
-(defn read-file!
-  "Reads a text file selected by the user via an `<input type=\"file\">` element.
-
-  Extracts the first file from the JS event's target, reads it as text
-  using a `FileReader`, and calls `on-read-fn` with the string content
-  when loading completes. This is a side-effecting function (note the `!`)."
-  [js-event on-read-fn]
-  (when-let [file (-> js-event .-target .-files (aget 0))]
-    (let [reader (js/FileReader.)]
-      (set! (.-onload reader)
-            (fn [e] (on-read-fn (-> e .-target .-result))))
-      (.readAsText reader file))))
+            [app.layout :refer [LAYOUT]]
+            [app.io :as io]))
 
 ;; ===== Style constants =====
 
@@ -99,53 +85,53 @@
                 ($ :input {:type "file"
                            :accept ".nwk,.newick,.tree,.txt"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
-                           :on-change #(read-file! % (fn [content]
-                                                       (set-newick-str! (.trim content))
-                                                       (set-metadata-rows! [])
-                                                       (set-active-cols! [])
-                                                       (set-selected-ids! #{})
-                                                       (set-highlights! {})))}))
+                           :on-change #(io/read-file! % (fn [content]
+                                                          (set-newick-str! (.trim content))
+                                                          (set-metadata-rows! [])
+                                                          (set-active-cols! [])
+                                                          (set-selected-ids! #{})
+                                                          (set-highlights! {})))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Metadata")
                 ($ :input {:type "file"
                            :accept ".csv,.tsv,.txt"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
-                           :on-change #(read-file! % (fn [content]
-                                                       (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
-                                                         (set-metadata-rows! data)
-                                                         (set-active-cols! headers))))})))
+                           :on-change #(io/read-file! % (fn [content]
+                                                          (let [{:keys [headers data]} (csv/parse-metadata content (:default-col-width LAYOUT))]
+                                                            (set-metadata-rows! data)
+                                                            (set-active-cols! headers))))})))
           ($ :div {:style section-style}
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "ArborView HTML")
                 ($ :input {:type "file"
                            :accept ".html,.htm"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
-                           :on-change #(read-file! % (fn [content]
-                                                       (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
-                                                         (when newick-str
-                                                           (set-newick-str! (str/trim newick-str)))
-                                                         (if metadata-raw
-                                                           (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
-                                                             (set-metadata-rows! data)
-                                                             (set-active-cols! headers))
-                                                           (do
-                                                             (set-metadata-rows! [])
-                                                             (set-active-cols! [])))
-                                                         (set-selected-ids! #{})
-                                                         (set-highlights! {}))))}))
+                           :on-change #(io/read-file! % (fn [content]
+                                                          (let [{:keys [newick-str metadata-raw]} (arbor/parse-arborview-html content)]
+                                                            (when newick-str
+                                                              (set-newick-str! (str/trim newick-str)))
+                                                            (if metadata-raw
+                                                              (let [{:keys [headers data]} (csv/parse-metadata metadata-raw (:default-col-width LAYOUT))]
+                                                                (set-metadata-rows! data)
+                                                                (set-active-cols! headers))
+                                                              (do
+                                                                (set-metadata-rows! [])
+                                                                (set-active-cols! [])))
+                                                            (set-selected-ids! #{})
+                                                            (set-highlights! {}))))}))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Nextstrain JSON")
                 ($ :input {:type "file"
                            :accept ".json"
                            :style {:font-family toolbar-font :font-size "12px" :color navy}
-                           :on-change #(read-file! % (fn [content]
-                                                       (let [{:keys [newick-str]} (nextstrain/parse-nextstrain-json content)]
-                                                         (when newick-str
-                                                           (set-newick-str! (str/trim newick-str))
-                                                           (set-metadata-rows! [])
-                                                           (set-active-cols! [])
-                                                           (set-selected-ids! #{})
-                                                           (set-highlights! {})))))}))))
+                           :on-change #(io/read-file! % (fn [content]
+                                                          (let [{:keys [newick-str]} (nextstrain/parse-nextstrain-json content)]
+                                                            (when newick-str
+                                                              (set-newick-str! (str/trim newick-str))
+                                                              (set-metadata-rows! [])
+                                                              (set-active-cols! [])
+                                                              (set-selected-ids! #{})
+                                                              (set-highlights! {})))))}))))
 
        ;; ── Controls ──
        ($ :div {:style group-style}
@@ -211,15 +197,14 @@
                    ($ :option {:value "root"} "Root"))))
              ;; Temporarily disabled this toggle for the PixelGrid.
              ;; only intended as dev-time troubleshooting tool.
-             #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
-                ($ :input {:type "checkbox"
-                           :checked show-pixel-grid
-                           :style {:accent-color navy}
-                           :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
-                "Pixel Grid")
-             )
+          #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+               ($ :input {:type "checkbox"
+                          :checked show-pixel-grid
+                          :style {:accent-color navy}
+                          :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
+               "Pixel Grid"))
 
-       ;; ── Export ──
+;; ── Export ──
        ($ :div {:style (merge group-style {:margin-left "auto"})}
           ($ :button {:on-click (fn [_] (export-svg/export-svg!))
                       :style {:font-family toolbar-font
@@ -244,5 +229,4 @@
                               :border (str "1px solid " navy)
                               :border-radius "6px"
                               :transition "background 0.15s"}}
-             "\u21E9 HTML")
-             ))))
+             "\u21E9 HTML")))))
