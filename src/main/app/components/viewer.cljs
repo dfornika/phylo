@@ -613,8 +613,9 @@
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
-  the positioned tree via [[tree/prepare-tree]] (memoized), and passes
-  everything as props to [[TreeViewer]].
+  the positioned tree via [[tree/parse-and-position]] and enriches
+  leaves via [[tree/enrich-leaves]] (both memoized separately so that
+  metadata changes don't re-parse the Newick string).
   When no Newick string is loaded, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
   (let [{:keys [newick-str metadata-rows active-cols
@@ -629,11 +630,20 @@
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
-        {:keys [tree tips max-depth]} (uix/use-memo
-                                       (fn [] (when (and (string? newick-str)
-                                                         (not (str/blank? newick-str)))
-                                                (tree/prepare-tree newick-str metadata-rows active-cols)))
-                                       [newick-str metadata-rows active-cols])]
+        ;; Stage 1: parse + position — only re-runs when newick-str changes
+        {:keys [tree raw-tips max-depth]}
+        (uix/use-memo
+         (fn [] (when (and (string? newick-str)
+                           (not (str/blank? newick-str)))
+                  (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
+                    {:tree tree :raw-tips tips :max-depth max-depth})))
+         [newick-str])
+
+        ;; Stage 2: enrich leaves with metadata — re-runs when metadata or cols change
+        tips (uix/use-memo
+              (fn [] (when raw-tips
+                       (tree/enrich-leaves raw-tips metadata-rows active-cols)))
+              [raw-tips metadata-rows active-cols])]
     (if tree
       ($ TreeViewer {:tree tree
                      :tips tips
