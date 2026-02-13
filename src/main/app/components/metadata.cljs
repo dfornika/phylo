@@ -227,8 +227,8 @@
                                        (.preventDefault e)
                                        (reset! gap-dragging-ref true)
                                        (reset! gap-start-x-ref (.-clientX e))
-                                       (reset! gap-start-ref (or tree-metadata-gap-px 0)))})
-          )
+                                       (reset! gap-start-ref (or tree-metadata-gap-px 0)))}))
+          
           (for [{:keys [key label width spacing]} columns]
             (let [col-gap (+ (or col-spacing 0) (or spacing 0))]
               ($ :div {:key key

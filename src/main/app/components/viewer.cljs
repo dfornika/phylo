@@ -526,9 +526,7 @@
                                  :tips tips
                                  :start-offset metadata-start-x
                                  :y-scale y-mult
-                                 :col-spacing col-spacing}))
-
-             )
+                                 :col-spacing col-spacing})))
 
              ;; Drag-select rectangle overlay
              (when drag-rect
@@ -555,9 +553,7 @@
                                   :set-collapsed! set-legend-collapsed!
                                   :labels legend-labels
                                   :set-labels! set-legend-labels!
-                                  :on-close (fn [] (set-legend-visible! false))})))
-
-          )
+                                  :on-close (fn [] (set-legend-visible! false))}))))
 
        ;; Selection bar (above the grid)
        ($ SelectionBar {:max-panel-height panel-max-height})
