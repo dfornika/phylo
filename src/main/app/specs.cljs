@@ -109,6 +109,11 @@
 (s/def ::parsed-metadata
   (s/keys :req-un [::headers ::data]))
 
+;; ===== Import Result Specs =====
+
+(s/def ::error keyword?)
+(s/def ::metadata-raw string?)
+
 ;; ===== App State Context =====
 
 (s/def ::newick-str (s/nilable string?))
@@ -347,3 +352,82 @@
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
+
+;; ----- Scale (additional) -----
+
+(s/fdef app.scale/get-ticks
+  :args (s/cat :max-x number? :unit number?)
+  :ret  (s/coll-of number?))
+
+(s/fdef app.scale/tick-position
+  :args (s/cat :origin (s/nilable #{:tips :root})
+               :max-depth (s/nilable number?)
+               :label number?)
+  :ret  number?)
+
+(s/fdef app.scale/label-value
+  :args (s/cat :origin (s/nilable #{:tips :root})
+               :max-depth (s/nilable number?)
+               :tick number?)
+  :ret  number?)
+
+(s/fdef app.scale/label-decimals
+  :args (s/cat :max-depth (s/nilable number?))
+  :ret  nat-int?)
+
+(s/fdef app.scale/format-label
+  :args (s/cat :origin (s/nilable #{:tips :root})
+               :max-depth (s/nilable number?)
+               :tick number?)
+  :ret  string?)
+
+;; ----- CSV (additional) -----
+
+(s/fdef app.csv/metadata->csv
+  :args (s/cat :active-cols (s/coll-of ::metadata-header)
+               :rows (s/coll-of ::metadata-row))
+  :ret  string?)
+
+;; ----- Date (additional) -----
+
+(s/fdef app.date/parse-date-ms
+  :args (s/cat :s (s/nilable string?))
+  :ret  (s/nilable number?))
+
+;; ----- Import: Nextstrain -----
+
+(s/fdef app.import.nextstrain/parse-nextstrain-json
+  :args (s/cat :json-str (s/nilable string?))
+  :ret  (s/nilable (s/or :success (s/keys :req-un [::newick-str ::parsed-tree])
+                         :error   (s/keys :req-un [::error]))))
+
+;; ----- Import: ArborView -----
+
+(s/fdef app.import.arborview/parse-arborview-html
+  :args (s/cat :html (s/nilable string?))
+  :ret  (s/nilable (s/keys :opt-un [::newick-str ::metadata-raw])))
+
+;; ----- Color -----
+
+(s/def ::color-field-type #{:numeric :date :categorical})
+
+(s/fdef app.color/infer-field-type
+  :args (s/cat :metadata-rows (s/coll-of ::metadata-row)
+               :field-key keyword?)
+  :ret  ::color-field-type)
+
+(s/fdef app.color/resolve-field-type
+  :args (s/cat :values (s/coll-of (s/nilable string?))
+               :type-override #{:auto :categorical :numeric :date})
+  :ret  ::color-field-type)
+
+(s/fdef app.color/build-color-map
+  :args (s/cat :tips (s/coll-of map?)
+               :field-key keyword?
+               :palette-id (s/nilable keyword?)
+               :type-override #{:auto :categorical :numeric :date})
+  :ret  (s/map-of string? string?))
+
+(s/fdef app.color/palette-options
+  :args (s/cat :field-type ::color-field-type)
+  :ret  (s/coll-of map?))
