@@ -20,7 +20,8 @@
             [app.components.resizable-panel :refer [ResizablePanel]]
             [app.components.selection-bar :refer [SelectionBar]]
             [app.components.legend :refer [FloatingLegend legend-width]]
-            [clojure.string :as str])
+            [clojure.string :as str]
+            [app.util :as util])
   (:require-macros [app.specs :refer [defui-with-spec]]))
 
 (defui PixelGrid
@@ -141,17 +142,6 @@
     (or (and assets (aget assets path)) path)))
 
 ;; ---- Helpers for SVG coordinate conversion ----
-
-(defn- client->svg
-  "Convert client (screen) coordinates to SVG user-space coordinates.
-  Returns [svg-x svg-y] or nil if the SVG's CTM is unavailable."
-  [^js svg client-x client-y]
-  (when-let [^js ctm (.getScreenCTM svg)]
-    (let [^js pt (.matrixTransform
-                  (js/DOMPoint. client-x client-y)
-                  (.inverse ctm))]
-      [(.-x pt) (.-y pt)])))
-
 (def ^:private drag-threshold
   "Minimum manhattan-distance (px) before a mousedown→move is treated as
   a box-select rather than an accidental click."
@@ -403,13 +393,13 @@
                      ;; Don't hijack clicks on interactive leaf elements
                      (not (#{"circle" "text"} (.-tagName (.-target e)))))
             (when-let [^js svg @svg-ref]
-              (when-let [[sx sy] (client->svg svg (.-clientX e) (.-clientY e))]
+              (when-let [[sx sy] (util/client->svg svg (.-clientX e) (.-clientY e))]
                 (let [shift?  (.-shiftKey e)
                       on-move (fn [^js me]
-                                (when-let [[mx my] (client->svg svg (.-clientX me) (.-clientY me))]
+                                (when-let [[mx my] (util/client->svg svg (.-clientX me) (.-clientY me))]
                                   (set-drag-rect! {:x1 sx :y1 sy :x2 mx :y2 my})))
                       on-up   (fn on-up-fn [^js ue]
-                                (when-let [[ex ey] (client->svg svg (.-clientX ue) (.-clientY ue))]
+                                (when-let [[ex ey] (util/client->svg svg (.-clientX ue) (.-clientY ue))]
                                   (let [dx (- ex sx)
                                         dy (- ey sy)]
                                     (when (> (+ (js/Math.abs dx) (js/Math.abs dy)) drag-threshold)
