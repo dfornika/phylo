@@ -76,6 +76,18 @@
   (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]
           :opt-un [::leaf-names]))
 
+;; ===== Bounding Rectangle (for lasso selection) =====
+
+(s/def ::min-x number?)
+(s/def ::max-x number?)
+(s/def ::min-y number?)
+(s/def ::max-y number?)
+
+;; ===== Scale Tick Output =====
+
+(s/def ::major-ticks (s/coll-of number?))
+(s/def ::minor-ticks (s/coll-of number?))
+
 ;; ===== Metadata Structures =====
 
 (s/def ::key keyword?)
@@ -251,7 +263,7 @@
                :default-col-width (s/? number?))
   :ret  ::parsed-metadata)
 
-(s/fdef app.csv/parse-date
+(s/fdef app.date/parse-date
   :args (s/cat :s (s/nilable string?))
   :ret  (s/nilable string?))
 
@@ -271,9 +283,45 @@
   :args (s/cat :node ::positioned-node)
   :ret  (s/coll-of ::positioned-node))
 
+(s/fdef app.tree/assign-x-coords
+  :args (s/cat :node ::tree-node)
+  :ret  ::positioned-node)
+
+(s/fdef app.tree/assign-leaf-names
+  :args (s/cat :node ::tree-node)
+  :ret  ::tree-node)
+
+(s/fdef app.tree/leaves-in-rect
+  :args (s/cat :tips (s/coll-of ::positioned-node)
+               :rect (s/keys :req-un [::min-x ::max-x ::min-y ::max-y])
+               :x-scale number?
+               :y-mult number?
+               :pad-x number?
+               :pad-y number?
+               :left-shift number?)
+  :ret  (s/coll-of string? :kind set?))
+
 (s/fdef app.scale/calculate-scale-unit
   :args (s/cat :max-x pos?)
   :ret  pos?)
+
+(s/fdef app.scale/scale-ticks
+  :args (s/cat :opts (s/keys :req-un [::max-depth ::x-scale]
+                             :opt-un [::scale-origin]))
+  :ret  (s/keys :req-un [::major-ticks ::minor-ticks]))
+
+(s/fdef app.newick/map->newick
+  :args (s/cat :node ::tree-node)
+  :ret  string?)
+
+(s/fdef app.layout/compute-col-gaps
+  :args (s/cat :active-cols (s/coll-of ::metadata-header)
+               :col-spacing (s/nilable number?))
+  :ret  (s/coll-of number? :kind vector?))
+
+(s/fdef app.util/clamp
+  :args (s/cat :value number? :min-v number? :max-v number?)
+  :ret  number?)
 
 (s/fdef app.tree/assign-node-ids
   :args (s/cat :node ::tree-node)
