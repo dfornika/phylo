@@ -124,35 +124,64 @@
       (assoc node :leaf-names names :children updated-children))
     (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))))
 
+(defn parse-and-position
+  "Parses a Newick string and produces a fully positioned tree.
+
+  Pipeline: Newick string → parsed tree → y-positioned → x-positioned →
+  node-ids → leaf-names → collect leaves.
+
+  This is the geometry-only stage — it depends solely on the Newick
+  string and does not touch metadata. Memoize on `newick-str` to
+  avoid re-parsing when only metadata changes.
+
+  Returns a map with:
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names`
+  - `:tips`      - flat vector of leaf nodes (no metadata yet)
+  - `:max-depth` - maximum x-coordinate (for scale calculations)"
+  [newick-str]
+  (let [root (-> (newick/newick->map newick-str)
+                 (assign-y-coords (atom 0))
+                 first
+                 assign-x-coords
+                 assign-node-ids
+                 assign-leaf-names)]
+    {:tree root
+     :tips (get-leaves root)
+     :max-depth (get-max-x root)}))
+
+(defn enrich-leaves
+  "Merges metadata from uploaded CSV/TSV rows onto positioned leaf nodes.
+
+  Looks up each leaf's `:name` in `metadata-rows` using the first
+  column of `active-cols` as the join key, and attaches the matching
+  row under `:metadata`.
+
+  Returns the enriched tips vector (same length as input `tips`)."
+  [tips metadata-rows active-cols]
+  (let [id-key (-> active-cols first :key)
+        metadata-index (when (and id-key (seq metadata-rows))
+                         (into {} (map (fn [r] [(get r id-key) r]) metadata-rows)))]
+    (if metadata-index
+      (mapv #(assoc % :metadata (get metadata-index (:name %))) tips)
+      tips)))
+
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.
 
-  Pipeline: Newick string -> parsed tree -> y-positioned -> x-positioned ->
-  node-ids -> leaf-names, then collects leaves and merges metadata from
-  uploaded CSV/TSV rows.
+  Combines [[parse-and-position]] (geometry) and [[enrich-leaves]]
+  (metadata join) into a single call.  Prefer the two-stage API in
+  performance-sensitive paths so that Newick parsing can be memoized
+  independently of metadata changes.
 
   Returns a map with:
   - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names` on every node
   - `:tips`      - flat vector of leaf nodes with `:metadata` merged
   - `:max-depth` - maximum x-coordinate (for scale calculations)"
   [newick-str metadata-rows active-cols]
-  (let [root (-> (newick/newick->map newick-str)
-                 (assign-y-coords (atom 0))
-                 first
-                 assign-x-coords
-                 assign-node-ids
-                 assign-leaf-names)
-        leaves (get-leaves root)
-        id-key (-> active-cols first :key)
-        metadata-index (when (and id-key (seq metadata-rows))
-                         (into {} (map (fn [r] [(get r id-key) r]) metadata-rows)))
-        enriched-leaves (if metadata-index
-                          (mapv #(assoc % :metadata (get metadata-index (:name %)))
-                                leaves)
-                          leaves)]
-    {:tree root
-     :tips enriched-leaves
-     :max-depth (get-max-x root)}))
+  (let [{:keys [tree tips max-depth]} (parse-and-position newick-str)]
+    {:tree tree
+     :tips (enrich-leaves tips metadata-rows active-cols)
+     :max-depth max-depth}))
 
 ;; ===== Spatial Selection =====
 

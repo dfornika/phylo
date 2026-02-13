@@ -327,6 +327,16 @@
   :args (s/cat :node ::tree-node)
   :ret  ::positioned-node)
 
+(s/fdef app.tree/parse-and-position
+  :args (s/cat :newick-str string?)
+  :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
+
+(s/fdef app.tree/enrich-leaves
+  :args (s/cat :tips (s/coll-of ::positioned-node)
+               :metadata-rows (s/coll-of ::metadata-row)
+               :active-cols (s/coll-of ::metadata-header))
+  :ret  (s/coll-of ::positioned-node))
+
 (s/fdef app.tree/prepare-tree
   :args (s/cat :newick-str string?
                :metadata-rows (s/coll-of ::metadata-row)
