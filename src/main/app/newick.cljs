@@ -15,17 +15,14 @@
   taxon labels, and branch length numbers. Trailing semicolons
   are stripped before tokenization.
 
-  Returns an empty list for nil or empty input."
+  Returns nil for nil input, and an empty sequence for blank input."
   [newick-str]
-  (cond (nil? newick-str)
-        '()
-        :else
-        (-> newick-str
-            (str/replace #";$" "")
-            (str/split #"(?=[(),:])|(?<=[(),:])")
-            (->> (map str/trim)
-                 (filter seq)))))
-
+  (when newick-str
+    (-> newick-str
+        (str/replace #";$" "")
+        (str/split #"(?=[(),:])|(?<=[(),:])")
+        (->> (map str/trim)
+             (filter seq)))))
 (comment
   (tokenize nil)
   (tokenize "")

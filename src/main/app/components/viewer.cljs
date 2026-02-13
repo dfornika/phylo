@@ -224,7 +224,7 @@
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
-        current-x-scale (if (> max-depth 0)
+        current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
         tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
