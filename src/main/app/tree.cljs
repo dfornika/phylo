@@ -124,11 +124,35 @@
       (assoc node :leaf-names names :children updated-children))
     (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))))
 
+(defn position-tree
+  "Assigns layout coordinates to a parsed tree map.
+
+  Pipeline: y-positioned → x-positioned → node-ids → leaf-names →
+  collect leaves.
+
+  Accepts the output of [[newick->map]] or any equivalent tree map
+  (e.g. from [[app.import.nextstrain/to-tree-map]]). Useful when
+  the tree map is already available and Newick parsing can be skipped.
+
+  Returns a map with:
+  - `:tree`      - root node with `:x`, `:y`, `:id`, and `:leaf-names`
+  - `:tips`      - flat vector of leaf nodes (no metadata yet)
+  - `:max-depth` - maximum x-coordinate (for scale calculations)"
+  [parsed-tree]
+  (let [root (-> parsed-tree
+                 (assign-y-coords (atom 0))
+                 first
+                 assign-x-coords
+                 assign-node-ids
+                 assign-leaf-names)]
+    {:tree root
+     :tips (get-leaves root)
+     :max-depth (get-max-x root)}))
+
 (defn parse-and-position
   "Parses a Newick string and produces a fully positioned tree.
 
-  Pipeline: Newick string → parsed tree → y-positioned → x-positioned →
-  node-ids → leaf-names → collect leaves.
+  Pipeline: Newick string → parsed tree → [[position-tree]].
 
   This is the geometry-only stage — it depends solely on the Newick
   string and does not touch metadata. Memoize on `newick-str` to
@@ -139,15 +163,7 @@
   - `:tips`      - flat vector of leaf nodes (no metadata yet)
   - `:max-depth` - maximum x-coordinate (for scale calculations)"
   [newick-str]
-  (let [root (-> (newick/newick->map newick-str)
-                 (assign-y-coords (atom 0))
-                 first
-                 assign-x-coords
-                 assign-node-ids
-                 assign-leaf-names)]
-    {:tree root
-     :tips (get-leaves root)
-     :max-depth (get-max-x root)}))
+  (position-tree (newick/newick->map newick-str)))
 
 (defn enrich-leaves
   "Merges metadata from uploaded CSV/TSV rows onto positioned leaf nodes.

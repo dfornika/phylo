@@ -613,12 +613,14 @@
   "Intermediate component that bridges state context and pure rendering.
 
   Reads raw state from context via [[state/use-app-state]], derives
-  the positioned tree via [[tree/parse-and-position]] and enriches
-  leaves via [[tree/enrich-leaves]] (both memoized separately so that
-  metadata changes don't re-parse the Newick string).
-  When no Newick string is loaded, renders [[EmptyState]] instead."
+  the positioned tree via [[tree/parse-and-position]] or
+  [[tree/position-tree]] (when a pre-parsed tree is available, e.g.
+  from Nextstrain import), and enriches leaves via
+  [[tree/enrich-leaves]]. Both stages are memoized separately so that
+  metadata changes don't re-parse the Newick string.
+  When no tree is available, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
-  (let [{:keys [newick-str metadata-rows active-cols
+  (let [{:keys [newick-str parsed-tree metadata-rows active-cols
                 x-mult y-mult show-internal-markers show-distance-from-origin
                 scale-origin show-scale-gridlines show-pixel-grid
                 col-spacing left-shift-px tree-metadata-gap-px highlights selected-ids metadata-panel-collapsed
@@ -630,14 +632,20 @@
                 set-metadata-panel-height! set-metadata-panel-last-drag-height!
                 set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
 
-        ;; Stage 1: parse + position — only re-runs when newick-str changes
+        ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
+        ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
+        ;; via position-tree, skipping the Newick parse step.
         {:keys [tree raw-tips max-depth]}
         (uix/use-memo
-         (fn [] (when (and (string? newick-str)
-                           (not (str/blank? newick-str)))
+         (fn [] (cond
+                  parsed-tree
+                  (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
+                    {:tree tree :raw-tips tips :max-depth max-depth})
+
+                  (and (string? newick-str) (not (str/blank? newick-str)))
                   (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
                     {:tree tree :raw-tips tips :max-depth max-depth})))
-         [newick-str])
+         [newick-str parsed-tree])
 
         ;; Stage 2: enrich leaves with metadata — re-runs when metadata or cols change
         tips (uix/use-memo

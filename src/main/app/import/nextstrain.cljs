@@ -1,8 +1,9 @@
 (ns app.import.nextstrain
   "Parser for Nextstrain JSON exports.
 
-  Extracts the 'tree' object and converts it into a Newick string
-  that can be fed into the existing pipeline."
+  Extracts the 'tree' object and converts it into both a Newick string
+  (for display/export) and a parsed tree map (for direct positioning,
+  avoiding a redundant Newick parse round-trip)."
   (:require [clojure.string :as str]))
 
 (defn- parse-div
@@ -71,7 +72,12 @@
          (or len-str ""))))
 
 (defn parse-nextstrain-json
-  "Parses Nextstrain JSON and returns a map with :newick-str when successful.
+  "Parses Nextstrain JSON and returns a map with tree data when successful.
+
+  Returns:
+  - `:newick-str`   - Newick serialization (for display/export)
+  - `:parsed-tree`  - tree map ready for [[tree/position-tree]], avoiding
+                      the wasteful Newick → parse round-trip
 
   Expected shape: top-level object with a 'tree' field. Each node should
   have optional :name, :node_attrs {:div ...}, and :children."
@@ -81,7 +87,9 @@
       (let [parsed (js->clj (js/JSON.parse json-str) :keywordize-keys true)
             tree (:tree parsed)]
         (when (map? tree)
-          {:newick-str (str (tree->newick (to-tree-map tree nil true)) ";")}))
+          (let [tree-map (to-tree-map tree nil true)]
+            {:newick-str  (str (tree->newick tree-map) ";")
+             :parsed-tree tree-map})))
       (catch :default err
         (js/console.warn "Failed to parse Nextstrain JSON:" err)
         {:error :invalid-json}))))

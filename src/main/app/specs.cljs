@@ -114,6 +114,9 @@
 (s/def ::newick-str (s/nilable string?))
 (s/def ::set-newick-str! fn?)
 
+(s/def ::parsed-tree (s/nilable ::tree-node))
+(s/def ::set-parsed-tree! fn?)
+
 (s/def ::metadata-rows (s/coll-of ::metadata-row :kind vector?))
 (s/def ::set-metadata-rows! fn?)
 
@@ -326,6 +329,10 @@
 (s/fdef app.tree/assign-node-ids
   :args (s/cat :node ::tree-node)
   :ret  ::positioned-node)
+
+(s/fdef app.tree/position-tree
+  :args (s/cat :parsed-tree ::tree-node)
+  :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
 
 (s/fdef app.tree/parse-and-position
   :args (s/cat :newick-str string?)

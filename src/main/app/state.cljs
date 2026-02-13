@@ -8,6 +8,7 @@
 
   State atoms:
   - [[!newick-str]]     - the current Newick tree string
+  - [[!parsed-tree]]   - pre-parsed tree map (e.g. from Nextstrain import)
   - [[!metadata-rows]]  - parsed metadata rows (vector of maps)
   - [[!active-cols]]    - column header configs for metadata display
   - [[!x-mult]]         - horizontal zoom multiplier
@@ -47,6 +48,12 @@
 ;; "Atom holding the current Newick-format tree string."
 (defonce !newick-str
   (atom default-tree))
+
+;; "Atom holding a pre-parsed tree map (e.g. from Nextstrain import).
+;;  When non-nil, TreeContainer uses this directly via position-tree
+;;  instead of parsing the Newick string."
+(defonce !parsed-tree
+  (atom nil))
 
 ;; "Atom holding parsed metadata rows — a vector of maps keyed by header keywords."
 (defonce !metadata-rows
@@ -352,7 +359,8 @@
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
-                   ]))
+                   ]
+          :opt-un [:app.specs/parsed-tree :app.specs/set-parsed-tree!]))
 
 (defui AppStateProvider
   "Wraps children with the app state context.
@@ -362,6 +370,7 @@
   map of current values and setter functions."
   [{:keys [children]}]
   (let [newick-str     (uix/use-atom !newick-str)
+        parsed-tree    (uix/use-atom !parsed-tree)
         metadata-rows  (uix/use-atom !metadata-rows)
         active-cols    (uix/use-atom !active-cols)
         x-mult         (uix/use-atom !x-mult)
@@ -390,6 +399,8 @@
         legend-visible?           (uix/use-atom !legend-visible?)
         app-state     {:newick-str           newick-str
                        :set-newick-str!      #(reset! !newick-str %)
+                       :parsed-tree          parsed-tree
+                       :set-parsed-tree!     #(reset! !parsed-tree %)
                        :metadata-rows        metadata-rows
                        :set-metadata-rows!   #(reset! !metadata-rows %)
                        :active-cols          active-cols
