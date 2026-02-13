@@ -1,4 +1,7 @@
 *~
+.vscode
+.calva
+.portal
 .idea
 .clj-kondo
 .lsp
