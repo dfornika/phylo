@@ -49,23 +49,47 @@ src/
       tree.cljs               # Pure tree layout functions (assign coords, prepare-tree, etc.)
       newick.cljs             # Newick tree format parser
       csv.cljs                # CSV/TSV parser with metadata column support
+      color.cljs              # Color palette helpers, gradient/legend builders
       date.cljs               # Date parsing helpers
+      scale.cljs              # Scale tick calculation, origin-aware label formatting
+      io.cljs                 # Browser file I/O utilities (save-blob!, read-file!)
+      util.cljs               # Small shared helpers (client->svg, clamp)
       specs.cljs              # clojure.spec definitions for data structures & props
       components/
         tree.cljs             # Branch, TreeNode, PhylogeneticTree — SVG tree rendering
         metadata.cljs         # StickyHeader, MetadataColumn, MetadataTable
-        scale.cljs            # Scale tick helpers and origin mapping
+        legend.cljs           # Color legend component for auto-coloring
         toolbar.cljs          # Toolbar — user controls
         viewer.cljs           # TreeContainer, TreeViewer, ScaleGridlines, ScaleBar, PixelGrid
+        grid.cljs             # AG-Grid metadata table
+        selection_bar.cljs    # Highlight color picker and assign/clear actions
+        resizable_panel.cljs  # Draggable bottom panel
+      export/
+        html.cljs             # Standalone HTML export pipeline
+        svg.cljs              # Standalone SVG export helper
+      import/
+        arborview.cljs        # ArborView HTML import parser
+        nextstrain.cljs       # Nextstrain JSON import parser
   test/
     app/
       tree_test.cljs          # Tests for tree layout functions
       newick_test.cljs        # Tests for Newick parser
       csv_test.cljs           # Tests for CSV/TSV parser
+      color_test.cljs         # Tests for color palette helpers
+      date_test.cljs          # Tests for date parsing
+      scale_test.cljs         # Tests for scale tick calculation
+      state_test.cljs         # Tests for state export/import round-trip
+      specs_test.cljs         # Tests for spec utilities and smoke tests
+      generative_test.cljs    # Property-based and stest/check tests
+      generators.cljs         # Shared test.check generators
       arborview_import_test.cljs  # Tests for ArborView HTML import
+      nextstrain_import_test.cljs # Tests for Nextstrain JSON import
       export_html_test.cljs       # Tests for standalone HTML export
   dev/
     user.clj                  # REPL helper for shadow-cljs
+    app/
+      dev_preload.cljs        # Dev-only preload: expound + spec instrumentation
+      spec_generators.cljs    # Dev-only custom generators for domain specs
 ```
 
 ### Data Flow
@@ -118,6 +142,17 @@ Output is written to `target/doc/`. Open `target/doc/index.html` to browse.
 | `npm test` | Compile and run tests (single run) |
 | `npm run test:watch` | Run tests in watch mode |
 | `npm run docs` | Generate API docs with Codox |
+
+## Docker
+
+A multi-stage Dockerfile builds the app and serves it with nginx:
+
+```bash
+docker build -t phylo .
+docker run -p 8080:80 phylo
+```
+
+A GitHub Actions workflow (`.github/workflows/docker.yml`) automatically builds and pushes the image to GitHub Container Registry on pushes to `main`.
 
 ## Architecture
 

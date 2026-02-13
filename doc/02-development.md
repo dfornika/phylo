@@ -57,6 +57,30 @@ The `app.specs` namespace defines specs for all core data structures and key fun
 ;; => true
 ```
 
+### Dev-Time Instrumentation
+
+The `app.dev-preload` namespace is loaded as a shadow-cljs preload in the `:app` build. It provides:
+
+1. **Expound** — Sets `s/*explain-out*` to `expound/printer` for readable error messages when specs fail.
+2. **`stest/instrument`** — Instruments all `fdef`'d functions at load time, checking argument specs on every call during development. This catches spec violations early without manual setup.
+
+Instrumentation is automatically stripped from release builds.
+
+### Custom Generators
+
+Custom generators for recursive and domain specs live in `src/dev/app/spec_generators.cljs`. These register generators via `s/with-gen` for specs like `::tree-node`, `::positioned-node`, `::metadata-header`, and `::metadata-row`.
+
+**Important:** `clojure.test.check` is only on the `:dev`/`:test` classpath. Never require it from `src/main/` namespaces.
+
+### Property-Based Testing
+
+The `app.generative-test` namespace contains:
+
+- **`defspec` tests** — Property-based tests for Newick round-trip, tree invariants, date parsing, etc.
+- **`stest/check` tests** — Generative testing of fdef'd functions (`newick->map`, `count-tips`, `parse-date`, `calculate-scale-unit`, etc.)
+
+Shared generators for tests live in `src/test/app/generators.cljs`.
+
 
 ## Component Prop Validation (Dev Only)
 
@@ -126,3 +150,14 @@ The layout algorithm in `app.tree/prepare-tree` is a multi-step pipeline:
 To change spacing, modify the `LAYOUT` constant in `app.layout`. To change the algorithm itself, modify the `assign-*` functions in `app.tree` and update corresponding tests in `app.tree-test`.
 
 Scale tick calculations (shared by the scale bar, sticky header, and gridlines) live in `app.scale`. Browser file I/O helpers (`save-blob!`, `read-file!`) live in `app.io`. Small shared utilities (`client->svg`, `clamp`) live in `app.util`.
+
+## Docker
+
+A multi-stage Dockerfile builds the app with Clojure tooling and serves the static assets with nginx:
+
+```bash
+docker build -t phylo .
+docker run -p 8080:80 phylo
+```
+
+A GitHub Actions workflow (`.github/workflows/docker.yml`) automatically builds and pushes the image to GitHub Container Registry on pushes to `main`.
