@@ -22,7 +22,10 @@
             [app.import.nextstrain]
             [app.import.arborview]
             [app.util]
-            [app.specs]))
+            [app.specs]
+            ;; Register custom generators for recursive/domain specs.
+            ;; Must be loaded after app.specs so it can re-def with s/with-gen.
+            [app.spec-generators]))
 
 ;; Use expound for human-readable spec error messages
 (set! s/*explain-out* expound/printer)

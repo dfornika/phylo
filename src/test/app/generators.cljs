@@ -8,7 +8,9 @@
   practical."
   (:require [clojure.test.check.generators :as gen]
             [cljs.spec.alpha :as s]
-            [app.specs :as specs]))
+            [app.specs :as specs]
+            ;; Ensure custom generators are registered before s/gen calls
+            [app.spec-generators]))
 
 ;; ===== Leaf Names =====
 

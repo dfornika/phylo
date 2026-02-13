@@ -3,7 +3,9 @@
   (:require [cljs.test :refer [deftest testing is]]
             [cljs.spec.alpha :as s]
             [clojure.test.check.generators :as gen]
-            [app.specs :as specs]))
+            [app.specs :as specs]
+            ;; Load custom generators so s/exercise works
+            [app.spec-generators]))
 
 ;; ===== get-allowed-keys =====
 
