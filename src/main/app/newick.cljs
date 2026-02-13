@@ -24,7 +24,7 @@
             (str/replace #";$" "")
             (str/split #"(?=[(),:])|(?<=[(),:])")
             (->> (map str/trim)
-                 (remove empty?)))))
+                 (filter seq)))))
 
 (comment
   (tokenize nil)

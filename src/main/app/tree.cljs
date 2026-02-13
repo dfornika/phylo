@@ -26,9 +26,9 @@
   Recursively traverses the tree comparing `:x` values. Used to determine
   the horizontal extent of the tree for scaling calculations."
   [node]
-  (if (empty? (:children node))
-    (:x node)
-    (apply max (:x node) (map get-max-x (:children node)))))
+  (if (seq (:children node))
+    (apply max (:x node) (map get-max-x (:children node)))
+    (:x node)))
 
 (defn count-tips
   "Counts the number of leaf nodes (tips) in a tree.
@@ -36,9 +36,9 @@
   A tip is any node with an empty `:children` vector. Internal nodes
   contribute the sum of their children's tip counts."
   [node]
-  (if (empty? (:children node))
-    1
-    (reduce + (map count-tips (:children node)))))
+  (if (seq (:children node))
+    (reduce + (map count-tips (:children node)))
+    1))
 
 (defn assign-y-coords
   "Assigns vertical (y) coordinates to every node in the tree.
@@ -54,12 +54,12 @@
   It is shared across the entire traversal to ensure leaves are
   evenly spaced."
   [node next-y]
-  (if (empty? (:children node))
-    [(assoc node :y @next-y) (swap! next-y inc)]
+  (if (seq (:children node))
     (let [processed-children (mapv #(first (assign-y-coords % next-y)) (:children node))
           avg-y (/ (+ (:y (first processed-children))
                       (:y (last processed-children))) 2)]
-      [(assoc node :children processed-children :y avg-y) @next-y])))
+      [(assoc node :children processed-children :y avg-y) @next-y])
+    [(assoc node :y @next-y) (swap! next-y inc)]))
 
 (defn assign-x-coords
   "Assigns horizontal (x) coordinates by accumulating branch lengths.
@@ -87,9 +87,9 @@
   Traverses the tree depth-first and returns only nodes whose
   `:children` vector is empty. Preserves left-to-right order."
   [n]
-  (if (empty? (:children n))
-    [n]
-    (into [] (mapcat get-leaves (:children n)))))
+  (if (seq (:children n))
+    (into [] (mapcat get-leaves (:children n)))
+    [n]))
 
 ;; ===== Tree Preparation =====
 
@@ -118,11 +118,11 @@
   sets.  This avoids the O(n²) cost of calling [[get-leaves]] per-node
   during rendering."
   [node]
-  (if (empty? (:children node))
-    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))
+  (if (seq (:children node))
     (let [updated-children (mapv assign-leaf-names (:children node))
           names (into #{} (mapcat :leaf-names) updated-children)]
-      (assoc node :leaf-names names :children updated-children))))
+      (assoc node :leaf-names names :children updated-children))
+    (assoc node :leaf-names (if (:name node) #{(:name node)} #{}))))
 
 (defn prepare-tree
   "Builds a fully positioned tree with enriched leaf metadata.

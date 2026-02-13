@@ -110,7 +110,7 @@
         p-y (* parent-y y-scale)
         line-width 0.5
         line-color "#000"
-        is-leaf? (empty? (:children node))
+        is-leaf? (not (seq (:children node)))
         internal-node? (not is-leaf?)
         node-name (:name node)
         highlight-color (when (and is-leaf? highlights) (get highlights node-name))
