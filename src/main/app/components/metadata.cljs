@@ -38,6 +38,18 @@
 (def ^:private col-handle-inset
   "Inset for per-column spacer handles (px)."
   4)
+
+(def ^:private gap-handle-width
+  "Width of the tree-metadata gap handle (px)."
+  4)
+
+(def ^:private gap-min
+  "Minimum tree-metadata gap (px)."
+  -50)
+
+(def ^:private gap-max
+  "Maximum tree-metadata gap (px)."
+  200)
 (s/def :app.specs/sticky-header-props
   (s/keys :req-un [:app.specs/columns
                    :app.specs/start-offset
@@ -45,7 +57,9 @@
                    :app.specs/x-scale
                    :app.specs/scale-origin
                    :app.specs/left-shift-px
+                   :app.specs/tree-metadata-gap-px
                    :app.specs/set-left-shift-px!
+                   :app.specs/set-tree-metadata-gap-px!
                    :app.specs/set-active-cols!]
           :opt-un [:app.specs/sticky-header-width]))
 
@@ -61,10 +75,12 @@
   - `:scale-origin` - `:tips` or `:root` for scale labeling
   - `:left-shift-px` - horizontal shift applied to tree + metadata overlay
   - `:set-left-shift-px!` - setter for left shift
+  - `:tree-metadata-gap-px` - extra spacing between tree and metadata
+  - `:set-tree-metadata-gap-px!` - setter for tree-metadata gap
   - `:set-active-cols!` - setter for column configs
   - `:width`       - optional width for the sticky header"
   [{:keys [columns start-offset col-spacing max-depth x-scale scale-origin width
-           left-shift-px set-left-shift-px! set-active-cols!]}]
+           left-shift-px tree-metadata-gap-px set-left-shift-px! set-tree-metadata-gap-px! set-active-cols!]}]
   (let [scale-width (max 0 (- start-offset (:svg-padding-x LAYOUT)))
         {:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                               :x-scale x-scale
@@ -76,12 +92,23 @@
         col-dragging-ref (uix/use-ref nil)
         col-start-x-ref (uix/use-ref 0)
         col-start-spacing-ref (uix/use-ref 0)
+        gap-dragging-ref (uix/use-ref false)
+        gap-start-x-ref (uix/use-ref 0)
+        gap-start-ref (uix/use-ref (or tree-metadata-gap-px 0))
         handle-offset -6
         min-shift (+ 4 (- (:svg-padding-x LAYOUT)) (/ shift-handle-width 2) (- handle-offset))
         clamp-shift (fn [v] (-> v (max min-shift) (min left-shift-max)))
         clamp-col-spacing (fn [v] (-> v (max col-spacing-min) (min col-spacing-max)))
+        clamp-gap (fn [v] (-> v (max gap-min) (min gap-max)))
         handle-left (+ (:svg-padding-x LAYOUT) left-shift (- (/ shift-handle-width 2)) handle-offset)]
 
+
+    
+    (uix/use-effect
+     (fn []
+       (reset! gap-start-ref (or tree-metadata-gap-px 0))
+       js/undefined)
+     [tree-metadata-gap-px])
 
     (uix/use-effect
      (fn []
@@ -94,6 +121,14 @@
                                  next-shift (clamp-shift (+ @start-shift-ref dx))]
                              (when set-left-shift-px!
                                (set-left-shift-px! next-shift))))
+
+                         @gap-dragging-ref
+                         (do
+                           (.preventDefault e)
+                           (let [dx (- (.-clientX e) @gap-start-x-ref)
+                                 next-gap (clamp-gap (+ @gap-start-ref dx))]
+                             (when set-tree-metadata-gap-px!
+                               (set-tree-metadata-gap-px! next-gap))))
 
                          @col-dragging-ref
                          (do
@@ -110,13 +145,14 @@
                                       (vec columns))))))))
              on-up (fn [_e]
                      (reset! dragging-ref false)
+                     (reset! gap-dragging-ref false)
                      (reset! col-dragging-ref nil))]
          (.addEventListener js/document "mousemove" on-move)
          (.addEventListener js/document "mouseup" on-up)
          (fn []
            (.removeEventListener js/document "mousemove" on-move)
            (.removeEventListener js/document "mouseup" on-up))))
-     [clamp-shift clamp-col-spacing set-left-shift-px! set-active-cols! columns])
+     [clamp-gap clamp-shift clamp-col-spacing set-left-shift-px! set-tree-metadata-gap-px! set-active-cols! columns])
 
     ($ :div {:style {:position "sticky"
                      :top 0
@@ -185,7 +221,25 @@
                      (scale/format-label scale-origin max-depth t)))))
           ;; Spacer pushes headers to align with metadata columns
           ($ :div {:style {:width (str (- start-offset (:svg-padding-x LAYOUT)) "px")
-                           :flex-shrink 0}})
+                           :flex-shrink 0
+                           :position "relative"}}
+             ($ :div {:title "Drag to adjust tree-metadata gap"
+                      :style {:position "absolute"
+                              :right "0px"
+                              :top "6px"
+                              :height "20px"
+                              :width (str gap-handle-width "px")
+                              :cursor "col-resize"
+                              :background "rgba(0,0,0,0.15)"
+                              :z-index 3
+                              :pointer-events "auto"
+                              :user-select "none"}
+                      :on-mouse-down (fn [e]
+                                       (.preventDefault e)
+                                       (reset! gap-dragging-ref true)
+                                       (reset! gap-start-x-ref (.-clientX e))
+                                       (reset! gap-start-ref (or tree-metadata-gap-px 0)))})
+          )
           (for [{:keys [key label width spacing]} columns]
             (let [col-gap (+ (or col-spacing 0) (or spacing 0))]
               ($ :div {:key key

@@ -184,7 +184,8 @@
                    :app.specs/legend-collapsed? :app.specs/set-legend-collapsed!
                    :app.specs/legend-labels :app.specs/set-legend-labels!
                    :app.specs/legend-visible? :app.specs/set-legend-visible!
-                   :app.specs/set-left-shift-px!]
+                   :app.specs/set-left-shift-px!
+                   :app.specs/set-tree-metadata-gap-px!]
           :opt-un [:app.specs/highlights :app.specs/selected-ids
                    :app.specs/color-by-enabled? :app.specs/color-by-field
                    :app.specs/color-by-palette
@@ -229,7 +230,7 @@
            color-by-enabled? color-by-field color-by-palette color-by-type-override
            legend-pos legend-collapsed? legend-labels legend-visible?
            set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
-           set-left-shift-px!
+           set-left-shift-px! set-tree-metadata-gap-px!
            set-active-cols! set-selected-ids! set-metadata-rows!
            set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
   (let [;; Dynamic layout math
@@ -473,7 +474,9 @@
                            :x-scale current-x-scale
                            :scale-origin scale-origin
                            :left-shift-px left-shift-px
+                           :tree-metadata-gap-px tree-metadata-gap-px
                            :set-left-shift-px! set-left-shift-px!
+                           :set-tree-metadata-gap-px! set-tree-metadata-gap-px!
                            :set-active-cols! set-active-cols!
                            :width svg-width})
 
@@ -688,6 +691,7 @@
                      :left-shift-px left-shift-px
                      :tree-metadata-gap-px tree-metadata-gap-px
                      :set-left-shift-px! set-left-shift-px!
+                     :set-tree-metadata-gap-px! set-tree-metadata-gap-px!
                      :highlights highlights
                      :color-by-enabled? color-by-enabled?
                      :color-by-field color-by-field
