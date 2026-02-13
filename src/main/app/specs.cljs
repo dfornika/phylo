@@ -6,13 +6,26 @@
   context. These specs serve as living documentation and can be used
   for validation and generative testing.
 
-  Custom generators are attached to recursive specs (::tree-node,
-  ::positioned-node) and domain-specific specs (::metadata-row,
-  ::metadata-header) so that `s/gen`, `s/exercise`, and `stest/check`
+  Custom generators are attached to recursive specs (`::tree-node`,
+  `::positioned-node`) and domain-specific specs (`::metadata-row`,
+  `::metadata-header`) so that `s/gen`, `s/exercise`, and `stest/check`
   work out of the box.
 
-  Require this namespace in the REPL or in dev preloads to
-  enable `cljs.spec.test.alpha/instrument` on key functions."
+  Sections:
+  1. Utility functions (`validate-spec!`, `get-allowed-keys`)
+  2. Tree data structures (`::tree-node`, `::positioned-node`)
+  3. Bounding rectangle / scale ticks
+  4. Metadata structures (`::metadata-header`, `::metadata-row`)
+  5. Import result specs
+  6. App state context (all atoms + setters)
+  7. Component props
+  8. Function specs (fdefs for newick, csv, date, tree, scale,
+     layout, color, import modules)
+
+  Dev integration:
+  - `app.dev-preload` sets `expound/printer` and instruments all fdefs
+  - `defui-with-spec` macro (in `app.specs` CLJ) injects dev-only
+    prop validation into UIx components"
   (:require [cljs.spec.alpha :as s]
             [clojure.set]
             [clojure.test.check.generators :as gen]
@@ -57,6 +70,15 @@
                             "\nAllowed:"
                             (clj->js allowed))))))
    value))
+
+;; ===== Generatable Primitive Specs =====
+;; Specs with attached generators for use in fdefs where bare
+;; predicates like `pos?` lack automatic generators.
+
+(s/def ::pos-number
+  (s/with-gen
+    (s/and number? pos?)
+    #(gen/double* {:min 0.001 :max 1000.0 :NaN? false :infinite? false})))
 
 (comment
   (let [test-props (clj->js {:helloThere "world"})]
@@ -364,8 +386,8 @@
   :ret  (s/coll-of string? :kind set?))
 
 (s/fdef app.scale/calculate-scale-unit
-  :args (s/cat :max-x pos?)
-  :ret  pos?)
+  :args (s/cat :max-x ::pos-number)
+  :ret  ::pos-number)
 
 (s/fdef app.scale/scale-ticks
   :args (s/cat :opts (s/keys :req-un [::max-depth ::x-scale]
