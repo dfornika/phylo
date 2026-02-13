@@ -12,6 +12,9 @@
   unless callers treat the atom as part of the input/output state (e.g. by
   passing a fresh atom when purity is required).
 
+  Scale-related helpers (`calculate-scale-unit`, `get-ticks`) now live
+  in [[app.scale]].
+
   See [[app.specs]] for function specs."
   (:require [app.newick :as newick]))
 
@@ -75,42 +78,6 @@
      (assoc node :x new-x
             :children (mapv #(assign-x-coords % new-x false)
                             (:children node))))))
-
-;; ===== Scale Bar Helpers =====
-
-(defn calculate-scale-unit
-  "Calculates a human-friendly tick interval for a scale bar.
-
-  Given a maximum value, returns a 'nice' unit size based on the
-  order of magnitude. The algorithm picks the largest round number
-  that produces a reasonable number of ticks:
-  - ratio < 2 -> 10% of magnitude
-  - ratio < 5 -> 50% of magnitude
-  - otherwise  -> full magnitude
-
-  For example, `(calculate-scale-unit 0.37)` returns `0.05`."
-  [max-x]
-  (let [log10 (js/Math.log10 max-x)
-        magnitude (js/Math.pow 10 (js/Math.floor log10))
-        ratio (/ max-x magnitude)]
-    (cond
-      (< ratio 2) (* magnitude 0.1)
-      (< ratio 5) (* magnitude 0.5)
-      :else magnitude)))
-
-(defn get-ticks
-  "Generates a lazy sequence of tick positions from 0 to `max-x` in
-  increments of `unit`. Used to render scale bar gridlines and labels.
-
-  Guards against non-positive `unit` to avoid a non-terminating sequence:
-  - If `max-x` is <= 0, returns a single tick at 0.
-  - If `unit` is <= 0 (and `max-x` is > 0), returns an empty sequence."
-  [max-x unit]
-  (cond
-    (<= max-x 0) [0]
-    (<= unit 0)  []
-    :else        (take-while #(<= % max-x)
-                             (iterate #(+ % unit) 0))))
 
 ;; ===== Tree Traversal Helpers =====
 

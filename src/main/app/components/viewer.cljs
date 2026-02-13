@@ -14,7 +14,7 @@
             [app.color :as color]
             [app.components.tree :refer [PhylogeneticTree]]
             [app.components.metadata :refer [StickyHeader MetadataTable]]
-            [app.components.scale :as scale]
+            [app.scale :as scale]
             [app.components.toolbar :refer [Toolbar]]
             [app.components.grid :refer [MetadataGrid]]
             [app.components.resizable-panel :refer [ResizablePanel]]
@@ -105,8 +105,8 @@
 (defui ScaleGridlines*
   "Renders evolutionary-distance gridlines as dashed vertical SVG lines.
 
-  Computes human-friendly tick intervals via [[tree/calculate-scale-unit]] and
-  [[tree/get-ticks]], then draws one dashed line per tick across the full
+  Computes human-friendly tick intervals via [[scale/calculate-scale-unit]] and
+  [[scale/get-ticks]], then draws one dashed line per tick across the full
   `tree-height`. Intended to be placed as a sibling of the tree and
   metadata in the SVG, inside the translated coordinate group.
 
@@ -248,7 +248,7 @@
         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
                             (+ (:x legend-pos) legend-width legend-right-pad))
         col-gaps        (mapv (fn [col] (+ (or col-spacing 0) (or (:spacing col) 0)))
-                                          active-cols)
+                              active-cols)
         base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
                            (reduce + 0 col-gaps)
@@ -494,39 +494,39 @@
                                 :scale-origin scale-origin}))
 
              ;; Debugging pixel grid
-             (when show-pixel-grid
-               ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
+                (when show-pixel-grid
+                  ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
              ;; Scale gridlines
-             (when show-scale-gridlines
-               ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-                  ($ ScaleGridlines {:max-depth max-depth
-                                     :x-scale current-x-scale
-                                     :tree-height tree-height
-                                     :scale-origin scale-origin})))
+                (when show-scale-gridlines
+                  ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
+                     ($ ScaleGridlines {:max-depth max-depth
+                                        :x-scale current-x-scale
+                                        :tree-height tree-height
+                                        :scale-origin scale-origin})))
 
              ;; The tree itself
-             ($ PhylogeneticTree {:tree tree
-                                  :x-scale current-x-scale
-                                  :y-scale y-mult
-                                  :show-internal-markers show-internal-markers
-                                  :show-distance-from-origin show-distance-from-origin
-                                  :scale-origin scale-origin
-                                  :max-depth max-depth
-                                  :marker-radius (:node-marker-radius LAYOUT)
-                                  :marker-fill (:node-marker-fill LAYOUT)
-                                  :highlights merged-highlights
-                                  :selected-ids selected-ids
-                                  :on-toggle-selection toggle-selection
-                                  :on-select-subtree select-subtree})
+                ($ PhylogeneticTree {:tree tree
+                                     :x-scale current-x-scale
+                                     :y-scale y-mult
+                                     :show-internal-markers show-internal-markers
+                                     :show-distance-from-origin show-distance-from-origin
+                                     :scale-origin scale-origin
+                                     :max-depth max-depth
+                                     :marker-radius (:node-marker-radius LAYOUT)
+                                     :marker-fill (:node-marker-fill LAYOUT)
+                                     :highlights merged-highlights
+                                     :selected-ids selected-ids
+                                     :on-toggle-selection toggle-selection
+                                     :on-select-subtree select-subtree})
 
              ;; Metadata columns
-             (when (seq active-cols)
-               ($ MetadataTable {:active-cols active-cols
-                                 :tips tips
-                                 :start-offset metadata-start-x
-                                 :y-scale y-mult
-                                 :col-spacing col-spacing})))
+                (when (seq active-cols)
+                  ($ MetadataTable {:active-cols active-cols
+                                    :tips tips
+                                    :start-offset metadata-start-x
+                                    :y-scale y-mult
+                                    :col-spacing col-spacing})))
 
              ;; Drag-select rectangle overlay
              (when drag-rect
@@ -573,9 +573,7 @@
                              :selected-ids selected-ids
                              :on-cols-reordered set-active-cols!
                              :on-selection-changed set-selected-ids!
-                             :on-cell-edited handle-cell-edited}))))
-
-     ))
+                             :on-cell-edited handle-cell-edited}))))))
 
 (defui-with-spec TreeViewer
   [{:spec :app.specs/tree-viewer-props :props props}]

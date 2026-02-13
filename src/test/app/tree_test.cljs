@@ -80,46 +80,6 @@
       (is (== 0.5 (-> t :children first :x)))
       (is (== 1.0 (-> t :children second :x))))))
 
-;; ===== calculate-scale-unit =====
-
-(deftest calculate-scale-unit-small-values
-  (testing "Scale unit for small max-x values"
-    ;; 0.37 has magnitude 0.1, ratio 3.7 -> 50% of magnitude -> 0.05
-    (let [unit (tree/calculate-scale-unit 0.37)]
-      (is (pos? unit))
-      (is (< unit 0.37)))))
-
-(deftest calculate-scale-unit-larger-values
-  (testing "Scale unit for larger values"
-    (let [unit (tree/calculate-scale-unit 5.2)]
-      ;; 5.2 has magnitude 1, ratio 5.2 -> full magnitude -> 1
-      (is (== 1 unit)))))
-
-(deftest calculate-scale-unit-very-small
-  (testing "Scale unit for very small max-x"
-    (let [unit (tree/calculate-scale-unit 0.012)]
-      (is (pos? unit))
-      (is (< unit 0.012)))))
-
-;; ===== get-ticks =====
-
-(deftest get-ticks-basic
-  (testing "Ticks from 0 to max-x in increments of unit"
-    (let [ticks (tree/get-ticks 1.0 0.25)]
-      (is (= [0 0.25 0.5 0.75 1.0] ticks)))))
-
-(deftest get-ticks-doesnt-exceed-max
-  (testing "Ticks never exceed max-x"
-    (let [ticks (tree/get-ticks 0.9 0.5)]
-      (is (every? #(<= % 0.9) ticks))
-      (is (= [0 0.5] ticks)))))
-
-(deftest get-ticks-starts-at-zero
-  (testing "Ticks always start at 0"
-    (is (= 0 (first (tree/get-ticks 10 1))))))
-
-;; ===== get-leaves =====
-
 (deftest get-leaves-all-tips
   (testing "get-leaves returns only leaf nodes"
     (let [t (positioned-tree "(A:0.1,(B:0.2,C:0.3)D:0.4)E:0.5;")

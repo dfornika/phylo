@@ -12,7 +12,6 @@
             [clojure.set]
             [camel-snake-kebab.core :as csk]))
 
-
 (defn get-allowed-keys
   "Gets all allowed keys for a spec, including both required and optional."
   [spec]
@@ -22,9 +21,7 @@
                    (map #(keyword (name %)) opt-un))))))
 
 (comment
-  (get-allowed-keys ::app-state)
-)
-
+  (get-allowed-keys ::app-state))
 
 (defn validate-spec!
   "Validates a value against a spec. Logs errors for invalid values
@@ -36,33 +33,28 @@
    (validate-spec! value spec label {}))
   ([value spec label {:keys [check-unexpected-keys?]
                       :or {check-unexpected-keys? false}}]
-   
+
      ;; Check spec validity
-     (when-not (s/valid? spec value)
-       (js/console.error (str "Invalid " label ":")
-                         (s/explain-str spec value)))
+   (when-not (s/valid? spec value)
+     (js/console.error (str "Invalid " label ":")
+                       (s/explain-str spec value)))
 
      ;; Check for unexpected keys (optional)
-     (when (and check-unexpected-keys?
-                (map? value))
-       (when-let [allowed (get-allowed-keys spec)]
-         (let [actual (set (keys value))
-               unexpected (clojure.set/difference actual allowed)]
-           (when (seq unexpected)
-             (js/console.warn (str "Unexpected keys in " label ":")
-                              (clj->js unexpected)
-                              "\nAllowed:"
-                              (clj->js allowed))))))
-     value))
-
-
-
-
+   (when (and check-unexpected-keys?
+              (map? value))
+     (when-let [allowed (get-allowed-keys spec)]
+       (let [actual (set (keys value))
+             unexpected (clojure.set/difference actual allowed)]
+         (when (seq unexpected)
+           (js/console.warn (str "Unexpected keys in " label ":")
+                            (clj->js unexpected)
+                            "\nAllowed:"
+                            (clj->js allowed))))))
+   value))
 
 (comment
   (let [test-props (clj->js {:helloThere "world"})]
-    (js->clj test-props :key-fn csk/->kebab-case-keyword))
-  )
+    (js->clj test-props :key-fn csk/->kebab-case-keyword)))
 
 ;; ===== Tree Data Structures =====
 
@@ -227,7 +219,6 @@
 (s/def ::set-metadata-panel-height! fn?)
 (s/def ::set-metadata-panel-last-drag-height! fn?)
 
-
 ;; MetadataGrid — AG-Grid table with bidirectional selection sync.
 
 (s/def ::on-cell-edited fn?)
@@ -277,7 +268,7 @@
   :args (s/cat :node ::positioned-node)
   :ret  (s/coll-of ::positioned-node))
 
-(s/fdef app.tree/calculate-scale-unit
+(s/fdef app.scale/calculate-scale-unit
   :args (s/cat :max-x pos?)
   :ret  pos?)
 

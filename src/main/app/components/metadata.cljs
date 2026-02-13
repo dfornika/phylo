@@ -8,12 +8,9 @@
   (:require [cljs.spec.alpha :as s]
             [uix.core :as uix :refer [defui $]]
             [app.layout :refer [LAYOUT]]
-            [app.components.scale :as scale]
+            [app.scale :as scale]
             [app.specs :as specs])
   (:require-macros [app.specs :refer [defui-with-spec]]))
-
-
-
 
 (def ^:private left-shift-max
   "Maximum allowed left shift (px)."
@@ -157,7 +154,7 @@
                      :width "100%"
                      :min-width (when width (str width "px"))
                      :overflow "hidden"}
-              :data-left-shift left-shift}
+             :data-left-shift left-shift}
        ($ :div {:title "Drag to shift tree + metadata"
                 :style {:position "absolute"
                         :left (str handle-left "px")
@@ -228,7 +225,7 @@
                                        (reset! gap-dragging-ref true)
                                        (reset! gap-start-x-ref (.-clientX e))
                                        (reset! gap-start-ref (or tree-metadata-gap-px 0)))}))
-          
+
           (for [{:keys [key label width spacing]} columns]
             (let [col-gap (+ (or col-spacing 0) (or spacing 0))]
               ($ :div {:key key
@@ -255,7 +252,6 @@
   [{:spec :app.specs/sticky-header-props :props props}]
   ($ StickyHeader* props))
 #_(def StickyHeader StickyHeader*)
-
 
 (s/def :app.specs/metadata-column-props
   (s/keys :req-un [:app.specs/tips
@@ -310,12 +306,10 @@
                                 :font-size "12px"}}
                  (get-in tip [:metadata column-key] "N/A"))))))))
 
-
 (defui-with-spec MetadataColumn
   [{:spec :app.specs/metadata-column-props :props props}]
   ($ MetadataColumn* props))
 #_(def MetadataColumn MetadataColumn*r*)
-
 
 (s/def :app.specs/metadata-table-props
   (s/keys :req-un [:app.specs/active-cols
