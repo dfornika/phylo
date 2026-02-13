@@ -36,7 +36,7 @@
       [[1 ;; internal node
         (gen/let [n-children (gen/choose 2 max-branching)
                   children   (gen/vector (gen-tree-map (dec max-depth) max-branching)
-                                         2 max-branching)
+                                         n-children n-children)
                   name       (gen/one-of [(gen/return nil) gen-leaf-name])
                   len        (gen/one-of [(gen/return nil)
                                          (gen/double* {:min 0.0001 :max 10.0
