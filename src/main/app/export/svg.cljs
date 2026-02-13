@@ -1,6 +1,6 @@
 (ns app.export.svg
   "Standalone SVG export helper."
-  (:require [app.export.html :as export-html]))
+  (:require [app.io :as io]))
 
 (defn export-svg!
   "Exports the phylogenetic tree SVG to a file.
@@ -15,7 +15,7 @@
           serializer (js/XMLSerializer.)
           svg-str    (.serializeToString serializer clone)
           blob       (js/Blob. #js [svg-str] #js {:type "image/svg+xml;charset=utf-8"})]
-      (export-html/save-blob!
+      (io/save-blob!
        blob
        "phylo-tree.svg"
        [{:description "SVG Image"

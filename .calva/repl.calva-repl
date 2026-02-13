@@ -7692,3 +7692,61 @@ cljs꞉app.color-test꞉> 
 ; [:app] Build completed. (201 files, 2 compiled, 0 warnings, 0.35s)
 ; [:app] Compiling ...
 ; [:app] Build completed. (201 files, 2 compiled, 0 warnings, 0.32s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 5 compiled, 2 warnings, 0.15s)
+; 
+; ------ WARNING #1 - :undeclared-var --------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/export/svg.cljs:18:8
+; --------------------------------------------------------------------------------
+;   15 |           serializer (js/XMLSerializer.)
+;   16 |           svg-str    (.serializeToString serializer clone)
+;   17 |           blob       (js/Blob. #js [svg-str] #js {:type "image/svg+xml;charset=utf-8"})]
+;   18 |       (export-html/save-blob!
+; --------------^-----------------------------------------------------------------
+;  Use of undeclared Var app.export.html/save-blob!
+; --------------------------------------------------------------------------------
+;   19 |        blob
+;   20 |        "phylo-tree.svg"
+;   21 |        [{:description "SVG Image"
+;   22 |          :accept {"image/svg+xml" [".svg"]}}]))))
+; --------------------------------------------------------------------------------
+; 
+; ------ WARNING #2 - :undeclared-var --------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/components/selection_bar.cljs:228:40
+; --------------------------------------------------------------------------------
+;  225 |                                     (let [csv-text (csv/metadata->csv active-cols metadata-rows)
+;  226 |                                           blob (js/Blob. (clj->js [csv-text])
+;  227 |                                                         #js {:type "text/csv;charset=utf-8"})]
+;  228 |                                       (export-html/save-blob!
+; ----------------------------------------------^---------------------------------
+;  Use of undeclared Var app.export.html/save-blob!
+; --------------------------------------------------------------------------------
+;  229 |                                        blob
+;  230 |                                        "metadata.csv"
+;  231 |                                        [{:description "CSV File"
+;  232 |                                          :accept {"text/csv" [".csv"]}}]))))}
+; --------------------------------------------------------------------------------
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 1 warnings, 0.13s)
+; 
+; ------ WARNING #1 - :undeclared-var --------------------------------------------
+;  File: /home/dfornika/code/phylo/src/main/app/components/selection_bar.cljs:228:40
+; --------------------------------------------------------------------------------
+;  225 |                                     (let [csv-text (csv/metadata->csv active-cols metadata-rows)
+;  226 |                                           blob (js/Blob. (clj->js [csv-text])
+;  227 |                                                         #js {:type "text/csv;charset=utf-8"})]
+;  228 |                                       (export-html/save-blob!
+; ----------------------------------------------^---------------------------------
+;  Use of undeclared Var app.export.html/save-blob!
+; --------------------------------------------------------------------------------
+;  229 |                                        blob
+;  230 |                                        "metadata.csv"
+;  231 |                                        [{:description "CSV File"
+;  232 |                                          :accept {"text/csv" [".csv"]}}]))))}
+; --------------------------------------------------------------------------------
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.37s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 2 compiled, 0 warnings, 0.34s)
+; [:app] Compiling ...
+; [:app] Build completed. (202 files, 4 compiled, 0 warnings, 0.31s)

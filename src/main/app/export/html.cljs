@@ -4,51 +4,8 @@
   Collects runtime scripts, styles, assets, and embeds serialized
   application state into a self-contained HTML file."
   (:require [clojure.string :as str]
-            [app.state :as state]))
-
-(defn- fallback-download!
-  "Downloads the blob using the fallback `<a download>` method.
-
-  Creates a temporary anchor element with an object URL, clicks it,
-  then cleans up asynchronously to avoid racing the download."
-  [blob filename]
-  (let [url (.createObjectURL js/URL blob)
-        a   (.createElement js/document "a")]
-    (set! (.-href a) url)
-    (set! (.-download a) filename)
-    (.appendChild (.-body js/document) a)
-    (.click a)
-    (js/setTimeout
-     (fn []
-       (.removeChild (.-body js/document) a)
-       (.revokeObjectURL js/URL url))
-     0)))
-
-(defn save-blob!
-  "Triggers a browser file save for the given Blob.
-
-  Attempts the File System Access API (`showSaveFilePicker`) first,
-  which opens a native \"Save as...\" dialog. Falls back to a
-  programmatic `<a download>` click for browsers that do not
-  support it (Firefox, Safari)."
-  ([blob filename]
-   (save-blob! blob filename [{:description "HTML File"
-                               :accept {"text/html" [".html"]}}]))
-  ([blob filename types]
-   (if (exists? js/window.showSaveFilePicker)
-     (-> (.showSaveFilePicker js/window
-                              (clj->js {:suggestedName filename
-                                        :types types}))
-         (.then (fn [handle]
-                  (-> (.createWritable handle)
-                      (.then (fn [writable]
-                               (-> (.write writable blob)
-                                   (.then #(.close writable))))))))
-         (.catch (fn [err]
-                   (when-not (= (.-name err) "AbortError")
-                     (js/console.error "File System Access API failed:" err)
-                     (fallback-download! blob filename)))))
-     (fallback-download! blob filename))))
+            [app.state :as state]
+            [app.io :as io]))
 
 (defn- fetch-text
   "Fetches a URL and resolves to its text content."
@@ -240,6 +197,6 @@
                                                 :asset-map asset-map
                                                 :state-edn state-edn})
                        blob (js/Blob. #js [html] #js {:type "text/html;charset=utf-8"})]
-                   (save-blob! blob "phylo-viewer.html"))))
+                   (io/save-blob! blob "phylo-viewer.html"))))
         (.catch (fn [err]
                   (js/console.error "Failed to export HTML" err))))))
