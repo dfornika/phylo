@@ -99,9 +99,6 @@
         clamp-gap (fn [v] (-> v (max gap-min) (min gap-max)))
         handle-left (+ (:svg-padding-x LAYOUT) left-shift (- (/ shift-handle-width 2)) handle-offset)]
 
-
-    
-
     (uix/use-effect
      (fn []
        (let [on-move (fn [e]
