@@ -1,8 +1,11 @@
 (ns app.specs-test
-  "Tests for spec utility functions in [[app.specs]]."
+  "Tests for spec utility functions and generator integration in [[app.specs]]."
   (:require [cljs.test :refer [deftest testing is]]
             [cljs.spec.alpha :as s]
-            [app.specs :as specs]))
+            [clojure.test.check.generators :as gen]
+            [app.specs :as specs]
+            ;; Load custom generators so s/exercise works
+            [app.spec-generators]))
 
 ;; ===== get-allowed-keys =====
 
@@ -109,3 +112,51 @@
     (let [input {:key :id :label "ID" :width 100}
           result (specs/validate-spec! input ::specs/metadata-header "header")]
       (is (= input result)))))
+
+;; ===== s/exercise — generator smoke tests =====
+;; Verify that the custom generators attached to specs produce
+;; values that conform to those specs.
+
+(deftest exercise-tree-node
+  (testing "s/exercise ::tree-node generates valid trees"
+    (let [samples (s/exercise ::specs/tree-node 10)]
+      (is (= 10 (count samples)))
+      (doseq [[value conformed] samples]
+        (is (s/valid? ::specs/tree-node value)
+            (str "Generated tree-node failed validation: " (pr-str value)))))))
+
+(deftest exercise-positioned-node
+  (testing "s/exercise ::positioned-node generates valid positioned nodes"
+    (let [samples (s/exercise ::specs/positioned-node 10)]
+      (is (= 10 (count samples)))
+      (doseq [[value _] samples]
+        (is (s/valid? ::specs/positioned-node value))
+        (is (contains? value :x))
+        (is (contains? value :y))
+        (is (contains? value :id))))))
+
+(deftest exercise-metadata-header
+  (testing "s/exercise ::metadata-header generates valid headers"
+    (let [samples (s/exercise ::specs/metadata-header 10)]
+      (is (= 10 (count samples)))
+      (doseq [[value _] samples]
+        (is (s/valid? ::specs/metadata-header value))
+        (is (keyword? (:key value)))
+        (is (string? (:label value)))
+        (is (pos? (:width value)))))))
+
+(deftest exercise-metadata-row
+  (testing "s/exercise ::metadata-row generates valid rows"
+    (let [samples (s/exercise ::specs/metadata-row 10)]
+      (is (= 10 (count samples)))
+      (doseq [[value _] samples]
+        (is (s/valid? ::specs/metadata-row value))
+        (is (every? keyword? (keys value)))
+        (is (every? string? (vals value)))))))
+
+(deftest exercise-column-type
+  (testing "s/exercise ::column-type generates valid types"
+    (let [samples (s/exercise ::specs/column-type 10)]
+      (is (= 10 (count samples)))
+      (doseq [[value _] samples]
+        (is (#{:date :numeric :string} value))))))

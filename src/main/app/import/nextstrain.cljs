@@ -90,6 +90,5 @@
           (let [tree-map (to-tree-map tree nil true)]
             {:newick-str  (str (tree->newick tree-map) ";")
              :parsed-tree tree-map})))
-      (catch :default err
-        (js/console.warn "Failed to parse Nextstrain JSON:" err)
+      (catch :default _err
         {:error :invalid-json}))))
