@@ -237,7 +237,7 @@
         legend-right-pad 12
         legend-right-edge (when (and legend-pos (number? (:x legend-pos)))
                             (+ (:x legend-pos) legend-width legend-right-pad))
-        col-gaps        (compute-col-gaps active-cols col-spacing)
+        col-gaps        (uix/use-memo #(compute-col-gaps active-cols col-spacing) [active-cols col-spacing])
         base-svg-width  (+ metadata-start-x
                            (reduce + 0 (map :width active-cols))
                            (reduce + 0 col-gaps)
@@ -251,7 +251,7 @@
                         (when (and color-by-enabled? color-by-field (seq tips))
                           (color/build-color-map tips color-by-field color-by-palette color-by-type-override)))
                       [color-by-enabled? color-by-field color-by-palette color-by-type-override tips])
-        merged-highlights (merge (or color-by-map {}) (or highlights {}))
+        merged-highlights (uix/use-memo #(merge (or color-by-map {}) (or highlights {})) [color-by-map highlights])
 
         field-keys (into #{} (map :key) active-cols)
         legend-field (when (contains? field-keys color-by-field) color-by-field)
