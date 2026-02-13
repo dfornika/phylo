@@ -25,7 +25,8 @@
       (is (contains? allowed :width))
       ;; Optional keys
       (is (contains? allowed :column-type))
-      (is (= 4 (count allowed))))))
+      (is (contains? allowed :spacing))
+      (is (= 5 (count allowed))))))
 
 (deftest get-allowed-keys-with-positioned-node
   (testing "Returns all keys including x, y, and id for positioned nodes"
@@ -37,7 +38,8 @@
       (is (contains? allowed :x))
       (is (contains? allowed :y))
       (is (contains? allowed :id))
-      (is (= 6 (count allowed))))))
+      (is (contains? allowed :leaf-names))
+      (is (= 7 (count allowed))))))
 
 (deftest get-allowed-keys-with-parsed-metadata
   (testing "Returns keys from nested spec structure"
@@ -63,11 +65,11 @@
 
 (deftest validate-spec-returns-value-for-valid-positioned-node
   (testing "Returns value unchanged for valid positioned node"
-    (let [input {:name "leaf1" 
-                 :branch-length 0.5 
-                 :children [] 
-                 :x 10.0 
-                 :y 5.0 
+    (let [input {:name "leaf1"
+                 :branch-length 0.5
+                 :children []
+                 :x 10.0
+                 :y 5.0
                  :id 0}
           result (specs/validate-spec! input ::specs/positioned-node "node")]
       (is (= input result)))))

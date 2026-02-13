@@ -70,8 +70,11 @@
 (s/def ::y number?)
 (s/def ::id nat-int?)
 
+(s/def ::leaf-names (s/coll-of string? :kind set?))
+
 (s/def ::positioned-node
-  (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]))
+  (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]
+          :opt-un [::leaf-names]))
 
 ;; ===== Metadata Structures =====
 
