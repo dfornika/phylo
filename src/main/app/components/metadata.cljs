@@ -15,10 +15,6 @@
 
 
 
-(def ^:private left-shift-min
-  "Minimum allowed left shift (px)."
-  -200)
-
 (def ^:private left-shift-max
   "Maximum allowed left shift (px)."
   200)
