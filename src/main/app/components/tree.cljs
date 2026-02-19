@@ -64,7 +64,9 @@
           :opt-un [:app.specs/highlights
                    :app.specs/selected-ids
                    :app.specs/on-toggle-selection
-                   :app.specs/on-select-subtree]))
+                   :app.specs/on-select-subtree
+                   :app.specs/active-internal-node-id
+                   :app.specs/on-set-reroot-node]))
 
 (declare TreeNode)
 
@@ -103,7 +105,7 @@
   - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-distance-from-origin
            scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection
-           on-select-subtree]}]
+           on-select-subtree active-internal-node-id on-set-reroot-node]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
@@ -131,8 +133,21 @@
                                  " internal-node-marker--select"))
         leaf-click (when (and is-leaf? on-toggle-selection)
                      (fn [_e] (on-toggle-selection node-name)))
-        internal-click (when (and internal-node? on-select-subtree)
-                         (fn [_e] (on-select-subtree node)))
+        internal-click (when internal-node?
+                         (fn [e]
+                           (if (and (.-ctrlKey e) on-set-reroot-node)
+                             (do
+                               (js/console.log "Selected node for re-rooting" (clj->js node))
+                               ;; Ctrl+click and handler exists: select for re-rooting
+                               (on-set-reroot-node (:id node)))
+                             ;; Otherwise: try subtree selection
+                             (do
+                               (js/console.log "Selected node for subtree" (clj->js node))
+                               (when on-select-subtree
+                                 (on-select-subtree node))))))
+        active-reroot? (and internal-node?
+                            active-internal-node-id
+                            (= (:id node) active-internal-node-id))
         internal-class (str "internal-node-marker"
                             (when (not show-internal-markers)
                               " internal-node-marker--hidden")
@@ -178,6 +193,12 @@
                      :fill "none" :stroke "#666" :stroke-width 1.5
                      :stroke-dasharray "3 2"
                      :style {:pointer-events "none"}}))
+       
+       (when active-reroot?
+         ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 6)
+                     :fill "none"
+                     :stroke "#d9534f"  ;; Red to indicate "this will be new root"
+                     :stroke-width 2}))
 
        ;; Internal node distance label
        (when distance-label
@@ -214,6 +235,8 @@
                       :marker-fill marker-fill
                       :highlights highlights
                       :selected-ids selected-ids
+                      :active-internal-node-id active-internal-node-id
+                      :on-set-reroot-node on-set-reroot-node
                       :on-toggle-selection on-toggle-selection
                       :on-select-subtree on-select-subtree})))))
 
@@ -235,7 +258,9 @@
           :opt-un [:app.specs/highlights
                    :app.specs/selected-ids
                    :app.specs/on-toggle-selection
-                   :app.specs/on-select-subtree]))
+                   :app.specs/on-select-subtree
+                   :app.specs/active-internal-node-id
+                   :app.specs/on-set-reroot-node]))
 
 (defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
@@ -253,10 +278,13 @@
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
+  - `:active-internal-node-id` - 
+  - `set-active-internal-node-id!` - 
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection
   - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
+  
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
-           highlights selected-ids on-toggle-selection on-select-subtree]}]
+           highlights selected-ids  active-internal-node-id set-active-internal-node-id! on-toggle-selection on-select-subtree]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -271,6 +299,8 @@
                   :marker-fill marker-fill
                   :highlights highlights
                   :selected-ids selected-ids
+                  :active-internal-node-id active-internal-node-id
+                  :on-set-reroot-node set-active-internal-node-id!
                   :on-toggle-selection on-toggle-selection
                   :on-select-subtree on-select-subtree})))
 

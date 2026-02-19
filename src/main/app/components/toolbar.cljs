@@ -12,7 +12,9 @@
             [app.export.html :as export-html]
             [app.export.svg :as export-svg]
             [app.layout :refer [LAYOUT]]
-            [app.io :as io]))
+            [app.io :as io]
+            [app.newick :as newick]
+            [app.tree :as tree]))
 
 ;; ===== Style constants =====
 
@@ -55,7 +57,10 @@
   Reads all state from [[app.state/app-context]] via [[app.state/use-app-state]],
   so this component requires no props."
   [_props]
-  (let [{:keys [x-mult set-x-mult!
+  (let [{:keys [newick-str set-newick-str!
+                parsed-tree set-parsed-tree!
+                positioned-tree set-positoned-tree!
+                x-mult set-x-mult!
                 y-mult set-y-mult!
                 col-spacing set-col-spacing!
                 tree-metadata-gap-px set-tree-metadata-gap-px!
@@ -64,10 +69,9 @@
                 show-distance-from-origin set-show-distance-from-origin!
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
-                set-newick-str!
-                set-parsed-tree!
                 set-metadata-rows! set-active-cols!
-                set-selected-ids! set-highlights!]} (state/use-app-state)]
+                set-selected-ids! set-highlights!
+                active-internal-node-id set-active-internal-node-id!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
@@ -198,7 +202,26 @@
                                     :background "#ffffff"}
                             :on-change #(set-scale-origin! (keyword (.. % -target -value)))}
                    ($ :option {:value "tips"} "Tips")
-                   ($ :option {:value "root"} "Root"))))
+                   ($ :option {:value "root"} "Root")))
+             ($ :button {:disabled (nil? active-internal-node-id)
+                         :on-click (fn [_]
+                                     (js/console.log "Re-rooting tree...")
+                                     (js/console.log "Active internal node:" active-internal-node-id)
+                                     (js/console.log "Positioned tree:" positioned-tree)
+                                     (when (and active-internal-node-id positioned-tree)
+                                       ;; Strip coordinates to get un-positioned tree
+                                       (let [strip-coords (fn strip [n]
+                                                            (-> n
+                                                                (dissoc :x :y :leaf-names)
+                                                                (update :children #(mapv strip %))))
+                                             unpositioned (strip-coords positioned-tree)
+                                             _ (js/console.log "Unpositioned tree:" (clj->js unpositioned))
+                                             rerooted (tree/reroot-tree unpositioned active-internal-node-id)]
+                                         (when rerooted
+                                           (set-parsed-tree! rerooted)
+                                           (set-newick-str! (newick/map->newick rerooted))
+                                           (set-active-internal-node-id! nil)))))}
+                "Re-root Tree"))
              ;; Temporarily disabled this toggle for the PixelGrid.
              ;; only intended as dev-time troubleshooting tool.
           #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}

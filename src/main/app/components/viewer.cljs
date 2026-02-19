@@ -212,17 +212,38 @@
   - `:metadata-panel-last-drag-height` - last height set by dragging
   - `:set-metadata-panel-height!` - setter for panel height
   - `:set-metadata-panel-last-drag-height!` - setter for last drag height"
-  [{:keys [tree tips max-depth active-cols x-mult y-mult
-           show-internal-markers show-distance-from-origin scale-origin width-px component-height-px
-           show-scale-gridlines show-pixel-grid col-spacing left-shift-px tree-metadata-gap-px
-           highlights selected-ids metadata-rows metadata-panel-collapsed
-           metadata-panel-height metadata-panel-last-drag-height
-           color-by-enabled? color-by-field color-by-palette color-by-type-override
-           legend-pos legend-collapsed? legend-labels legend-visible?
-           set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
-           set-left-shift-px! set-tree-metadata-gap-px!
-           set-active-cols! set-selected-ids! set-metadata-rows!
-           set-metadata-panel-height! set-metadata-panel-last-drag-height!]}]
+  [{:keys [tree 
+           tips 
+           max-depth 
+           x-mult 
+           y-mult
+           show-internal-markers 
+           show-distance-from-origin 
+           scale-origin 
+           width-px 
+           component-height-px
+           show-scale-gridlines 
+           show-pixel-grid 
+           col-spacing  
+           highlights
+           metadata-panel-collapsed
+           color-by-enabled? 
+           color-by-field 
+           color-by-palette 
+           color-by-type-override
+           active-cols           set-active-cols!
+           selected-ids          set-selected-ids! 
+           metadata-rows         set-metadata-rows! 
+           metadata-panel-height set-metadata-panel-height! 
+           metadata-panel-last-drag-height set-metadata-panel-last-drag-height!
+           tree-metadata-gap-px  set-tree-metadata-gap-px!
+           left-shift-px         set-left-shift-px!
+           legend-pos            set-legend-pos! 
+           legend-collapsed?     set-legend-collapsed! 
+           legend-labels         set-legend-labels! 
+           legend-visible?       set-legend-visible!
+           active-internal-node-id set-active-internal-node-id!
+           positioned-tree         set-positioned-tree!]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -482,6 +503,8 @@
                                      :marker-fill (:node-marker-fill LAYOUT)
                                      :highlights merged-highlights
                                      :selected-ids selected-ids
+                                     :active-internal-node-id active-internal-node-id
+                                     :set-active-internal-node-id! set-active-internal-node-id!
                                      :on-toggle-selection toggle-selection
                                      :on-select-subtree select-subtree})
 
@@ -620,32 +643,63 @@
   metadata changes don't re-parse the Newick string.
   When no tree is available, renders [[EmptyState]] instead."
   [{:keys [width-px component-height-px]}]
-  (let [{:keys [newick-str parsed-tree metadata-rows active-cols
-                x-mult y-mult show-internal-markers show-distance-from-origin
-                scale-origin show-scale-gridlines show-pixel-grid
-                col-spacing left-shift-px tree-metadata-gap-px highlights selected-ids metadata-panel-collapsed
-                metadata-panel-height metadata-panel-last-drag-height
-                color-by-enabled? color-by-field color-by-palette color-by-type-override
-                legend-pos legend-collapsed? legend-labels legend-visible?
-                set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!
-                set-left-shift-px! set-tree-metadata-gap-px!
-                set-metadata-panel-height! set-metadata-panel-last-drag-height!
-                set-active-cols! set-selected-ids! set-metadata-rows!]} (state/use-app-state)
+  (let [{:keys [newick-str
+                parsed-tree
+                metadata-rows set-metadata-rows!
+                active-cols set-active-cols!
+                x-mult
+                y-mult
+                show-internal-markers
+                show-distance-from-origin
+                scale-origin
+                show-scale-gridlines
+                show-pixel-grid
+                col-spacing
+                left-shift-px set-left-shift-px!
+                tree-metadata-gap-px set-tree-metadata-gap-px!
+                highlights
+                selected-ids set-selected-ids!
+                metadata-panel-collapsed
+                metadata-panel-height set-metadata-panel-height!
+                metadata-panel-last-drag-height set-metadata-panel-last-drag-height!
+                color-by-enabled?
+                color-by-field
+                color-by-palette
+                color-by-type-override
+                legend-pos set-legend-pos!
+                legend-collapsed? set-legend-collapsed!
+                legend-labels set-legend-labels!
+                legend-visible? set-legend-visible!
+                active-internal-node-id set-active-internal-node-id!
+                positioned-tree set-positioned-tree!]} (state/use-app-state)
 
         ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
         ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
         ;; via position-tree, skipping the Newick parse step.
         {:keys [tree raw-tips max-depth]}
-        (uix/use-memo
-         (fn [] (cond
-                  parsed-tree
-                  (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
-                    {:tree tree :raw-tips tips :max-depth max-depth})
+        #_(uix/use-memo
+           (fn [] (cond
+                    parsed-tree
+                    (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
+                      {:tree tree :raw-tips tips :max-depth max-depth})
 
-                  (and (string? newick-str) (not (str/blank? newick-str)))
-                  (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
-                    {:tree tree :raw-tips tips :max-depth max-depth})))
-         [newick-str parsed-tree])
+                    (and (string? newick-str) (not (str/blank? newick-str)))
+                    (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
+                      {:tree tree :raw-tips tips :max-depth max-depth})))
+           [newick-str parsed-tree])
+        (uix/use-memo
+         (fn []
+           (cond
+             parsed-tree
+             (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
+               (set-positioned-tree! tree)  ;; <-- Save it
+               {:tree tree :raw-tips tips :max-depth max-depth})
+
+             (and (string? newick-str) (not (str/blank? newick-str)))
+             (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
+               (set-positioned-tree! tree)  ;; <-- Save it
+               {:tree tree :raw-tips tips :max-depth max-depth})))
+         [newick-str parsed-tree set-positioned-tree!])
 
         ;; Stage 2: enrich leaves with metadata — re-runs when metadata or cols change
         tips (uix/use-memo
@@ -682,6 +736,8 @@
                      :set-legend-collapsed! set-legend-collapsed!
                      :set-legend-labels! set-legend-labels!
                      :set-legend-visible! set-legend-visible!
+                     :active-internal-node-id active-internal-node-id
+                     :set-active-internal-node-id! set-active-internal-node-id!
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed

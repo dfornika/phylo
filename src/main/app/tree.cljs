@@ -91,6 +91,25 @@
     (into [] (mapcat get-leaves (:children n)))
     [n]))
 
+(defn find-path-to-node
+  "Finds the path from root to target node.
+   Returns vector of nodes [root ... target] or nil if not found."
+  [node target-id]
+  (cond
+    (= (:id node) target-id)
+    [node]
+    
+    (empty? (:children node))
+    nil
+    
+    :else
+    (some (fn [child]
+            (when-let [child-path (find-path-to-node child target-id)]
+              (into [node] child-path)))
+          (:children node))))
+
+
+
 ;; ===== Tree Preparation =====
 
 (defn assign-node-ids
@@ -225,3 +244,58 @@
                           (<= min-y ly max-y)))))
          (map :name))
         tips))
+
+;; ===== Structural Transformation =====
+
+(defn reroot-tree
+  "Re-roots the tree at the node with the given ID.
+   
+   Reverses parent-child relationships along the path from the old root
+   to the new root. Branch lengths are preserved but reassigned:
+   when edge A->B is reversed to B->A, the branch length stays with the
+   child end.
+   
+   Returns the new tree with the specified node as root, or the original
+   tree if the ID is not found or is already the root."
+  [tree new-root-id]
+  (if (= (:id tree) new-root-id)
+    (do
+      (js/console.log "Tree is already rooted on this node. Not re-rooting.")
+      ;; Already at root - just ensure branch-length is 0
+      (assoc tree :branch-length 0))
+
+    (when-let [path (find-path-to-node tree new-root-id)]
+      (do
+        (js/console.log "Re-rooting tree...")
+        ;; Walk backwards from new-root, reversing edges
+        (loop [idx (dec (count path))
+               reversed-parent nil]
+          (if (< idx 0)
+            reversed-parent
+            (let [current (nth path idx)
+                  next-in-path (when (< idx (dec (count path)))
+                                 (nth path (inc idx)))
+
+                  ;; Keep children that aren't on the path
+                  side-children (if next-in-path
+                                  (filterv #(not= (:id %) (:id next-in-path))
+                                           (:children current))
+                                  (:children current))
+
+                  ;; Add the reversed parent as a child (if we built one)
+                  new-children (if reversed-parent
+                                 (conj side-children reversed-parent)
+                                 side-children)
+
+                  ;; Branch length logic:
+                  ;; - New root (last in path): 0
+                  ;; - Reversed edges: take length from what was the child
+                  new-branch-length (cond
+                                      (= idx (dec (count path))) 0
+                                      next-in-path (:branch-length next-in-path)
+                                      :else (:branch-length current))]
+
+              (recur (dec idx)
+                     (assoc current
+                            :children new-children
+                            :branch-length new-branch-length)))))))))

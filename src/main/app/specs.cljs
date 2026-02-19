@@ -195,6 +195,10 @@
 (s/def ::selected-ids (s/nilable (s/coll-of string? :kind set?)))
 (s/def ::set-selected-ids! fn?)
 
+(s/def ::active-internal-node-id (s/nilable nat-int?))
+(s/def ::set-active-internal-node-id! fn?)
+(s/def ::on-set-reroot-node (s/nilable fn?))
+
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
 
