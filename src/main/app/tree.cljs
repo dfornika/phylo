@@ -259,43 +259,59 @@
    tree if the ID is not found or is already the root."
   [tree new-root-id]
   (if (= (:id tree) new-root-id)
-    (do
-      (js/console.log "Tree is already rooted on this node. Not re-rooting.")
-      ;; Already at root - just ensure branch-length is 0
-      (assoc tree :branch-length 0))
-
+    ;; Already at root - just ensure branch-length is 0
+    (assoc tree :branch-length 0)
+    ;; Else:
     (when-let [path (find-path-to-node tree new-root-id)]
-      (do
-        (js/console.log "Re-rooting tree...")
-        ;; Walk backwards from new-root, reversing edges
-        (loop [idx (dec (count path))
-               reversed-parent nil]
-          (if (< idx 0)
-            reversed-parent
-            (let [current (nth path idx)
-                  next-in-path (when (< idx (dec (count path)))
-                                 (nth path (inc idx)))
+      ;; Walk backwards from new-root, reversing edges
+      (loop [idx (dec (count path))
+             reversed-parent nil]
+        (if (< idx 0)
+          reversed-parent
+          (let [current (nth path idx)
+                next-in-path (when (< idx (dec (count path)))
+                               (nth path (inc idx)))
 
-                  ;; Keep children that aren't on the path
-                  side-children (if next-in-path
-                                  (filterv #(not= (:id %) (:id next-in-path))
-                                           (:children current))
-                                  (:children current))
+                ;; Keep children that aren't on the path
+                side-children (if next-in-path
+                                (filterv #(not= (:id %) (:id next-in-path))
+                                         (:children current))
+                                (:children current))
 
-                  ;; Add the reversed parent as a child (if we built one)
-                  new-children (if reversed-parent
-                                 (conj side-children reversed-parent)
-                                 side-children)
+                ;; Add the reversed parent as a child (if we built one)
+                new-children (if reversed-parent
+                               (conj side-children reversed-parent)
+                               side-children)
 
-                  ;; Branch length logic:
-                  ;; - New root (last in path): 0
-                  ;; - Reversed edges: take length from what was the child
-                  new-branch-length (cond
-                                      (= idx (dec (count path))) 0
-                                      next-in-path (:branch-length next-in-path)
-                                      :else (:branch-length current))]
+                ;; Branch length logic:
+                ;; - New root (last in path): 0
+                ;; - Reversed edges: take length from what was the child
+                new-branch-length (cond
+                                    (= idx (dec (count path))) 0
+                                    next-in-path (:branch-length next-in-path)
+                                    :else (:branch-length current))]
 
-              (recur (dec idx)
-                     (assoc current
-                            :children new-children
-                            :branch-length new-branch-length)))))))))
+            (recur (dec idx)
+                   (assoc current
+                          :children new-children
+                          :branch-length new-branch-length))))))))
+
+
+(defn ladderize
+  "Ladderizes a tree by sorting children at each node by subtree size.
+  
+  Direction can be :ascending (larger clades on top, the default) or
+  :descending (larger clades on bottom).
+  
+  This is a pure function - it doesn't modify coordinates, just reorders
+  the :children vectors."
+  ([tree]
+   (ladderize tree :ascending))
+  ([tree direction]
+   (if (empty? (:children tree))
+     tree
+     (let [ladderized-children (mapv #(ladderize % direction) (:children tree))
+           sorted-children (sort-by count-tips
+                                    (if (= direction :ascending) > <)
+                                    ladderized-children)]
+       (assoc tree :children (vec sorted-children))))))

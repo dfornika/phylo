@@ -220,8 +220,17 @@
                                          (when rerooted
                                            (set-parsed-tree! rerooted)
                                            (set-newick-str! (newick/map->newick rerooted))
-                                           (set-active-internal-node-id! nil)))))}
-                "Re-root Tree"))
+                                           (set-active-internal-node-id! nil)))))
+                         :style {}}
+                "Re-root Tree")
+             ($ :button {:disabled (nil? parsed-tree)
+                         :on-click (fn [_]
+                                     (when parsed-tree
+                                       (let [ladderized (tree/ladderize parsed-tree :ascending)]
+                                         (set-parsed-tree! ladderized)
+                                         (set-newick-str! (newick/map->newick ladderized)))))
+                         :style {}}
+                "Ladderize ↓"))
              ;; Temporarily disabled this toggle for the PixelGrid.
              ;; only intended as dev-time troubleshooting tool.
           #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
