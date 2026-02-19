@@ -72,6 +72,10 @@
                             (clj->js allowed))))))
    value))
 
+(defn atom-of [inner-spec]
+  (s/and #(instance? Atom %)
+         #(s/valid? inner-spec @%)))
+
 ;; ===== Primitive Specs =====
 
 (s/def ::pos-number (s/and number? pos?))
@@ -86,6 +90,9 @@
 (s/def ::branch-length (s/nilable (s/and number? #(not (js/isNaN %)))))
 (s/def ::children (s/coll-of ::tree-node :kind vector?))
 
+;; For positioned nodes - children are ALSO positioned
+(s/def ::positioned-children (s/coll-of ::positioned-node :kind vector?))
+
 (s/def ::tree-node
   (s/keys :req-un [::name ::branch-length ::children]))
 
@@ -97,7 +104,7 @@
 (s/def ::leaf-names (s/coll-of string? :kind set?))
 
 (s/def ::positioned-node
-  (s/keys :req-un [::name ::branch-length ::children ::x ::y ::id]
+  (s/keys :req-un [::name ::branch-length ::positioned-children ::x ::y ::id]
           :opt-un [::leaf-names]))
 
 ;; ===== Bounding Rectangle (for lasso selection) =====
@@ -314,7 +321,10 @@
   :ret  (s/coll-of ::positioned-node))
 
 (s/fdef app.tree/assign-x-coords
-  :args (s/cat :node ::tree-node)
+  :args (s/alt :node-only (s/cat :node ::tree-node)
+               :positioned-node  (s/cat :node ::tree-node 
+                                        :current-x number?
+                                        :is-root? boolean?))
   :ret  ::positioned-node)
 
 (s/fdef app.tree/assign-leaf-names
@@ -354,7 +364,9 @@
   :ret  number?)
 
 (s/fdef app.tree/assign-node-ids
-  :args (s/cat :node ::tree-node)
+  :args (s/alt :node-only (s/cat :node ::tree-node)
+               :node-with-next-id (s/cat :node ::tree-node 
+                                         :next-id (atom-of nat-int?)))
   :ret  ::positioned-node)
 
 (s/fdef app.tree/position-tree
