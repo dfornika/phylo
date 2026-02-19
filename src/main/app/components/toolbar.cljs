@@ -223,14 +223,26 @@
                                            (set-active-internal-node-id! nil)))))
                          :style {}}
                 "Re-root Tree")
-             ($ :button {:disabled (nil? parsed-tree)
+             ($ :button {:disabled (not (or newick-str parsed-tree))
                          :on-click (fn [_]
-                                     (when parsed-tree
-                                       (let [ladderized (tree/ladderize parsed-tree :ascending)]
-                                         (set-parsed-tree! ladderized)
-                                         (set-newick-str! (newick/map->newick ladderized)))))
+                                     (let [current-tree (or parsed-tree
+                                                            (when newick-str
+                                                              (newick/newick->map newick-str)))
+                                           ladderized (tree/ladderize current-tree :ascending)]
+                                       (set-parsed-tree! ladderized)
+                                       (set-newick-str! (newick/map->newick ladderized))))
                          :style {}}
-                "Ladderize ↓"))
+                "Ladderize ↓")
+             ($ :button {:disabled (not (or newick-str parsed-tree))
+                         :on-click (fn [_]
+                                     (let [current-tree (or parsed-tree
+                                                            (when newick-str
+                                                              (newick/newick->map newick-str)))
+                                           ladderized (tree/ladderize current-tree :descending)]
+                                       (set-parsed-tree! ladderized)
+                                       (set-newick-str! (newick/map->newick ladderized))))
+                         :style {}}
+                "Ladderize ↑"))
              ;; Temporarily disabled this toggle for the PixelGrid.
              ;; only intended as dev-time troubleshooting tool.
           #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
