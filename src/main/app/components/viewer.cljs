@@ -677,16 +677,6 @@
         ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
         ;; via position-tree, skipping the Newick parse step.
         {:keys [tree raw-tips max-depth]}
-        #_(uix/use-memo
-           (fn [] (cond
-                    parsed-tree
-                    (let [{:keys [tree tips max-depth]} (tree/position-tree parsed-tree)]
-                      {:tree tree :raw-tips tips :max-depth max-depth})
-
-                    (and (string? newick-str) (not (str/blank? newick-str)))
-                    (let [{:keys [tree tips max-depth]} (tree/parse-and-position newick-str)]
-                      {:tree tree :raw-tips tips :max-depth max-depth})))
-           [newick-str parsed-tree])
         (uix/use-memo
          (fn []
            (cond
