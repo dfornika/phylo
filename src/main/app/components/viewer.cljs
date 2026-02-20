@@ -80,7 +80,7 @@
                                                               :x-scale x-scale
                                                               :origin scale-origin})
         ;; All y-coords derived from the single centralised LAYOUT constant.
-        bar-y   (:scale-bar-line-y LAYOUT)   ;; -18
+        bar-y   (:scale-bar-line-y LAYOUT)   ;; -36
         minor-y (- bar-y 2)                  ;; -20
         major-y (- bar-y 4)                  ;; -22
         label-y (- bar-y 8)]                 ;; -26
