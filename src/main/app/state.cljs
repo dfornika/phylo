@@ -548,7 +548,7 @@
                     y-mult set-y-mult!
                     show-internal-markers set-show-internal-markers!
                     show-scale-gridlines set-show-scale-gridlines!
-                    show-distance-from-origin set-show-distance-from-origin! 
+                    show-distance-from-origin set-show-distance-from-origin!
                     scale-origin set-scale-origin!
                     show-pixel-grid set-show-pixel-grid!
                     col-spacing set-col-spacing!
