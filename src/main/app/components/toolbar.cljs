@@ -67,13 +67,14 @@
                 show-internal-markers set-show-internal-markers!
                 show-scale-gridlines set-show-scale-gridlines!
                 show-distance-from-origin set-show-distance-from-origin!
+                show-distance-from-node set-show-distance-from-node!
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-metadata-rows! set-active-cols!
                 set-selected-ids! set-highlights!
                 branch-length-mult set-branch-length-mult!
                 scale-units-label set-scale-units-label!
-                active-reroot-node-id set-active-reroot-node-id!]} (state/use-app-state)
+                active-reference-node-id set-active-reference-node-id!]} (state/use-app-state)
         ;; Local draft for the multiplier so the user can freely edit the
         ;; text field (including clearing it) before pressing Apply.
         [draft-mult set-draft-mult!] (uix/use-state (str branch-length-mult))
@@ -202,6 +203,12 @@
                            :style {:accent-color navy}
                            :on-change #(set-show-distance-from-origin! (not show-distance-from-origin))})
                 "Distance from Origin")
+             ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked show-distance-from-node
+                           :style {:accent-color navy}
+                           :on-change #(set-show-distance-from-node! (not show-distance-from-node))})
+                "Dist. from Node")
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Scale Origin")
                 ($ :select {:value (name scale-origin)
@@ -215,14 +222,14 @@
                             :on-change #(set-scale-origin! (keyword (.. % -target -value)))}
                    ($ :option {:value "tips"} "Tips")
                    ($ :option {:value "root"} "Root")))
-             ($ :button {:disabled (nil? active-reroot-node-id)
+             ($ :button {:disabled (nil? active-reference-node-id)
                          :on-click (fn [_]
-                                     (when (and active-reroot-node-id positioned-tree)
-                                       (let [rerooted (tree/reroot-on-branch positioned-tree active-reroot-node-id)]
+                                     (when (and active-reference-node-id positioned-tree)
+                                       (let [rerooted (tree/reroot-on-branch positioned-tree active-reference-node-id)]
                                          (when rerooted
                                            (set-parsed-tree! rerooted)
                                            (set-newick-str! (newick/map->newick rerooted))
-                                           (set-active-reroot-node-id! nil)))))
+                                           (set-active-reference-node-id! nil)))))
                          :style {}}
                 "Re-root Tree")
              ($ :button {:disabled (not (or newick-str parsed-tree))

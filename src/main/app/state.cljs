@@ -16,6 +16,7 @@
   - [[!show-internal-markers]] - whether to show markers on internal nodes
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
   - [[!show-distance-from-origin]]   - whether to show internal node distance labels
+  - [[!show-distance-from-node]]     - whether to show distances from the ctrl-clicked reference node
   - [[!scale-origin]]          - scale origin for labels (:tips or :root)
   - [[!branch-length-mult]]    - multiplier applied to branch lengths for display (e.g. number of core SNP sites)
   - [[!scale-units-label]]     - label string for scale units (e.g. \"SNPs\")
@@ -96,6 +97,11 @@
 (defonce !show-distance-from-origin
   (atom false))
 
+;; "Atom holding whether to show distances from the ctrl-clicked reference node
+;;  on currently selected leaves."
+(defonce !show-distance-from-node
+  (atom false))
+
 ;; "Atom holding scale origin for labels (:tips or :root)."
 (defonce !scale-origin
   (atom :tips))
@@ -174,7 +180,7 @@
 
 ;; "Atom holding the node selected for re-rooting (via Ctrl+click).
 ;;  Can be any node (leaf or internal) — identifies the branch leading to it."
-(defonce !active-reroot-node-id
+(defonce !active-reference-node-id
   (atom nil))
 
 ;; "Atom holding the positioned tree (with IDs but before metadata enrichment)"
@@ -198,6 +204,7 @@
    :show-internal-markers false
    :show-scale-gridlines false
    :show-distance-from-origin false
+   :show-distance-from-node false
    :scale-origin :tips
    :show-pixel-grid false
    :col-spacing 4
@@ -217,7 +224,7 @@
    :legend-collapsed? false
    :legend-labels {}
    :legend-visible? false
-   :active-reroot-node-id nil})
+   :active-reference-node-id nil})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -235,6 +242,7 @@
            :show-internal-markers     @!show-internal-markers
            :show-scale-gridlines      @!show-scale-gridlines
            :show-distance-from-origin @!show-distance-from-origin
+           :show-distance-from-node   @!show-distance-from-node
            :scale-origin              @!scale-origin
            :show-pixel-grid           @!show-pixel-grid
            :col-spacing               @!col-spacing
@@ -254,7 +262,7 @@
            :legend-collapsed? @!legend-collapsed?
            :legend-labels @!legend-labels
            :legend-visible? @!legend-visible?
-           :active-reroot-node-id @!active-reroot-node-id}})
+           :active-reference-node-id @!active-reference-node-id}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -334,6 +342,7 @@
       (reset! !show-internal-markers (:show-internal-markers merged))
       (reset! !show-scale-gridlines (:show-scale-gridlines merged))
       (reset! !show-distance-from-origin (:show-distance-from-origin merged))
+      (reset! !show-distance-from-node (boolean (:show-distance-from-node merged)))
       (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
       (reset! !col-spacing (:col-spacing merged))
@@ -374,6 +383,7 @@
                    :app.specs/show-internal-markers           :app.specs/set-show-internal-markers!
                    :app.specs/show-scale-gridlines            :app.specs/set-show-scale-gridlines!
                    :app.specs/show-distance-from-origin       :app.specs/set-show-distance-from-origin!
+                   :app.specs/show-distance-from-node          :app.specs/set-show-distance-from-node!
                    :app.specs/scale-origin    :app.specs/set-scale-origin!
                    :app.specs/show-pixel-grid :app.specs/set-show-pixel-grid!
                    :app.specs/col-spacing     :app.specs/set-col-spacing!
@@ -393,7 +403,7 @@
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
-                   :app.specs/active-reroot-node-id :app.specs/set-active-reroot-node-id!]
+                   :app.specs/active-reference-node-id :app.specs/set-active-reference-node-id!]
           :opt-un [:app.specs/parsed-tree :app.specs/set-parsed-tree!
                    :app.specs/positioned-tree :app.specs/set-positioned-tree!]))
 
@@ -440,6 +450,9 @@
 
         show-distance-from-origin      (uix/use-atom !show-distance-from-origin)
         set-show-distance-from-origin! (uix/use-callback #(reset! !show-distance-from-origin %) [])
+
+        show-distance-from-node        (uix/use-atom !show-distance-from-node)
+        set-show-distance-from-node!   (uix/use-callback #(reset! !show-distance-from-node %) [])
 
         scale-origin                (uix/use-atom !scale-origin)
         set-scale-origin!           (uix/use-callback #(reset! !scale-origin %) [])
@@ -499,8 +512,8 @@
         legend-visible?              (uix/use-atom !legend-visible?)
         set-legend-visible!          (uix/use-callback #(reset! !legend-visible? %) [])
 
-        active-reroot-node-id      (uix/use-atom !active-reroot-node-id)
-        set-active-reroot-node-id! (uix/use-callback #(reset! !active-reroot-node-id %) [])
+        active-reference-node-id      (uix/use-atom !active-reference-node-id)
+        set-active-reference-node-id! (uix/use-callback #(reset! !active-reference-node-id %) [])
 
         positioned-tree             (uix/use-atom !positioned-tree)
         set-positioned-tree!        (uix/use-callback #(reset! !positioned-tree %) [])
@@ -529,6 +542,8 @@
                       :set-show-scale-gridlines!            set-show-scale-gridlines!
                       :show-distance-from-origin            show-distance-from-origin
                       :set-show-distance-from-origin!       set-show-distance-from-origin!
+                      :show-distance-from-node              show-distance-from-node
+                      :set-show-distance-from-node!         set-show-distance-from-node!
                       :scale-origin         scale-origin
                       :set-scale-origin!    set-scale-origin!
                       :show-pixel-grid      show-pixel-grid
@@ -567,8 +582,8 @@
                       :set-legend-labels! set-legend-labels!
                       :legend-visible? legend-visible?
                       :set-legend-visible! set-legend-visible!
-                      :active-reroot-node-id active-reroot-node-id
-                      :set-active-reroot-node-id! set-active-reroot-node-id!
+                      :active-reference-node-id active-reference-node-id
+                      :set-active-reference-node-id! set-active-reference-node-id!
                       :positioned-tree positioned-tree
                       :set-positioned-tree! set-positioned-tree!})
                    ;; Setters have stable identity ([] deps) so listing them here
@@ -584,6 +599,7 @@
                     show-internal-markers set-show-internal-markers!
                     show-scale-gridlines set-show-scale-gridlines!
                     show-distance-from-origin set-show-distance-from-origin!
+                    show-distance-from-node set-show-distance-from-node!
                     scale-origin set-scale-origin!
                     show-pixel-grid set-show-pixel-grid!
                     col-spacing set-col-spacing!
@@ -603,7 +619,7 @@
                     legend-collapsed? set-legend-collapsed!
                     legend-labels set-legend-labels!
                     legend-visible? set-legend-visible!
-                    active-reroot-node-id set-active-reroot-node-id!
+                    active-reference-node-id set-active-reference-node-id!
                     positioned-tree set-positioned-tree!])]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))

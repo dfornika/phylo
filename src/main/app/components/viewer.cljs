@@ -193,7 +193,8 @@
                    :app.specs/color-by-palette
                    :app.specs/color-by-type-override
                    :app.specs/branch-length-mult
-                   :app.specs/scale-units-label]))
+                   :app.specs/scale-units-label
+                   :app.specs/node-distances]))
 
 (defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
@@ -256,9 +257,10 @@
            legend-collapsed?     set-legend-collapsed!
            legend-labels         set-legend-labels!
            legend-visible?       set-legend-visible!
-           active-reroot-node-id set-active-reroot-node-id!
+           active-reference-node-id set-active-reference-node-id!
            positioned-tree         set-positioned-tree!
-           branch-length-mult scale-units-label]}]
+           branch-length-mult scale-units-label
+           node-distances]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -521,12 +523,13 @@
                                      :scale-origin scale-origin
                                      :max-depth max-depth
                                      :branch-length-mult bl-mult
+                                     :node-distances node-distances
                                      :marker-radius (:node-marker-radius LAYOUT)
                                      :marker-fill (:node-marker-fill LAYOUT)
                                      :highlights merged-highlights
                                      :selected-ids selected-ids
-                                     :active-reroot-node-id active-reroot-node-id
-                                     :set-active-reroot-node-id! set-active-reroot-node-id!
+                                     :active-reference-node-id active-reference-node-id
+                                     :set-active-reference-node-id! set-active-reference-node-id!
                                      :on-toggle-selection toggle-selection
                                      :on-select-subtree select-subtree})
 
@@ -692,8 +695,9 @@
                 legend-collapsed? set-legend-collapsed!
                 legend-labels set-legend-labels!
                 legend-visible? set-legend-visible!
-                active-reroot-node-id set-active-reroot-node-id!
+                active-reference-node-id set-active-reference-node-id!
                 positioned-tree set-positioned-tree!
+                show-distance-from-node
                 branch-length-mult
                 scale-units-label]} (state/use-app-state)
 
@@ -719,7 +723,30 @@
         tips (uix/use-memo
               (fn [] (when raw-tips
                        (tree/enrich-leaves raw-tips metadata-rows active-cols)))
-              [raw-tips metadata-rows active-cols])]
+              [raw-tips metadata-rows active-cols])
+
+        ;; Stage 3: pairwise distances from ctrl-clicked reference node to selected leaves.
+        ;; Keyed on the reference node ID, selected leaf names, and branch-length multiplier.
+        ;; Returns nil when the toggle is off or prerequisites are missing.
+        node-distances
+        (uix/use-memo
+         (fn []
+           (when (and show-distance-from-node
+                      active-reference-node-id
+                      positioned-tree
+                      (seq selected-ids)
+                      (seq tips))
+             (let [bl-mult (or branch-length-mult 1)
+                   tip-id-map (into {} (map (fn [t] [(:name t) (:id t)]) tips))]
+               (reduce (fn [acc leaf-name]
+                         (let [tip-id (get tip-id-map leaf-name)]
+                           (if tip-id
+                             (let [d (tree/distance-between positioned-tree active-reference-node-id tip-id)]
+                               (if d (assoc acc leaf-name (* d bl-mult)) acc))
+                             acc)))
+                       {}
+                       selected-ids))))
+         [show-distance-from-node active-reference-node-id positioned-tree selected-ids tips branch-length-mult])]
     (if tree
       ($ TreeViewer {:tree tree
                      :tips tips
@@ -750,8 +777,8 @@
                      :set-legend-collapsed! set-legend-collapsed!
                      :set-legend-labels! set-legend-labels!
                      :set-legend-visible! set-legend-visible!
-                     :active-reroot-node-id active-reroot-node-id
-                     :set-active-reroot-node-id! set-active-reroot-node-id!
+                     :active-reference-node-id active-reference-node-id
+                     :set-active-reference-node-id! set-active-reference-node-id!
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed
@@ -765,7 +792,8 @@
                      :set-metadata-rows! set-metadata-rows!
                      :component-height-px component-height-px
                      :branch-length-mult branch-length-mult
-                     :scale-units-label scale-units-label})
+                     :scale-units-label scale-units-label
+                     :node-distances node-distances})
       ($ EmptyState {:component-height-px component-height-px}))))
 
 (defui-with-spec TreeContainer

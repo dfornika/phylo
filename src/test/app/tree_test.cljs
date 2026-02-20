@@ -168,6 +168,79 @@
       ;; All children should have IDs
       (is (every? #(number? (:id %)) (:children result))))))
 
+;; ===== find-lca =====
+
+(deftest find-lca-sibling-leaves
+  (testing "LCA of two sibling leaves is their direct parent"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:1.0)Root;")))
+          leaves (tree/get-leaves t)
+          leaf-a (first (filter #(= "A" (:name %)) leaves))
+          leaf-b (first (filter #(= "B" (:name %)) leaves))]
+      (is (= "Root" (:name (tree/find-lca t (:id leaf-a) (:id leaf-b))))))))
+
+(deftest find-lca-same-node
+  (testing "LCA of a node with itself is that node"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:1.0)Root;")))
+          leaf-a (first (filter #(= "A" (:name %)) (tree/get-leaves t)))]
+      (is (= (:id leaf-a) (:id (tree/find-lca t (:id leaf-a) (:id leaf-a))))))))
+
+(deftest find-lca-returns-nil-for-missing-id
+  (testing "find-lca returns nil when an ID is not found in the tree"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:1.0)Root;")))
+          leaf-a (first (tree/get-leaves t))]
+      (is (nil? (tree/find-lca t (:id leaf-a) 99999))))))
+
+(deftest find-lca-deeper-tree
+  (testing "LCA of A and C (in different subtrees) is the root"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,(B:1.0,C:2.0)D:1.0)Root;")))
+          leaves (tree/get-leaves t)
+          leaf-a (first (filter #(= "A" (:name %)) leaves))
+          leaf-c (first (filter #(= "C" (:name %)) leaves))]
+      (is (= "Root" (:name (tree/find-lca t (:id leaf-a) (:id leaf-c)))))))
+  (testing "LCA of two leaves sharing an immediate parent is that parent"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,(B:1.0,C:2.0)D:1.0)Root;")))
+          leaves (tree/get-leaves t)
+          leaf-b (first (filter #(= "B" (:name %)) leaves))
+          leaf-c (first (filter #(= "C" (:name %)) leaves))]
+      (is (= "D" (:name (tree/find-lca t (:id leaf-b) (:id leaf-c))))))))
+
+;; ===== distance-between =====
+
+(deftest distance-between-siblings
+  (testing "Distance between two sibling leaves equals the sum of their branch lengths"
+    ;; x(Root)=0.0, x(A)=1.0, x(B)=2.0  =>  distance = 1.0 + 2.0 = 3.0
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:2.0)Root;")))
+          leaves (tree/get-leaves t)
+          leaf-a (first (filter #(= "A" (:name %)) leaves))
+          leaf-b (first (filter #(= "B" (:name %)) leaves))]
+      (is (= 3.0 (tree/distance-between t (:id leaf-a) (:id leaf-b)))))))
+
+(deftest distance-between-same-node
+  (testing "Distance from a node to itself is zero"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:2.0)Root;")))
+          leaf-a (first (filter #(= "A" (:name %)) (tree/get-leaves t)))]
+      (is (= 0.0 (tree/distance-between t (:id leaf-a) (:id leaf-a)))))))
+
+(deftest distance-between-returns-nil-for-missing-id
+  (testing "distance-between returns nil when an ID is not found in the tree"
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,B:2.0)Root;")))
+          leaf-a (first (tree/get-leaves t))]
+      (is (nil? (tree/distance-between t (:id leaf-a) 99999))))))
+
+(deftest distance-between-nested-tree
+  (testing "Distance traverses the correct LCA path in a deeper tree"
+    ;; (A:1.0,(B:1.0,C:2.0)D:1.0)Root;
+    ;; x(Root)=0.0, x(A)=1.0, x(D)=1.0, x(B)=2.0, x(C)=3.0
+    ;; distance(A,C): LCA=Root  => (1.0-0.0) + (3.0-0.0) = 4.0
+    ;; distance(B,C): LCA=D    => (2.0-1.0) + (3.0-1.0) = 3.0
+    (let [t (:tree (tree/position-tree (newick/newick->map "(A:1.0,(B:1.0,C:2.0)D:1.0)Root;")))
+          leaves (tree/get-leaves t)
+          leaf-a (first (filter #(= "A" (:name %)) leaves))
+          leaf-b (first (filter #(= "B" (:name %)) leaves))
+          leaf-c (first (filter #(= "C" (:name %)) leaves))]
+      (is (= 4.0 (tree/distance-between t (:id leaf-a) (:id leaf-c))))
+      (is (= 3.0 (tree/distance-between t (:id leaf-b) (:id leaf-c)))))))
+
 ;; ===== reroot-on-branch =====
 
 (defn- id-tree
