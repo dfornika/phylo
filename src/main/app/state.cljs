@@ -159,8 +159,9 @@
 (defonce !legend-visible?
   (atom false))
 
-;; "Atom holding the internal node selected for re-rooting (via Ctrl+click)"
-(defonce !active-internal-node-id
+;; "Atom holding the node selected for re-rooting (via Ctrl+click).
+;;  Can be any node (leaf or internal) — identifies the branch leading to it."
+(defonce !active-reroot-node-id
   (atom nil))
 
 ;; "Atom holding the positioned tree (with IDs but before metadata enrichment)"
@@ -201,7 +202,7 @@
    :legend-collapsed? false
    :legend-labels {}
    :legend-visible? false
-   :active-internal-node-id nil})
+   :active-reroot-node-id nil})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -236,7 +237,7 @@
            :legend-collapsed? @!legend-collapsed?
            :legend-labels @!legend-labels
            :legend-visible? @!legend-visible?
-           :active-internal-node-id @!active-internal-node-id}})
+           :active-reroot-node-id @!active-reroot-node-id}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -369,7 +370,7 @@
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
-                   :app.specs/active-internal-node-id :app.specs/set-active-internal-node-id!]
+                   :app.specs/active-reroot-node-id :app.specs/set-active-reroot-node-id!]
           :opt-un [:app.specs/parsed-tree :app.specs/set-parsed-tree!
                    :app.specs/positioned-tree :app.specs/set-positioned-tree!]))
 
@@ -469,8 +470,8 @@
         legend-visible?              (uix/use-atom !legend-visible?)
         set-legend-visible!          (uix/use-callback #(reset! !legend-visible? %) [])
 
-        active-internal-node-id      (uix/use-atom !active-internal-node-id)
-        set-active-internal-node-id! (uix/use-callback #(reset! !active-internal-node-id %) [])
+        active-reroot-node-id      (uix/use-atom !active-reroot-node-id)
+        set-active-reroot-node-id! (uix/use-callback #(reset! !active-reroot-node-id %) [])
 
         positioned-tree             (uix/use-atom !positioned-tree)
         set-positioned-tree!        (uix/use-callback #(reset! !positioned-tree %) [])
@@ -533,8 +534,8 @@
                       :set-legend-labels! set-legend-labels!
                       :legend-visible? legend-visible?
                       :set-legend-visible! set-legend-visible!
-                      :active-internal-node-id active-internal-node-id
-                      :set-active-internal-node-id! set-active-internal-node-id!
+                      :active-reroot-node-id active-reroot-node-id
+                      :set-active-reroot-node-id! set-active-reroot-node-id!
                       :positioned-tree positioned-tree
                       :set-positioned-tree! set-positioned-tree!})
                    ;; Setters have stable identity ([] deps) so listing them here
@@ -567,7 +568,7 @@
                     legend-collapsed? set-legend-collapsed!
                     legend-labels set-legend-labels!
                     legend-visible? set-legend-visible!
-                    active-internal-node-id set-active-internal-node-id!
+                    active-reroot-node-id set-active-reroot-node-id!
                     positioned-tree set-positioned-tree!])]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))

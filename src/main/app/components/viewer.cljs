@@ -242,7 +242,7 @@
            legend-collapsed?     set-legend-collapsed! 
            legend-labels         set-legend-labels! 
            legend-visible?       set-legend-visible!
-           active-internal-node-id set-active-internal-node-id!
+           active-reroot-node-id set-active-reroot-node-id!
            positioned-tree         set-positioned-tree!]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
@@ -503,8 +503,8 @@
                                      :marker-fill (:node-marker-fill LAYOUT)
                                      :highlights merged-highlights
                                      :selected-ids selected-ids
-                                     :active-internal-node-id active-internal-node-id
-                                     :set-active-internal-node-id! set-active-internal-node-id!
+                                     :active-reroot-node-id active-reroot-node-id
+                                     :set-active-reroot-node-id! set-active-reroot-node-id!
                                      :on-toggle-selection toggle-selection
                                      :on-select-subtree select-subtree})
 
@@ -670,7 +670,7 @@
                 legend-collapsed? set-legend-collapsed!
                 legend-labels set-legend-labels!
                 legend-visible? set-legend-visible!
-                active-internal-node-id set-active-internal-node-id!
+                active-reroot-node-id set-active-reroot-node-id!
                 positioned-tree set-positioned-tree!]} (state/use-app-state)
 
         ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
@@ -726,8 +726,8 @@
                      :set-legend-collapsed! set-legend-collapsed!
                      :set-legend-labels! set-legend-labels!
                      :set-legend-visible! set-legend-visible!
-                     :active-internal-node-id active-internal-node-id
-                     :set-active-internal-node-id! set-active-internal-node-id!
+                     :active-reroot-node-id active-reroot-node-id
+                     :set-active-reroot-node-id! set-active-reroot-node-id!
                      :selected-ids selected-ids
                      :metadata-rows metadata-rows
                      :metadata-panel-collapsed metadata-panel-collapsed

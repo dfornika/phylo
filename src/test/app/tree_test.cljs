@@ -167,3 +167,182 @@
       (is (number? (:id result)))
       ;; All children should have IDs
       (is (every? #(number? (:id %)) (:children result))))))
+
+;; ===== reroot-on-branch =====
+
+(defn- id-tree
+  "Parses a Newick string and assigns node IDs (but not x/y coords).
+  Suitable for testing structural transformations that need :id keys."
+  [newick-str]
+  (tree/assign-node-ids (newick/newick->map newick-str)))
+
+(defn- collect-all-nodes
+  "Collects all nodes in a tree into a flat vector (depth-first)."
+  [node]
+  (into [node] (mapcat collect-all-nodes (:children node))))
+
+(defn- find-node-by-name
+  "Finds the first node with the given name in a tree."
+  [node name]
+  (first (filter #(= (:name %) name) (collect-all-nodes node))))
+
+(defn- pairwise-distance
+  "Returns the distance between two leaf names in a tree.
+  Computes root-to-leaf distances and uses: d(A,B) = d(root,A) + d(root,B) - 2*d(root,LCA).
+  For simplicity, sums root-to-leaf for each, then subtracts 2x the shared prefix."
+  [tree leaf-a leaf-b]
+  (letfn [(root-to-leaf-path [node target-name]
+            (cond
+              (= (:name node) target-name)
+              [node]
+              (empty? (:children node))
+              nil
+              :else
+              (some (fn [child]
+                      (when-let [p (root-to-leaf-path child target-name)]
+                        (into [node] p)))
+                    (:children node))))
+          (path-length [path]
+            ;; Sum of branch-lengths, skipping the root (no incoming edge)
+            (reduce + 0 (map #(or (:branch-length %) 0) (rest path))))]
+    (let [path-a (root-to-leaf-path tree leaf-a)
+          path-b (root-to-leaf-path tree leaf-b)
+          len-a (path-length path-a)
+          len-b (path-length path-b)
+          ;; Find LCA depth: length of shared prefix path
+          shared (count (take-while (fn [[a b]] (= (:name a) (:name b)))
+                                    (map vector path-a path-b)))
+          lca-depth (path-length (take shared path-a))]
+      (+ (- len-a lca-depth) (- len-b lca-depth)))))
+
+(deftest reroot-on-branch-returns-nil-for-root
+  (testing "Rerooting on the root node returns nil (root has no incoming branch)"
+    (let [t (id-tree "(A:0.1,B:0.2)Root:0.3;")]
+      (is (nil? (tree/reroot-on-branch t (:id t)))))))
+
+(deftest reroot-on-branch-returns-nil-for-missing-id
+  (testing "Rerooting with a non-existent ID returns nil"
+    (let [t (id-tree "(A:0.1,B:0.2)Root:0.3;")]
+      (is (nil? (tree/reroot-on-branch t 9999))))))
+
+(deftest reroot-on-branch-simple-two-leaf
+  (testing "Rerooting a 2-leaf tree on a leaf branch"
+    (let [t (id-tree "(A:0.1,B:0.2)Root:0.3;")
+          a-node (find-node-by-name t "A")
+          rerooted (tree/reroot-on-branch t (:id a-node))]
+      ;; Should produce a valid tree
+      (is (some? rerooted))
+      ;; New root has nil name and 2 children
+      (is (nil? (:name rerooted)))
+      (is (= 2 (count (:children rerooted))))
+      ;; Same number of leaves
+      (is (= 2 (tree/count-tips rerooted)))
+      ;; Leaf names preserved
+      (is (= #{"A" "B"} (set (map :name (tree/get-leaves rerooted)))))
+      ;; No :id keys remain (they should be stripped)
+      (is (every? #(not (contains? % :id)) (collect-all-nodes rerooted))))))
+
+(deftest reroot-on-branch-preserves-pairwise-distances
+  (testing "Pairwise tip distances are preserved after rerooting"
+    (let [nwk "(A:1.0,(B:2.0,(C:3.0,D:4.0)E:5.0)F:6.0)Root;"
+          raw (newick/newick->map nwk)
+          t (tree/assign-node-ids raw)
+          ;; Get all leaf pairs
+          leaves ["A" "B" "C" "D"]
+          pairs (for [a leaves b leaves :when (pos? (compare a b))] [a b])
+          ;; Record original distances
+          orig-distances (into {} (map (fn [[a b]] [[a b] (pairwise-distance t a b)]) pairs))
+          ;; Reroot on the branch leading to node B
+          b-node (find-node-by-name t "B")
+          rerooted (tree/reroot-on-branch t (:id b-node))
+          ;; Record rerooted distances
+          new-distances (into {} (map (fn [[a b]] [[a b] (pairwise-distance rerooted a b)]) pairs))]
+      (doseq [pair (keys orig-distances)]
+        ;; Use a small epsilon for floating-point comparison
+        (is (< (js/Math.abs (- (orig-distances pair) (new-distances pair))) 1e-10)
+            (str "Distance mismatch for " pair
+                 ": orig=" (orig-distances pair)
+                 " new=" (new-distances pair)))))))
+
+(deftest reroot-on-branch-three-leaf-on-leaf
+  (testing "Rerooting a 3-leaf tree on a leaf branch produces correct topology"
+    (let [nwk "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;"
+          t (id-tree nwk)
+          ;; Reroot on A's branch
+          a-node (find-node-by-name t "A")
+          rerooted (tree/reroot-on-branch t (:id a-node))]
+      (is (some? rerooted))
+      (is (= 3 (tree/count-tips rerooted)))
+      ;; A's branch was 1.0, split in half → A gets 0.5 from new root
+      (let [a-child (first (filter #(= "A" (:name %)) (:children rerooted)))]
+        (is (some? a-child))
+        (is (== 0.5 (:branch-length a-child)))))))
+
+(deftest reroot-on-branch-internal-node
+  (testing "Rerooting on an internal node's branch works correctly"
+    (let [nwk "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;"
+          t (id-tree nwk)
+          d-node (find-node-by-name t "D")
+          rerooted (tree/reroot-on-branch t (:id d-node))]
+      (is (some? rerooted))
+      (is (= 3 (tree/count-tips rerooted)))
+      (is (= #{"A" "B" "C"} (set (map :name (tree/get-leaves rerooted))))))))
+
+(deftest reroot-on-branch-zero-length
+  (testing "Rerooting on a branch with zero/nil length uses 0 for both halves"
+    (let [nwk "(A:0.0,B:0.2)Root;"
+          t (id-tree nwk)
+          a-node (find-node-by-name t "A")
+          rerooted (tree/reroot-on-branch t (:id a-node))]
+      (is (some? rerooted))
+      ;; Both children of the new root should have branch-length 0
+      (let [a-child (first (filter #(= "A" (:name %)) (:children rerooted)))]
+        (is (== 0 (:branch-length a-child)))))))
+
+(deftest reroot-on-branch-unifurcation-collapse
+  (testing "Old bifurcating root collapses into a unifurcation correctly"
+    ;; When we reroot on A: the old root had 2 children (A and D).
+    ;; We remove A from the path, leaving the old root with just D.
+    ;; That's a unifurcation that should be collapsed.
+    (let [nwk "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;"
+          t (id-tree nwk)
+          a-node (find-node-by-name t "A")
+          rerooted (tree/reroot-on-branch t (:id a-node))]
+      ;; After rerooting on A, the rootward side should NOT have
+      ;; a single-child internal node at the old root position.
+      ;; It should be collapsed: Root(BL=1.0) with child D(BL=4.0)
+      ;; becomes D with BL=1.0+4.0=5.0 (since old root had BL from
+      ;; the reversed A→Root edge which is 1.0)
+      (let [rootward-child (first (filter #(not= "A" (:name %)) (:children rerooted)))
+            all-nodes (collect-all-nodes rootward-child)]
+        ;; No unifurcations: every internal node has 2+ children
+        (doseq [n all-nodes]
+          (when (seq (:children n))
+            (is (>= (count (:children n)) 2)
+                (str "Unifurcation found at node: " (:name n)))))))))
+
+(deftest reroot-on-branch-round-trip-position
+  (testing "Rerooted tree can be positioned successfully"
+    (let [nwk "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;"
+          t (id-tree nwk)
+          b-node (find-node-by-name t "B")
+          rerooted (tree/reroot-on-branch t (:id b-node))
+          ;; Position the rerooted tree
+          positioned (tree/position-tree rerooted)]
+      (is (some? (:tree positioned)))
+      (is (= 3 (count (:tips positioned))))
+      (is (pos? (:max-depth positioned))))))
+
+(deftest reroot-on-branch-newick-round-trip
+  (testing "Rerooted tree serializes to Newick and parses back"
+    (let [nwk "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;"
+          t (id-tree nwk)
+          b-node (find-node-by-name t "B")
+          rerooted (tree/reroot-on-branch t (:id b-node))
+          ;; Serialize and re-parse
+          rerooted-nwk (newick/map->newick rerooted)
+          reparsed (newick/newick->map rerooted-nwk)]
+      (is (string? rerooted-nwk))
+      (is (some? reparsed))
+      (is (= 3 (tree/count-tips reparsed)))
+      (is (= #{"A" "B" "C"} (set (map :name (tree/get-leaves reparsed))))))))
