@@ -71,8 +71,11 @@
             (str y))))))
 
 (defui ScaleBar
-  "Renders a solid scale bar with tick marks and labels."
-  [{:keys [max-depth x-scale scale-origin]}]
+  "Renders a solid scale bar with tick marks and labels.
+
+  When `scale-units-label` is non-empty, a units label is rendered as a static
+  `<text>` element just past the right end of the scale bar."
+  [{:keys [max-depth x-scale scale-origin scale-units-label]}]
   (let [{:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                               :x-scale x-scale
                                                               :origin scale-origin})]
@@ -95,7 +98,16 @@
                       :style {:font-family "monospace"
                               :font-size "10px"
                               :fill "#111"}}
-               (scale/format-label scale-origin max-depth t)))))))
+               (scale/format-label scale-origin max-depth t))))
+       ;; Optional units label at the right end of the scale bar
+       (when (not (str/blank? scale-units-label))
+         ($ :text {:x (+ (* max-depth x-scale) 10)
+                   :y -26
+                   :text-anchor "start"
+                   :style {:font-family "monospace"
+                           :font-size "10px"
+                           :fill "#666"}}
+            scale-units-label)))))
 
 (s/def :app.specs/scale-gridlines-props
   (s/keys :req-un [:app.specs/max-depth
@@ -179,7 +191,9 @@
           :opt-un [:app.specs/highlights :app.specs/selected-ids
                    :app.specs/color-by-enabled? :app.specs/color-by-field
                    :app.specs/color-by-palette
-                   :app.specs/color-by-type-override]))
+                   :app.specs/color-by-type-override
+                   :app.specs/branch-length-mult
+                   :app.specs/scale-units-label]))
 
 (defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
@@ -212,42 +226,48 @@
   - `:metadata-panel-last-drag-height` - last height set by dragging
   - `:set-metadata-panel-height!` - setter for panel height
   - `:set-metadata-panel-last-drag-height!` - setter for last drag height"
-  [{:keys [tree 
-           tips 
-           max-depth 
-           x-mult 
+  [{:keys [tree
+           tips
+           max-depth
+           x-mult
            y-mult
-           show-internal-markers 
-           show-distance-from-origin 
-           scale-origin 
-           width-px 
+           show-internal-markers
+           show-distance-from-origin
+           scale-origin
+           width-px
            component-height-px
-           show-scale-gridlines 
-           show-pixel-grid 
-           col-spacing  
+           show-scale-gridlines
+           show-pixel-grid
+           col-spacing
            highlights
            metadata-panel-collapsed
-           color-by-enabled? 
-           color-by-field 
-           color-by-palette 
+           color-by-enabled?
+           color-by-field
+           color-by-palette
            color-by-type-override
            active-cols           set-active-cols!
-           selected-ids          set-selected-ids! 
-           metadata-rows         set-metadata-rows! 
-           metadata-panel-height set-metadata-panel-height! 
+           selected-ids          set-selected-ids!
+           metadata-rows         set-metadata-rows!
+           metadata-panel-height set-metadata-panel-height!
            metadata-panel-last-drag-height set-metadata-panel-last-drag-height!
            tree-metadata-gap-px  set-tree-metadata-gap-px!
            left-shift-px         set-left-shift-px!
-           legend-pos            set-legend-pos! 
-           legend-collapsed?     set-legend-collapsed! 
-           legend-labels         set-legend-labels! 
+           legend-pos            set-legend-pos!
+           legend-collapsed?     set-legend-collapsed!
+           legend-labels         set-legend-labels!
            legend-visible?       set-legend-visible!
            active-reroot-node-id set-active-reroot-node-id!
-           positioned-tree         set-positioned-tree!]}]
+           positioned-tree         set-positioned-tree!
+           branch-length-mult scale-units-label]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
                           1)
+        ;; Branch-length multiplier for display: scales tick labels and distance
+        ;; labels without affecting pixel positions.
+        bl-mult           (or branch-length-mult 1)
+        effective-max-depth (* max-depth bl-mult)
+        effective-x-scale   (/ current-x-scale bl-mult)
         tree-end-x      (+ (* max-depth current-x-scale) (:label-buffer LAYOUT))
         metadata-start-x (+ (:svg-padding-x LAYOUT)
                             tree-end-x
@@ -456,8 +476,8 @@
           ($ StickyHeader {:columns active-cols
                            :start-offset metadata-start-x
                            :col-spacing col-spacing
-                           :max-depth max-depth
-                           :x-scale current-x-scale
+                           :max-depth effective-max-depth
+                           :x-scale effective-x-scale
                            :scale-origin scale-origin
                            :left-shift-px left-shift-px
                            :tree-metadata-gap-px tree-metadata-gap-px
@@ -475,23 +495,24 @@
              ($ :g {:transform (str "translate(" left-shift ", 0)")}
                 ;; Scale bar
                 ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-                   ($ ScaleBar {:max-depth max-depth
-                                :x-scale current-x-scale
-                                :scale-origin scale-origin}))
+                   ($ ScaleBar {:max-depth effective-max-depth
+                                :x-scale effective-x-scale
+                                :scale-origin scale-origin
+                                :scale-units-label scale-units-label}))
 
-             ;; Debugging pixel grid
+                ;; Debugging pixel grid
                 (when show-pixel-grid
                   ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
-             ;; Scale gridlines
+                ;; Scale gridlines
                 (when show-scale-gridlines
                   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
-                     ($ ScaleGridlines {:max-depth max-depth
-                                        :x-scale current-x-scale
+                     ($ ScaleGridlines {:max-depth effective-max-depth
+                                        :x-scale effective-x-scale
                                         :tree-height tree-height
                                         :scale-origin scale-origin})))
 
-             ;; The tree itself
+                ;; The tree itself
                 ($ PhylogeneticTree {:tree tree
                                      :x-scale current-x-scale
                                      :y-scale y-mult
@@ -499,6 +520,7 @@
                                      :show-distance-from-origin show-distance-from-origin
                                      :scale-origin scale-origin
                                      :max-depth max-depth
+                                     :branch-length-mult bl-mult
                                      :marker-radius (:node-marker-radius LAYOUT)
                                      :marker-fill (:node-marker-fill LAYOUT)
                                      :highlights merged-highlights
@@ -508,7 +530,7 @@
                                      :on-toggle-selection toggle-selection
                                      :on-select-subtree select-subtree})
 
-             ;; Metadata columns
+                ;; Metadata columns
                 (when (seq active-cols)
                   ($ MetadataTable {:active-cols active-cols
                                     :tips tips
@@ -671,7 +693,9 @@
                 legend-labels set-legend-labels!
                 legend-visible? set-legend-visible!
                 active-reroot-node-id set-active-reroot-node-id!
-                positioned-tree set-positioned-tree!]} (state/use-app-state)
+                positioned-tree set-positioned-tree!
+                branch-length-mult
+                scale-units-label]} (state/use-app-state)
 
         ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
         ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
@@ -739,7 +763,9 @@
                      :set-active-cols! set-active-cols!
                      :set-selected-ids! set-selected-ids!
                      :set-metadata-rows! set-metadata-rows!
-                     :component-height-px component-height-px})
+                     :component-height-px component-height-px
+                     :branch-length-mult branch-length-mult
+                     :scale-units-label scale-units-label})
       ($ EmptyState {:component-height-px component-height-px}))))
 
 (defui-with-spec TreeContainer

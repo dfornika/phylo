@@ -17,6 +17,8 @@
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
   - [[!show-distance-from-origin]]   - whether to show internal node distance labels
   - [[!scale-origin]]          - scale origin for labels (:tips or :root)
+  - [[!branch-length-mult]]    - multiplier applied to branch lengths for display (e.g. number of core SNP sites)
+  - [[!scale-units-label]]     - label string for scale units (e.g. \"SNPs\")
   - [[!show-pixel-grid]]       - whether to show pixel-coordinate debug grid
   - [[!col-spacing]]           - extra horizontal spacing between metadata columns
   - [[!left-shift-px]]          - horizontal shift applied to tree + metadata overlay
@@ -70,6 +72,17 @@
 ;; "Atom holding the vertical tip spacing in pixels (10–100)."
 (defonce !y-mult
   (atom 30))
+
+;; "Atom holding the multiplier applied to branch-length values for display.
+;;  Default 1 (no scaling). Set to the number of core SNP sites to rescale
+;;  the tree from substitutions/site to number of SNPs."
+(defonce !branch-length-mult
+  (atom 1))
+
+;; "Atom holding the units label shown at the right end of the scale bar.
+;;  Empty string means no label is rendered."
+(defonce !scale-units-label
+  (atom ""))
 
 ;; "Atom holding whether to display circular markers on internal (non-leaf) nodes."
 (defonce !show-internal-markers
@@ -180,6 +193,8 @@
    :active-cols []
    :x-mult 0.5
    :y-mult 30
+   :branch-length-mult 1
+   :scale-units-label ""
    :show-internal-markers false
    :show-scale-gridlines false
    :show-distance-from-origin false
@@ -215,6 +230,8 @@
            :active-cols     @!active-cols
            :x-mult          @!x-mult
            :y-mult          @!y-mult
+           :branch-length-mult @!branch-length-mult
+           :scale-units-label  @!scale-units-label
            :show-internal-markers     @!show-internal-markers
            :show-scale-gridlines      @!show-scale-gridlines
            :show-distance-from-origin @!show-distance-from-origin
@@ -309,6 +326,11 @@
       (reset! !active-cols (:active-cols merged))
       (reset! !x-mult (:x-mult merged))
       (reset! !y-mult (:y-mult merged))
+      (reset! !branch-length-mult (let [v (:branch-length-mult merged)]
+                                    (if (and (number? v) (pos? v)) v 1)))
+      (reset! !scale-units-label (if (string? (:scale-units-label merged))
+                                   (:scale-units-label merged)
+                                   ""))
       (reset! !show-internal-markers (:show-internal-markers merged))
       (reset! !show-scale-gridlines (:show-scale-gridlines merged))
       (reset! !show-distance-from-origin (:show-distance-from-origin merged))
@@ -341,13 +363,14 @@
   Provided by [[AppStateProvider]], consumed via [[use-app-state]]."
   (uix/create-context nil))
 
-
 (s/def :app.specs/app-state
   (s/keys :req-un [:app.specs/newick-str      :app.specs/set-newick-str!
                    :app.specs/metadata-rows   :app.specs/set-metadata-rows!
                    :app.specs/active-cols     :app.specs/set-active-cols!
                    :app.specs/x-mult          :app.specs/set-x-mult!
                    :app.specs/y-mult          :app.specs/set-y-mult!
+                   :app.specs/branch-length-mult :app.specs/set-branch-length-mult!
+                   :app.specs/scale-units-label  :app.specs/set-scale-units-label!
                    :app.specs/show-internal-markers           :app.specs/set-show-internal-markers!
                    :app.specs/show-scale-gridlines            :app.specs/set-show-scale-gridlines!
                    :app.specs/show-distance-from-origin       :app.specs/set-show-distance-from-origin!
@@ -402,6 +425,12 @@
 
         y-mult                      (uix/use-atom !y-mult)
         set-y-mult!                 (uix/use-callback #(reset! !y-mult %) [])
+
+        branch-length-mult          (uix/use-atom !branch-length-mult)
+        set-branch-length-mult!     (uix/use-callback #(reset! !branch-length-mult %) [])
+
+        scale-units-label           (uix/use-atom !scale-units-label)
+        set-scale-units-label!      (uix/use-callback #(reset! !scale-units-label %) [])
 
         show-internal-markers       (uix/use-atom !show-internal-markers)
         set-show-internal-markers!  (uix/use-callback #(reset! !show-internal-markers %) [])
@@ -490,6 +519,10 @@
                       :set-x-mult!          set-x-mult!
                       :y-mult               y-mult
                       :set-y-mult!          set-y-mult!
+                      :branch-length-mult   branch-length-mult
+                      :set-branch-length-mult! set-branch-length-mult!
+                      :scale-units-label    scale-units-label
+                      :set-scale-units-label! set-scale-units-label!
                       :show-internal-markers                show-internal-markers
                       :set-show-internal-markers!           set-show-internal-markers!
                       :show-scale-gridlines                 show-scale-gridlines
@@ -546,6 +579,8 @@
                     active-cols set-active-cols!
                     x-mult set-x-mult!
                     y-mult set-y-mult!
+                    branch-length-mult set-branch-length-mult!
+                    scale-units-label set-scale-units-label!
                     show-internal-markers set-show-internal-markers!
                     show-scale-gridlines set-show-scale-gridlines!
                     show-distance-from-origin set-show-distance-from-origin!

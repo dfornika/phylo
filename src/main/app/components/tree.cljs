@@ -66,7 +66,8 @@
                    :app.specs/on-toggle-selection
                    :app.specs/on-select-subtree
                    :app.specs/active-reroot-node-id
-                   :app.specs/on-set-reroot-node]))
+                   :app.specs/on-set-reroot-node
+                   :app.specs/branch-length-mult]))
 
 (declare TreeNode)
 
@@ -107,7 +108,7 @@
   - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-distance-from-origin
            scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection
-           on-select-subtree active-reroot-node-id on-set-reroot-node]}]
+           on-select-subtree active-reroot-node-id on-set-reroot-node branch-length-mult]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
         p-x (* parent-x x-scale)
@@ -122,8 +123,9 @@
         fill (if highlight-color highlight-color marker-fill)
         radius (if highlight-color (+ marker-radius 1.5) marker-radius)
         node-depth (:x node)
+        bl-mult    (or branch-length-mult 1)
         distance-label (when (and (not is-leaf?) show-distance-from-origin (number? node-depth) (pos? max-depth))
-                         (scale/format-label scale-origin max-depth node-depth))
+                         (scale/format-label scale-origin (* max-depth bl-mult) (* node-depth bl-mult)))
         leaf-names (when internal-node?
                      (:leaf-names node))
         any-selected? (and (seq selected-ids)
@@ -231,6 +233,7 @@
                       :show-distance-from-origin show-distance-from-origin
                       :scale-origin scale-origin
                       :max-depth max-depth
+                      :branch-length-mult branch-length-mult
                       :marker-radius marker-radius
                       :marker-fill marker-fill
                       :highlights highlights
@@ -260,7 +263,8 @@
                    :app.specs/on-toggle-selection
                    :app.specs/on-select-subtree
                    :app.specs/active-reroot-node-id
-                   :app.specs/on-set-reroot-node]))
+                   :app.specs/on-set-reroot-node
+                   :app.specs/branch-length-mult]))
 
 (defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
@@ -284,7 +288,8 @@
   - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
 
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
-           highlights selected-ids  active-reroot-node-id set-active-reroot-node-id! on-toggle-selection on-select-subtree]}]
+           highlights selected-ids  active-reroot-node-id set-active-reroot-node-id! on-toggle-selection on-select-subtree
+           branch-length-mult]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -295,6 +300,7 @@
                   :show-distance-from-origin show-distance-from-origin
                   :scale-origin scale-origin
                   :max-depth max-depth
+                  :branch-length-mult branch-length-mult
                   :marker-radius marker-radius
                   :marker-fill marker-fill
                   :highlights highlights
