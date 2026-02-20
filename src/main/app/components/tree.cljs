@@ -137,6 +137,8 @@
         any-selected? (and (seq selected-ids)
                            (seq leaf-names)
                            (some leaf-names selected-ids))
+        active-reference? (and active-reference-node-id
+                               (= (:id node) active-reference-node-id))
         internal-state-class (when (seq leaf-names)
                                (if any-selected?
                                  " internal-node-marker--deselect"
@@ -144,18 +146,16 @@
         leaf-click (when (and is-leaf? on-toggle-selection)
                      (fn [e]
                        (if (and (.-ctrlKey e) on-set-reroot-node)
-                         (on-set-reroot-node (:id node))
+                         (on-set-reroot-node (when-not active-reference? (:id node)))
                          (on-toggle-selection node-name))))
         internal-click (when internal-node?
                          (fn [e]
                            (if (and (.-ctrlKey e) on-set-reroot-node)
-                             ;; Ctrl+click and handler exists: select for re-rooting
-                             (on-set-reroot-node (:id node))
+                             ;; Ctrl+click: toggle reference node selection
+                             (on-set-reroot-node (when-not active-reference? (:id node)))
                              ;; Otherwise: try subtree selection
                              (when on-select-subtree
                                (on-select-subtree node)))))
-        active-reference? (and active-reference-node-id
-                            (= (:id node) active-reference-node-id))
         internal-class (str "internal-node-marker"
                             (when (not show-internal-markers)
                               " internal-node-marker--hidden")
