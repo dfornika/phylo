@@ -12,7 +12,9 @@
             [app.export.html :as export-html]
             [app.export.svg :as export-svg]
             [app.layout :refer [LAYOUT]]
-            [app.io :as io]))
+            [app.io :as io]
+            [app.newick :as newick]
+            [app.tree :as tree]))
 
 ;; ===== Style constants =====
 
@@ -55,7 +57,10 @@
   Reads all state from [[app.state/app-context]] via [[app.state/use-app-state]],
   so this component requires no props."
   [_props]
-  (let [{:keys [x-mult set-x-mult!
+  (let [{:keys [newick-str set-newick-str!
+                parsed-tree set-parsed-tree!
+                positioned-tree set-positioned-tree!
+                x-mult set-x-mult!
                 y-mult set-y-mult!
                 col-spacing set-col-spacing!
                 tree-metadata-gap-px set-tree-metadata-gap-px!
@@ -64,10 +69,9 @@
                 show-distance-from-origin set-show-distance-from-origin!
                 scale-origin set-scale-origin!
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
-                set-newick-str!
-                set-parsed-tree!
                 set-metadata-rows! set-active-cols!
-                set-selected-ids! set-highlights!]} (state/use-app-state)]
+                set-selected-ids! set-highlights!
+                active-reroot-node-id set-active-reroot-node-id!]} (state/use-app-state)]
     ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
@@ -198,7 +202,37 @@
                                     :background "#ffffff"}
                             :on-change #(set-scale-origin! (keyword (.. % -target -value)))}
                    ($ :option {:value "tips"} "Tips")
-                   ($ :option {:value "root"} "Root"))))
+                   ($ :option {:value "root"} "Root")))
+             ($ :button {:disabled (nil? active-reroot-node-id)
+                         :on-click (fn [_]
+                                     (when (and active-reroot-node-id positioned-tree)
+                                       (let [rerooted (tree/reroot-on-branch positioned-tree active-reroot-node-id)]
+                                         (when rerooted
+                                           (set-parsed-tree! rerooted)
+                                           (set-newick-str! (newick/map->newick rerooted))
+                                           (set-active-reroot-node-id! nil)))))
+                         :style {}}
+                "Re-root Tree")
+             ($ :button {:disabled (not (or newick-str parsed-tree))
+                         :on-click (fn [_]
+                                     (let [current-tree (or parsed-tree
+                                                            (when newick-str
+                                                              (newick/newick->map newick-str)))
+                                           ladderized (tree/ladderize current-tree :ascending)]
+                                       (set-parsed-tree! ladderized)
+                                       (set-newick-str! (newick/map->newick ladderized))))
+                         :style {}}
+                "Ladderize ↓")
+             ($ :button {:disabled (not (or newick-str parsed-tree))
+                         :on-click (fn [_]
+                                     (let [current-tree (or parsed-tree
+                                                            (when newick-str
+                                                              (newick/newick->map newick-str)))
+                                           ladderized (tree/ladderize current-tree :descending)]
+                                       (set-parsed-tree! ladderized)
+                                       (set-newick-str! (newick/map->newick ladderized))))
+                         :style {}}
+                "Ladderize ↑"))
              ;; Temporarily disabled this toggle for the PixelGrid.
              ;; only intended as dev-time troubleshooting tool.
           #_($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}

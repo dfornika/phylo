@@ -195,6 +195,10 @@
 (s/def ::selected-ids (s/nilable (s/coll-of string? :kind set?)))
 (s/def ::set-selected-ids! fn?)
 
+(s/def ::active-reroot-node-id (s/nilable nat-int?))
+(s/def ::set-active-reroot-node-id! fn?)
+(s/def ::on-set-reroot-node (s/nilable fn?))
+
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
 
@@ -388,6 +392,10 @@
                :metadata-rows (s/coll-of ::metadata-row)
                :active-cols (s/coll-of ::metadata-header))
   :ret  (s/keys :req-un [::tree ::tips ::max-depth]))
+
+(s/fdef app.tree/reroot-on-branch
+  :args (s/cat :tree ::positioned-node :target-id nat-int?)
+  :ret  (s/nilable ::tree-node))
 
 ;; ----- Scale (additional) -----
 

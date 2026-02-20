@@ -159,6 +159,15 @@
 (defonce !legend-visible?
   (atom false))
 
+;; "Atom holding the node selected for re-rooting (via Ctrl+click).
+;;  Can be any node (leaf or internal) — identifies the branch leading to it."
+(defonce !active-reroot-node-id
+  (atom nil))
+
+;; "Atom holding the positioned tree (with IDs but before metadata enrichment)"
+(defonce !positioned-tree
+  (atom nil))
+
 ;; ===== Export / Import =====
 
 (def ^:private export-version
@@ -192,7 +201,8 @@
    :legend-pos nil
    :legend-collapsed? false
    :legend-labels {}
-   :legend-visible? false})
+   :legend-visible? false
+   :active-reroot-node-id nil})
 
 (defn export-state
   "Returns a versioned, EDN-serializable snapshot of app state.
@@ -226,7 +236,8 @@
            :legend-pos @!legend-pos
            :legend-collapsed? @!legend-collapsed?
            :legend-labels @!legend-labels
-           :legend-visible? @!legend-visible?}})
+           :legend-visible? @!legend-visible?
+           :active-reroot-node-id @!active-reroot-node-id}})
 
 (defn- normalize-export
   "Normalizes export payloads to a flat state map.
@@ -359,8 +370,9 @@
                    :app.specs/metadata-panel-collapsed        :app.specs/set-metadata-panel-collapsed!
                    :app.specs/metadata-panel-height           :app.specs/set-metadata-panel-height!
                    :app.specs/metadata-panel-last-drag-height :app.specs/set-metadata-panel-last-drag-height!
-                   ]
-          :opt-un [:app.specs/parsed-tree :app.specs/set-parsed-tree!]))
+                   :app.specs/active-reroot-node-id :app.specs/set-active-reroot-node-id!]
+          :opt-un [:app.specs/parsed-tree :app.specs/set-parsed-tree!
+                   :app.specs/positioned-tree :app.specs/set-positioned-tree!]))
 
 (defui AppStateProvider
   "Wraps children with the app state context.
@@ -372,65 +384,97 @@
   memoized via `use-memo` so its object identity only changes when
   an atom value actually changes."
   [{:keys [children]}]
-  (let [newick-str     (uix/use-atom !newick-str)
-        parsed-tree    (uix/use-atom !parsed-tree)
-        metadata-rows  (uix/use-atom !metadata-rows)
-        active-cols    (uix/use-atom !active-cols)
-        x-mult         (uix/use-atom !x-mult)
-        y-mult         (uix/use-atom !y-mult)
-        show-internal-markers       (uix/use-atom !show-internal-markers)
-        show-scale-gridlines        (uix/use-atom !show-scale-gridlines)
-        show-distance-from-origin   (uix/use-atom !show-distance-from-origin)
-        scale-origin                (uix/use-atom !scale-origin)
-        show-pixel-grid             (uix/use-atom !show-pixel-grid)
-        col-spacing                 (uix/use-atom !col-spacing)
-        left-shift-px               (uix/use-atom !left-shift-px)
-        tree-metadata-gap-px        (uix/use-atom !tree-metadata-gap-px)
-        metadata-panel-collapsed    (uix/use-atom !metadata-panel-collapsed)
-        metadata-panel-height       (uix/use-atom !metadata-panel-height)
-        metadata-panel-last-drag-height (uix/use-atom !metadata-panel-last-drag-height)
-        highlight-color             (uix/use-atom !highlight-color)
-        selected-ids                (uix/use-atom !selected-ids)
-        highlights                  (uix/use-atom !highlights)
-        color-by-enabled?           (uix/use-atom !color-by-enabled?)
-        color-by-field              (uix/use-atom !color-by-field)
-        color-by-palette            (uix/use-atom !color-by-palette)
-        color-by-type-override      (uix/use-atom !color-by-type-override)
-        legend-pos                  (uix/use-atom !legend-pos)
-        legend-collapsed?           (uix/use-atom !legend-collapsed?)
-        legend-labels               (uix/use-atom !legend-labels)
-        legend-visible?             (uix/use-atom !legend-visible?)
+  ;; Stable setter callbacks — atoms are module-level defonce so [] deps is safe
+  (let [newick-str                  (uix/use-atom !newick-str)
+        set-newick-str!             (uix/use-callback #(reset! !newick-str %) [])
 
-        ;; Stable setter callbacks — atoms are module-level defonce so [] deps is safe
-        set-newick-str!      (uix/use-callback #(reset! !newick-str %) [])
-        set-parsed-tree!     (uix/use-callback #(reset! !parsed-tree %) [])
-        set-metadata-rows!   (uix/use-callback #(reset! !metadata-rows %) [])
-        set-active-cols!     (uix/use-callback #(reset! !active-cols %) [])
-        set-x-mult!          (uix/use-callback #(reset! !x-mult %) [])
-        set-y-mult!          (uix/use-callback #(reset! !y-mult %) [])
-        set-show-internal-markers!     (uix/use-callback #(reset! !show-internal-markers %) [])
-        set-show-scale-gridlines!      (uix/use-callback #(reset! !show-scale-gridlines %) [])
+        parsed-tree                 (uix/use-atom !parsed-tree)
+        set-parsed-tree!            (uix/use-callback #(reset! !parsed-tree %) [])
+
+        metadata-rows               (uix/use-atom !metadata-rows)
+        set-metadata-rows!          (uix/use-callback #(reset! !metadata-rows %) [])
+
+        active-cols                 (uix/use-atom !active-cols)
+        set-active-cols!            (uix/use-callback #(reset! !active-cols %) [])
+
+        x-mult                      (uix/use-atom !x-mult)
+        set-x-mult!                 (uix/use-callback #(reset! !x-mult %) [])
+
+        y-mult                      (uix/use-atom !y-mult)
+        set-y-mult!                 (uix/use-callback #(reset! !y-mult %) [])
+
+        show-internal-markers       (uix/use-atom !show-internal-markers)
+        set-show-internal-markers!  (uix/use-callback #(reset! !show-internal-markers %) [])
+
+        show-scale-gridlines        (uix/use-atom !show-scale-gridlines)
+        set-show-scale-gridlines!   (uix/use-callback #(reset! !show-scale-gridlines %) [])
+
+        show-distance-from-origin      (uix/use-atom !show-distance-from-origin)
         set-show-distance-from-origin! (uix/use-callback #(reset! !show-distance-from-origin %) [])
-        set-scale-origin!    (uix/use-callback #(reset! !scale-origin %) [])
-        set-show-pixel-grid! (uix/use-callback #(reset! !show-pixel-grid %) [])
-        set-col-spacing!     (uix/use-callback #(reset! !col-spacing %) [])
-        set-left-shift-px!   (uix/use-callback #(reset! !left-shift-px %) [])
-        set-tree-metadata-gap-px!      (uix/use-callback #(reset! !tree-metadata-gap-px %) [])
-        set-metadata-panel-collapsed!  (uix/use-callback #(reset! !metadata-panel-collapsed %) [])
-        set-metadata-panel-height!     (uix/use-callback #(reset! !metadata-panel-height %) [])
+
+        scale-origin                (uix/use-atom !scale-origin)
+        set-scale-origin!           (uix/use-callback #(reset! !scale-origin %) [])
+
+        show-pixel-grid             (uix/use-atom !show-pixel-grid)
+        set-show-pixel-grid!        (uix/use-callback #(reset! !show-pixel-grid %) [])
+
+        col-spacing                 (uix/use-atom !col-spacing)
+        set-col-spacing!            (uix/use-callback #(reset! !col-spacing %) [])
+
+        left-shift-px               (uix/use-atom !left-shift-px)
+        set-left-shift-px!          (uix/use-callback #(reset! !left-shift-px %) [])
+
+        tree-metadata-gap-px        (uix/use-atom !tree-metadata-gap-px)
+        set-tree-metadata-gap-px!   (uix/use-callback #(reset! !tree-metadata-gap-px %) [])
+
+        metadata-panel-collapsed             (uix/use-atom !metadata-panel-collapsed)
+        set-metadata-panel-collapsed!        (uix/use-callback #(reset! !metadata-panel-collapsed %) [])
+
+        metadata-panel-height                (uix/use-atom !metadata-panel-height)
+        set-metadata-panel-height!           (uix/use-callback #(reset! !metadata-panel-height %) [])
+
+        metadata-panel-last-drag-height      (uix/use-atom !metadata-panel-last-drag-height)
         set-metadata-panel-last-drag-height! (uix/use-callback #(reset! !metadata-panel-last-drag-height %) [])
-        set-highlight-color! (uix/use-callback #(reset! !highlight-color %) [])
+
+        highlight-color             (uix/use-atom !highlight-color)
+        set-highlight-color!        (uix/use-callback #(reset! !highlight-color %) [])
+
+        selected-ids                (uix/use-atom !selected-ids)
         ;; set-selected-ids! accepts both fns (swap!) and values (reset!)
-        set-selected-ids!    (uix/use-callback #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %)) [])
-        set-highlights!      (uix/use-callback #(reset! !highlights %) [])
-        set-color-by-enabled!  (uix/use-callback #(reset! !color-by-enabled? %) [])
-        set-color-by-field!    (uix/use-callback #(reset! !color-by-field %) [])
-        set-color-by-palette!  (uix/use-callback #(reset! !color-by-palette %) [])
+        set-selected-ids!           (uix/use-callback #(if (fn? %) (swap! !selected-ids %) (reset! !selected-ids %)) [])
+
+        highlights                  (uix/use-atom !highlights)
+        set-highlights!             (uix/use-callback #(reset! !highlights %) [])
+
+        color-by-enabled?           (uix/use-atom !color-by-enabled?)
+        set-color-by-enabled!       (uix/use-callback #(reset! !color-by-enabled? %) [])
+
+        color-by-field              (uix/use-atom !color-by-field)
+        set-color-by-field!         (uix/use-callback #(reset! !color-by-field %) [])
+
+        color-by-palette            (uix/use-atom !color-by-palette)
+        set-color-by-palette!       (uix/use-callback #(reset! !color-by-palette %) [])
+
+        color-by-type-override      (uix/use-atom !color-by-type-override)
         set-color-by-type-override! (uix/use-callback #(reset! !color-by-type-override %) [])
-        set-legend-pos!        (uix/use-callback #(reset! !legend-pos %) [])
-        set-legend-collapsed!  (uix/use-callback #(reset! !legend-collapsed? %) [])
-        set-legend-labels!     (uix/use-callback #(reset! !legend-labels %) [])
-        set-legend-visible!    (uix/use-callback #(reset! !legend-visible? %) [])
+
+        legend-pos                  (uix/use-atom !legend-pos)
+        set-legend-pos!             (uix/use-callback #(reset! !legend-pos %) [])
+
+        legend-collapsed?           (uix/use-atom !legend-collapsed?)
+        set-legend-collapsed!       (uix/use-callback #(reset! !legend-collapsed? %) [])
+
+        legend-labels               (uix/use-atom !legend-labels)
+        set-legend-labels!          (uix/use-callback #(reset! !legend-labels %) [])
+
+        legend-visible?              (uix/use-atom !legend-visible?)
+        set-legend-visible!          (uix/use-callback #(reset! !legend-visible? %) [])
+
+        active-reroot-node-id      (uix/use-atom !active-reroot-node-id)
+        set-active-reroot-node-id! (uix/use-callback #(reset! !active-reroot-node-id %) [])
+
+        positioned-tree             (uix/use-atom !positioned-tree)
+        set-positioned-tree!        (uix/use-callback #(reset! !positioned-tree %) [])
 
         app-state (uix/use-memo
                    (fn []
@@ -489,28 +533,43 @@
                       :legend-labels legend-labels
                       :set-legend-labels! set-legend-labels!
                       :legend-visible? legend-visible?
-                      :set-legend-visible! set-legend-visible!})
-                   [newick-str parsed-tree metadata-rows active-cols
-                    x-mult y-mult show-internal-markers show-scale-gridlines
-                    show-distance-from-origin scale-origin show-pixel-grid
-                    col-spacing left-shift-px tree-metadata-gap-px
-                    metadata-panel-collapsed metadata-panel-height metadata-panel-last-drag-height
-                    highlight-color selected-ids highlights
-                    color-by-enabled? color-by-field color-by-palette color-by-type-override
-                    legend-pos legend-collapsed? legend-labels legend-visible?
-                    ;; Setters have stable identity ([] deps) so listing them here
-                    ;; doesn't cause extra re-renders, but satisfies exhaustive-deps.
-                    set-newick-str! set-parsed-tree! set-metadata-rows! set-active-cols!
-                    set-x-mult! set-y-mult! set-show-internal-markers!
-                    set-show-scale-gridlines! set-show-distance-from-origin!
-                    set-scale-origin! set-show-pixel-grid! set-col-spacing!
-                    set-left-shift-px! set-tree-metadata-gap-px!
-                    set-metadata-panel-collapsed! set-metadata-panel-height!
-                    set-metadata-panel-last-drag-height!
-                    set-highlight-color! set-selected-ids! set-highlights!
-                    set-color-by-enabled! set-color-by-field! set-color-by-palette!
-                    set-color-by-type-override!
-                    set-legend-pos! set-legend-collapsed! set-legend-labels! set-legend-visible!])]
+                      :set-legend-visible! set-legend-visible!
+                      :active-reroot-node-id active-reroot-node-id
+                      :set-active-reroot-node-id! set-active-reroot-node-id!
+                      :positioned-tree positioned-tree
+                      :set-positioned-tree! set-positioned-tree!})
+                   ;; Setters have stable identity ([] deps) so listing them here
+                   ;; doesn't cause extra re-renders, but satisfies exhaustive-deps.
+                   [newick-str set-newick-str!
+                    parsed-tree set-parsed-tree!
+                    metadata-rows set-metadata-rows!
+                    active-cols set-active-cols!
+                    x-mult set-x-mult!
+                    y-mult set-y-mult!
+                    show-internal-markers set-show-internal-markers!
+                    show-scale-gridlines set-show-scale-gridlines!
+                    show-distance-from-origin set-show-distance-from-origin!
+                    scale-origin set-scale-origin!
+                    show-pixel-grid set-show-pixel-grid!
+                    col-spacing set-col-spacing!
+                    left-shift-px set-left-shift-px!
+                    tree-metadata-gap-px set-tree-metadata-gap-px!
+                    metadata-panel-collapsed set-metadata-panel-collapsed!
+                    metadata-panel-height set-metadata-panel-height!
+                    metadata-panel-last-drag-height set-metadata-panel-last-drag-height!
+                    highlight-color set-highlight-color!
+                    selected-ids set-selected-ids!
+                    highlights set-highlights!
+                    color-by-enabled? set-color-by-enabled!
+                    color-by-field set-color-by-field!
+                    color-by-palette set-color-by-palette!
+                    color-by-type-override set-color-by-type-override!
+                    legend-pos set-legend-pos!
+                    legend-collapsed? set-legend-collapsed!
+                    legend-labels set-legend-labels!
+                    legend-visible? set-legend-visible!
+                    active-reroot-node-id set-active-reroot-node-id!
+                    positioned-tree set-positioned-tree!])]
     (when ^boolean goog.DEBUG
       (specs/validate-spec! app-state :app.specs/app-state "app-state" {:check-unexpected-keys? true}))
     ($ app-context {:value app-state}

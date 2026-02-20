@@ -91,6 +91,23 @@
     (into [] (mapcat get-leaves (:children n)))
     [n]))
 
+(defn find-path-to-node
+  "Finds the path from root to target node.
+   Returns vector of nodes [root ... target] or nil if not found."
+  [node target-id]
+  (cond
+    (= (:id node) target-id)
+    [node]
+
+    (empty? (:children node))
+    nil
+
+    :else
+    (some (fn [child]
+            (when-let [child-path (find-path-to-node child target-id)]
+              (into [node] child-path)))
+          (:children node))))
+
 ;; ===== Tree Preparation =====
 
 (defn assign-node-ids
@@ -225,3 +242,156 @@
                           (<= min-y ly max-y)))))
          (map :name))
         tips))
+
+;; ===== Structural Transformation =====
+
+(defn- strip-ids
+  "Recursively removes `:id` keys from every node in a tree.
+  Stale IDs from a pre-positioned tree must be stripped after structural
+  transformations; `position-tree` will reassign fresh ones."
+  [node]
+  (-> node
+      (dissoc :id)
+      (update :children #(mapv strip-ids %))))
+
+(defn- collapse-unifurcations
+  "Recursively collapses any internal node that has exactly one child.
+  The single child is promoted upward and its branch length is summed
+  with the collapsed parent's branch length. This is needed after
+  rerooting because the old root may become a unifurcation."
+  [node]
+  (if (empty? (:children node))
+    node
+    (let [collapsed-children (mapv collapse-unifurcations (:children node))]
+      (if (= 1 (count collapsed-children))
+        (let [only-child (first collapsed-children)
+              combined-len (+ (or (:branch-length node) 0)
+                              (or (:branch-length only-child) 0))]
+          (assoc only-child :branch-length combined-len))
+        (assoc node :children collapsed-children)))))
+
+(defn reroot-on-branch
+  "Re-roots the tree at the midpoint of the branch leading to the
+  node with `target-id`.
+
+  This mimics FigTree's \"Reroot\" behaviour: a new bifurcating root
+  node is inserted at the midpoint of the selected branch, splitting
+  it into two halves. One child of the new root is the subtree below
+  the split point; the other child is the rest of the tree with
+  reversed parent-child edges along the path from the old root to
+  the split point.
+
+  The selected branch is identified by `target-id` — the `:id` of
+  the child node at the end of the branch. The tree must have `:id`
+  keys on every node (as produced by `assign-node-ids` or
+  `position-tree`).
+
+  After rerooting:
+  - All pairwise tip distances are preserved.
+  - `:id` keys are stripped (callers should run `position-tree` to
+    reassign layout coordinates and fresh IDs).
+  - Unifurcations at the old root are collapsed.
+
+  Returns the new tree map, or `nil` if:
+  - `target-id` is the root's own ID (no incoming branch to split)
+  - `target-id` is not found in the tree"
+  [tree target-id]
+  (when (not= (:id tree) target-id)
+    (when-let [path (find-path-to-node tree target-id)]
+      (let [target (last path)
+            branch-len (or (:branch-length target) 0)
+            half-len (/ branch-len 2)
+
+            ;; === Build the rootward subtree ===
+            ;; Walk from the old root down to the parent of the target,
+            ;; reversing parent→child edges so they point root-ward.
+            ;; path indices: 0=old-root, 1, …, (n-2)=parent, (n-1)=target
+            rootward
+            (loop [idx 0
+                   reversed-child nil]
+              (if (>= idx (dec (count path)))
+                ;; We've processed up to (and including) the parent of the
+                ;; target node. `reversed-child` is the fully rebuilt
+                ;; rootward subtree.
+                reversed-child
+                (let [current (nth path idx)
+                      path-child (nth path (inc idx))
+
+                      ;; Children of `current` that are NOT on the path
+                      ;; (these stay attached as-is)
+                      side-children (filterv #(not= (:id %) (:id path-child))
+                                             (:children current))
+
+                      ;; If we already built a reversed child from a
+                      ;; deeper level, attach it as an additional child
+                      new-children (if reversed-child
+                                     (conj side-children reversed-child)
+                                     side-children)
+
+                      ;; Branch-length for this reversed node:
+                      ;; - At idx 0 (old root): takes the branch-length
+                      ;;   of the path-child edge that was reversed
+                      ;;   (the edge from root to its path-child)
+                      ;; The reversed node was formerly a parent; it now
+                      ;; becomes a child, so it receives the branch-length
+                      ;; of the edge that *used to* connect it to its child
+                      ;; on the path (which is now its parent direction).
+                      reversed-branch-length (if (nil? reversed-child)
+                                               ;; First iteration (old root, idx=0):
+                                               ;; The old root has no incoming edge.
+                                               ;; It gets the branch-length from the
+                                               ;; edge to path-child.
+                                               (:branch-length path-child)
+                                               ;; Subsequent iterations: each
+                                               ;; reversed node gets the branch-length
+                                               ;; from the edge to its path-child.
+                                               (:branch-length path-child))]
+                  (recur (inc idx)
+                         (assoc current
+                                :children new-children
+                                :branch-length reversed-branch-length)))))
+
+            ;; Collapse unifurcations: if the old root had exactly 2
+            ;; children and we removed one (the path child), the old root
+            ;; now has 1 remaining child + reversed-child from deeper.
+            ;; Actually the loop already handles this correctly by
+            ;; building new-children, but the OLD root node (idx=0)
+            ;; may end up with {its side-children + reversed-child-from-below}.
+            ;; If the old root had just 2 children, side-children is 1, plus
+            ;; nothing from below on the first iteration, totaling just 1.
+            ;; That's a unifurcation we need to collapse.
+            rootward (collapse-unifurcations rootward)
+
+            ;; === Build the target subtree ===
+            ;; The target subtree keeps all its descendants but gets
+            ;; half the original branch length.
+            target-subtree (assoc target :branch-length half-len)
+
+            ;; The rootward subtree gets the other half.
+            rootward-subtree (assoc rootward :branch-length half-len)
+
+            ;; === Assemble new root ===
+            new-root {:name nil
+                      :branch-length nil
+                      :children [target-subtree rootward-subtree]}]
+
+        (strip-ids new-root)))))
+
+(defn ladderize
+  "Ladderizes a tree by sorting children at each node by subtree size.
+  
+  Direction can be :ascending (larger clades on top, the default) or
+  :descending (larger clades on bottom).
+  
+  This is a pure function - it doesn't modify coordinates, just reorders
+  the :children vectors."
+  ([tree]
+   (ladderize tree :ascending))
+  ([tree direction]
+   (if (empty? (:children tree))
+     tree
+     (let [ladderized-children (mapv #(ladderize % direction) (:children tree))
+           sorted-children (sort-by count-tips
+                                    (if (= direction :ascending) > <)
+                                    ladderized-children)]
+       (assoc tree :children (vec sorted-children))))))
