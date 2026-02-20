@@ -136,22 +136,16 @@
         leaf-click (when (and is-leaf? on-toggle-selection)
                      (fn [e]
                        (if (and (.-ctrlKey e) on-set-reroot-node)
-                         (do
-                           (js/console.log "Selected leaf for re-rooting" (clj->js node))
-                           (on-set-reroot-node (:id node)))
+                         (on-set-reroot-node (:id node))
                          (on-toggle-selection node-name))))
         internal-click (when internal-node?
                          (fn [e]
                            (if (and (.-ctrlKey e) on-set-reroot-node)
-                             (do
-                               (js/console.log "Selected node for re-rooting" (clj->js node))
-                               ;; Ctrl+click and handler exists: select for re-rooting
-                               (on-set-reroot-node (:id node)))
+                             ;; Ctrl+click and handler exists: select for re-rooting
+                             (on-set-reroot-node (:id node))
                              ;; Otherwise: try subtree selection
-                             (do
-                               (js/console.log "Selected node for subtree" (clj->js node))
-                               (when on-select-subtree
-                                 (on-select-subtree node))))))
+                             (when on-select-subtree
+                               (on-select-subtree node)))))
         active-reroot? (and active-reroot-node-id
                             (= (:id node) active-reroot-node-id))
         internal-class (str "internal-node-marker"
