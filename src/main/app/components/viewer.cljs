@@ -522,7 +522,7 @@
                                :style {:font-family "monospace"
                                        :font-size "10px"
                                        :fill "#666"}}
-                        (str "Labeled distances from: "
+                        (str "Leaf node distances from: "
                              (if (and reference-node-name (not (str/blank? reference-node-name)))
                                reference-node-name
                                "(internal node)")))))

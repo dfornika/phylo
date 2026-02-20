@@ -202,7 +202,7 @@
                            :checked show-distance-from-origin
                            :style {:accent-color navy}
                            :on-change #(set-show-distance-from-origin! (not show-distance-from-origin))})
-                "Distance from Origin")
+                "Dist. from Origin")
              ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
                 ($ :input {:type "checkbox"
                            :checked show-distance-from-node
