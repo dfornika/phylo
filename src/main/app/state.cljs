@@ -561,8 +561,8 @@
                     selected-ids set-selected-ids!
                     highlights set-highlights!
                     color-by-enabled? set-color-by-enabled!
-                    color-by-field set-color-by-field! 
-                    color-by-palette set-color-by-palette! 
+                    color-by-field set-color-by-field!
+                    color-by-palette set-color-by-palette!
                     color-by-type-override set-color-by-type-override!
                     legend-pos set-legend-pos!
                     legend-collapsed? set-legend-collapsed!
