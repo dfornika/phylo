@@ -209,6 +209,13 @@
                            :style {:accent-color navy}
                            :on-change #(set-show-distance-from-node! (not show-distance-from-node))})
                 "Dist. from Node")
+             (when show-distance-from-node
+               ($ :div {:style {:font-size "11px" :color "#8893a2" :font-style "italic" :padding-left "2px" :white-space "nowrap"}}
+                  (if active-reference-node-id
+                    (let [ref-name (when positioned-tree
+                                     (-> (tree/find-path-to-node positioned-tree active-reference-node-id) last :name))]
+                      (str "From: " (if (and ref-name (not (str/blank? ref-name))) ref-name "(internal node)")))
+                    "Ctrl-click a node to set reference")))
              ($ :div {:style {:display "flex" :align-items "center" :gap "6px"}}
                 ($ :label {:style label-style} "Scale Origin")
                 ($ :select {:value (name scale-origin)

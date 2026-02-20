@@ -78,22 +78,27 @@
   [{:keys [max-depth x-scale scale-origin scale-units-label]}]
   (let [{:keys [major-ticks minor-ticks]} (scale/scale-ticks {:max-depth max-depth
                                                               :x-scale x-scale
-                                                              :origin scale-origin})]
+                                                              :origin scale-origin})
+        ;; All y-coords derived from the single centralised LAYOUT constant.
+        bar-y   (:scale-bar-line-y LAYOUT)   ;; -18
+        minor-y (- bar-y 2)                  ;; -20
+        major-y (- bar-y 4)                  ;; -22
+        label-y (- bar-y 8)]                 ;; -26
     ($ :g
-       ($ :line {:x1 0 :y1 -18
-                 :x2 (* max-depth x-scale) :y2 -18
+       ($ :line {:x1 0 :y1 bar-y
+                 :x2 (* max-depth x-scale) :y2 bar-y
                  :stroke "#111" :stroke-width 1})
        (for [t minor-ticks]
          ($ :line {:key (str "scale-minor-" t)
-                   :x1 (* t x-scale) :y1 -20
-                   :x2 (* t x-scale) :y2 -18
+                   :x1 (* t x-scale) :y1 minor-y
+                   :x2 (* t x-scale) :y2 bar-y
                    :stroke "#111" :stroke-width 1}))
        (for [t major-ticks]
          ($ :g {:key (str "scale-tick-" t)}
-            ($ :line {:x1 (* t x-scale) :y1 -22
-                      :x2 (* t x-scale) :y2 -18
+            ($ :line {:x1 (* t x-scale) :y1 major-y
+                      :x2 (* t x-scale) :y2 bar-y
                       :stroke "#111" :stroke-width 1})
-            ($ :text {:x (* t x-scale) :y -26
+            ($ :text {:x (* t x-scale) :y label-y
                       :text-anchor "middle"
                       :style {:font-family "monospace"
                               :font-size "10px"
@@ -102,7 +107,7 @@
        ;; Optional units label at the right end of the scale bar
        (when (not (str/blank? scale-units-label))
          ($ :text {:x (+ (* max-depth x-scale) 10)
-                   :y -26
+                   :y label-y
                    :text-anchor "start"
                    :style {:font-family "monospace"
                            :font-size "10px"
@@ -194,7 +199,9 @@
                    :app.specs/color-by-type-override
                    :app.specs/branch-length-mult
                    :app.specs/scale-units-label
-                   :app.specs/node-distances]))
+                   :app.specs/node-distances
+                   :app.specs/show-distance-from-node
+                   :app.specs/reference-node-name]))
 
 (defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
@@ -260,7 +267,9 @@
            active-reference-node-id set-active-reference-node-id!
            positioned-tree         set-positioned-tree!
            branch-length-mult scale-units-label
-           node-distances]}]
+           node-distances
+           show-distance-from-node
+           reference-node-name]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -495,14 +504,30 @@
                    :on-mouse-down handle-svg-mousedown
                    :style {:cursor (when drag-rect "crosshair")}}
              ($ :g {:transform (str "translate(" left-shift ", 0)")}
-                ;; Scale bar
+                ;; Scale bar + reference label, both inside the padded group so
+                ;; they share the same x/y coordinate space.
                 ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
                    ($ ScaleBar {:max-depth effective-max-depth
                                 :x-scale effective-x-scale
                                 :scale-origin scale-origin
-                                :scale-units-label scale-units-label}))
+                                :scale-units-label scale-units-label})
+                   ;; Reference node context label — positioned at the midpoint
+                   ;; between scale-bar-line-y and tree y=0, so it always sits
+                   ;; in the gap between the bar line and the first leaf.
+                   ;; Rendered in SVG so it appears in SVG and HTML exports.
+                   (when (and show-distance-from-node active-reference-node-id)
+                     ($ :text {:x 0
+                               :y (/ (:scale-bar-line-y LAYOUT) 2)
+                               :dominant-baseline "central"
+                               :style {:font-family "monospace"
+                                       :font-size "10px"
+                                       :fill "#666"}}
+                        (str "Labeled distances from: "
+                             (if (and reference-node-name (not (str/blank? reference-node-name)))
+                               reference-node-name
+                               "(internal node)")))))
 
-                ;; Debugging pixel grid
+;; Debugging pixel grid
                 (when show-pixel-grid
                   ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
@@ -725,8 +750,8 @@
                        (tree/enrich-leaves raw-tips metadata-rows active-cols)))
               [raw-tips metadata-rows active-cols])
 
-        ;; Stage 3: pairwise distances from ctrl-clicked reference node to selected leaves.
-        ;; Keyed on the reference node ID, selected leaf names, and branch-length multiplier.
+        ;; Stage 3: pairwise distances from ctrl-clicked reference node to ALL leaf nodes.
+        ;; Re-runs when the toggle, reference node, tree, tips, or multiplier changes.
         ;; Returns nil when the toggle is off or prerequisites are missing.
         node-distances
         (uix/use-memo
@@ -734,19 +759,19 @@
            (when (and show-distance-from-node
                       active-reference-node-id
                       positioned-tree
-                      (seq selected-ids)
                       (seq tips))
-             (let [bl-mult (or branch-length-mult 1)
-                   tip-id-map (into {} (map (fn [t] [(:name t) (:id t)]) tips))]
-               (reduce (fn [acc leaf-name]
-                         (let [tip-id (get tip-id-map leaf-name)]
-                           (if tip-id
-                             (let [d (tree/distance-between positioned-tree active-reference-node-id tip-id)]
-                               (if d (assoc acc leaf-name (* d bl-mult)) acc))
-                             acc)))
+             (let [bl-mult (or branch-length-mult 1)]
+               (reduce (fn [acc {:keys [name id]}]
+                         (let [d (tree/distance-between positioned-tree active-reference-node-id id)]
+                           (if d (assoc acc name (* d bl-mult)) acc)))
                        {}
-                       selected-ids))))
-         [show-distance-from-node active-reference-node-id positioned-tree selected-ids tips branch-length-mult])]
+                       tips))))
+         [show-distance-from-node active-reference-node-id positioned-tree tips branch-length-mult])
+
+        ;; Name of the reference node for the context label (nil for unnamed internal nodes).
+        reference-node-name
+        (when (and show-distance-from-node active-reference-node-id positioned-tree)
+          (-> (tree/find-path-to-node positioned-tree active-reference-node-id) last :name))]
     (if tree
       ($ TreeViewer {:tree tree
                      :tips tips
@@ -793,7 +818,9 @@
                      :component-height-px component-height-px
                      :branch-length-mult branch-length-mult
                      :scale-units-label scale-units-label
-                     :node-distances node-distances})
+                     :node-distances node-distances
+                     :show-distance-from-node show-distance-from-node
+                     :reference-node-name reference-node-name})
       ($ EmptyState {:component-height-px component-height-px}))))
 
 (defui-with-spec TreeContainer

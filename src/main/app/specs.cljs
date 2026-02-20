@@ -209,6 +209,7 @@
 (s/def ::on-set-reroot-node (s/nilable fn?))
 
 (s/def ::node-distances (s/nilable (s/map-of string? number?)))
+(s/def ::reference-node-name (s/nilable string?))
 
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
