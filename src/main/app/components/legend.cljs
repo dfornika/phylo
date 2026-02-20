@@ -101,19 +101,8 @@
     (uix/use-effect
      (fn []
        (when (or (nil? x) (nil? y))
-         (let [fallback-x (max 0 (- (or svg-width 0) legend-width padding))
-               fallback-y (max 0 padding)
-               default-pos (when-let [^js svg @svg-ref]
-                             (let [rect (.getBoundingClientRect svg)
-                                   client-x (- (.-right rect) padding legend-width)
-                                   client-y (+ (.-top rect) padding)
-                                   svg-pos (util/client->svg svg client-x client-y)]
-                               (when (and svg-pos (number? (first svg-pos)) (number? (second svg-pos)))
-                                 {:x (max 0 (first svg-pos))
-                                  :y (max 0 (second svg-pos))})))
-               {:keys [x y]} (or default-pos {:x fallback-x :y fallback-y})]
-           (set-position! {:x x :y y}))))
-     [x y svg-width svg-height svg-ref set-position!])
+         (set-position! {:x 20 :y 20})))
+     [x y set-position!])
 
     ($ :g {:transform (str "translate(" pos-x "," pos-y ")")
            :style {:pointer-events "all"}
