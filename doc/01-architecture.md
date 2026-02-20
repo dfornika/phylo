@@ -241,17 +241,20 @@ table, and loads them using the same parsing pipeline as regular Newick/CSV inpu
 
 The `LAYOUT` constant in `app.layout` centralizes all spacing values:
 
-| Key | Default | Purpose |
-|-----|---------|---------|
+| Key | Value | Purpose |
+|-----|-------|---------|
 | `:svg-padding-x` | 40px | Horizontal SVG padding |
-| `:svg-padding-y` | 40px | Vertical SVG padding |
+| `:svg-padding-y` | 56px | Total vertical space above tree y=0. Must be ≥ `abs(scale-bar-line-y)` + ~30 to fit scale bar labels and the reference-node label. |
+| `:scale-bar-line-y` | -36px | Y-coordinate of the scale bar baseline within the padded SVG group (negative = above tree y=0). `ScaleBar` derives all tick and label y-positions from this value: minor tick top at `y-2`, major tick top at `y-4`, tick label base at `y-8`. The reference-node label is centered at `y/2` (midpoint between bar and tree). |
 | `:header-height` | 36px | Metadata header bar height |
-| `:label-buffer` | 150px | Space for tip labels |
-| `:metadata-gap` | 20px | Gap between labels and metadata |
+| `:label-buffer` | 150px | Space reserved for tip labels |
+| `:metadata-gap` | 20px | Gap between labels and metadata columns |
 | `:default-col-width` | 120px | Default metadata column width |
 | `:toolbar-gap` | 20px | Toolbar control spacing |
 | `:node-marker-radius` | 3px | Radius of circular SVG node markers |
 | `:node-marker-fill` | `#333` | Fill color for node markers |
+
+`ScaleBar` derives all of its vertical positions from `:scale-bar-line-y` rather than using hardcoded literals, so adjusting one constant repositions all ticks, labels, and the reference-node label together.
 
 ### Coordinate Systems
 

@@ -108,6 +108,37 @@
               (into [node] child-path)))
           (:children node))))
 
+(defn- lca-and-paths
+  "Returns a map {:lca node :path-a [...] :path-b [...]} for the two node IDs,
+  or nil if either node cannot be found. Used internally by [[find-lca]] and
+  [[distance-between]] to avoid traversing the tree more than twice."
+  [root id-a id-b]
+  (let [path-a (find-path-to-node root id-a)
+        path-b (find-path-to-node root id-b)]
+    (when (and path-a path-b)
+      (let [lca (->> (map (fn [na nb] (when (= (:id na) (:id nb)) na))
+                          path-a path-b)
+                     (keep identity)
+                     last)]
+        (when lca {:lca lca :path-a path-a :path-b path-b})))))
+
+(defn find-lca
+  "Returns the lowest common ancestor node of the nodes with ids `id-a` and `id-b`
+  in `root`, or nil if either node is not found."
+  [root id-a id-b]
+  (:lca (lca-and-paths root id-a id-b)))
+
+(defn distance-between
+  "Returns the phylogenetic distance (sum of branch lengths) between the nodes
+  with ids `id-a` and `id-b` in `root`.
+
+  Distance is computed as (x-a - x-lca) + (x-b - x-lca), where `:x` is the
+  cumulative branch-length sum from the root. Returns nil if either node is not found."
+  [root id-a id-b]
+  (when-let [{:keys [lca path-a path-b]} (lca-and-paths root id-a id-b)]
+    (+ (- (:x (last path-a)) (:x lca))
+       (- (:x (last path-b)) (:x lca)))))
+
 ;; ===== Tree Preparation =====
 
 (defn assign-node-ids

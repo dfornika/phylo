@@ -180,6 +180,9 @@
 (s/def ::show-distance-from-origin boolean?)
 (s/def ::set-show-distance-from-origin! fn?)
 
+(s/def ::show-distance-from-node boolean?)
+(s/def ::set-show-distance-from-node! fn?)
+
 (s/def ::scale-origin #{:tips :root})
 (s/def ::set-scale-origin! fn?)
 
@@ -201,9 +204,12 @@
 (s/def ::selected-ids (s/nilable (s/coll-of string? :kind set?)))
 (s/def ::set-selected-ids! fn?)
 
-(s/def ::active-reroot-node-id (s/nilable nat-int?))
-(s/def ::set-active-reroot-node-id! fn?)
+(s/def ::active-reference-node-id (s/nilable nat-int?))
+(s/def ::set-active-reference-node-id! fn?)
 (s/def ::on-set-reroot-node (s/nilable fn?))
+
+(s/def ::node-distances (s/nilable (s/map-of string? number?)))
+(s/def ::reference-node-name (s/nilable string?))
 
 (s/def ::highlights (s/nilable (s/map-of string? string?)))
 (s/def ::set-highlights! fn?)
@@ -402,6 +408,14 @@
 (s/fdef app.tree/reroot-on-branch
   :args (s/cat :tree ::positioned-node :target-id nat-int?)
   :ret  (s/nilable ::tree-node))
+
+(s/fdef app.tree/find-lca
+  :args (s/cat :root ::positioned-node :id-a nat-int? :id-b nat-int?)
+  :ret  (s/nilable ::positioned-node))
+
+(s/fdef app.tree/distance-between
+  :args (s/cat :root ::positioned-node :id-a nat-int? :id-b nat-int?)
+  :ret  (s/nilable number?))
 
 ;; ----- Scale (additional) -----
 
