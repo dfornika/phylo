@@ -178,8 +178,10 @@
 (defonce !legend-visible?
   (atom false))
 
-;; "Atom holding the node selected for re-rooting (via Ctrl+click).
-;;  Can be any node (leaf or internal) — identifies the branch leading to it."
+;; "Atom holding the reference node selected via Ctrl+click.
+;;  Used for both re-rooting operations and calculating pairwise distances
+;;  to other nodes. Can be any node (leaf or internal) — identifies the
+;;  branch leading to it."
 (defonce !active-reference-node-id
   (atom nil))
 
