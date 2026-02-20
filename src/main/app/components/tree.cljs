@@ -299,7 +299,7 @@
   - `:marker-fill`            - fill color for node markers
   - `:highlights`             - map of {leaf-name -> color-string} for highlighted nodes
   - `:selected-ids`           - set of leaf names currently selected in the grid
-  - `:active-reference-node-id` - ID of the node selected for rerooting (or nil)
+  - `:active-reference-node-id` - ID of the reference node selected via Ctrl+click, used for rerooting and distance calculations (or nil)
   - `set-active-reference-node-id!` - setter for reroot node selection
   - `:on-toggle-selection`    - `(fn [leaf-name])` callback to toggle selection
   - `:on-select-subtree`      - `(fn [node])` callback to add a subtree's leaf names"
