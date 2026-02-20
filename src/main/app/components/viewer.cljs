@@ -101,7 +101,7 @@
                (scale/format-label scale-origin max-depth t))))
        ;; Optional units label at the right end of the scale bar
        (when (not (str/blank? scale-units-label))
-         ($ :text {:x (+ (* max-depth x-scale) 6)
+         ($ :text {:x (+ (* max-depth x-scale) 10)
                    :y -26
                    :text-anchor "start"
                    :style {:font-family "monospace"
@@ -500,11 +500,11 @@
                                 :scale-origin scale-origin
                                 :scale-units-label scale-units-label}))
 
-             ;; Debugging pixel grid
+                ;; Debugging pixel grid
                 (when show-pixel-grid
                   ($ PixelGrid {:width svg-width :height svg-height :spacing 50}))
 
-             ;; Scale gridlines
+                ;; Scale gridlines
                 (when show-scale-gridlines
                   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
                      ($ ScaleGridlines {:max-depth effective-max-depth
@@ -512,7 +512,7 @@
                                         :tree-height tree-height
                                         :scale-origin scale-origin})))
 
-             ;; The tree itself
+                ;; The tree itself
                 ($ PhylogeneticTree {:tree tree
                                      :x-scale current-x-scale
                                      :y-scale y-mult
@@ -530,7 +530,7 @@
                                      :on-toggle-selection toggle-selection
                                      :on-select-subtree select-subtree})
 
-             ;; Metadata columns
+                ;; Metadata columns
                 (when (seq active-cols)
                   ($ MetadataTable {:active-cols active-cols
                                     :tips tips
