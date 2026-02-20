@@ -183,6 +183,9 @@
 (s/def ::show-distance-from-node boolean?)
 (s/def ::set-show-distance-from-node! fn?)
 
+(s/def ::align-leaf-labels boolean?)
+(s/def ::set-align-leaf-labels! fn?)
+
 (s/def ::scale-origin #{:tips :root})
 (s/def ::set-scale-origin! fn?)
 

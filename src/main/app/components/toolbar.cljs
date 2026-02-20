@@ -74,7 +74,8 @@
                 set-selected-ids! set-highlights!
                 branch-length-mult set-branch-length-mult!
                 scale-units-label set-scale-units-label!
-                active-reference-node-id set-active-reference-node-id!]} (state/use-app-state)
+                active-reference-node-id set-active-reference-node-id!
+                align-leaf-labels set-align-leaf-labels!]} (state/use-app-state)
         ;; Local draft for the multiplier so the user can freely edit the
         ;; text field (including clearing it) before pressing Apply.
         [draft-mult set-draft-mult!] (uix/use-state (str branch-length-mult))
@@ -185,6 +186,12 @@
                         :style {:width "64px" :accent-color navy}
                         :on-change #(set-col-spacing! (js/parseInt (.. % -target -value) 10))}))
           ($ :div {:style (merge section-style {:gap "10px"})}
+             ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
+                ($ :input {:type "checkbox"
+                           :checked align-leaf-labels
+                           :style {:accent-color navy}
+                           :on-change #(set-align-leaf-labels! (not align-leaf-labels))})
+                "Align Labels")
              ($ :label {:style (merge label-style {:display "flex" :align-items "center" :gap "4px" :cursor "pointer"})}
                 ($ :input {:type "checkbox"
                            :checked show-internal-markers

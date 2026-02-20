@@ -68,7 +68,8 @@
                    :app.specs/active-reference-node-id
                    :app.specs/on-set-reroot-node
                    :app.specs/branch-length-mult
-                   :app.specs/node-distances]))
+                   :app.specs/node-distances
+                   :app.specs/align-leaf-labels]))
 
 (declare TreeNode)
 
@@ -110,9 +111,10 @@
   [{:keys [node parent-x parent-y x-scale y-scale show-internal-markers show-distance-from-origin
            scale-origin max-depth marker-radius marker-fill highlights selected-ids on-toggle-selection
            on-select-subtree active-reference-node-id on-set-reroot-node branch-length-mult
-           node-distances]}]
+           node-distances align-leaf-labels]}]
   (let [scaled-x (* (:x node) x-scale)
         scaled-y (* (:y node) y-scale)
+        align-x  (if align-leaf-labels (+ (* max-depth x-scale) 8) (+ scaled-x 8))
         p-x (* parent-x x-scale)
         p-y (* parent-y y-scale)
         line-width 0.5
@@ -217,9 +219,20 @@
                            :font-size "10px"
                            :fill "#111"}}
             distance-label))
+       ;; Dashed connector line to right-aligned label position
+       (when (and is-leaf? align-leaf-labels)
+         ($ :line {:x1 (+ scaled-x (+ marker-radius 3))
+                   :x2 (- align-x 4)
+                   :y1 scaled-y
+                   :y2 scaled-y
+                   :stroke "#bbb"
+                   :stroke-width 0.5
+                   :stroke-dasharray "3 3"
+                   :style {:pointer-events "none"}}))
+
        ;; Tip label
        (when is-leaf?
-         ($ :text {:x (+ scaled-x 8)
+         ($ :text {:x align-x
                    :y scaled-y
                    :dominant-baseline "central"
                    :style {:font-family "monospace" :font-size "12px" :font-weight "bold"
@@ -229,7 +242,7 @@
 
        ;; Distance from reference node label (below leaf name)
        (when node-dist-label
-         ($ :text {:x (+ scaled-x 8)
+         ($ :text {:x align-x
                    :y (+ scaled-y 14)
                    :dominant-baseline "central"
                    :style {:font-family "monospace" :font-size "10px" :fill "#666"
@@ -257,7 +270,8 @@
                       :active-reference-node-id active-reference-node-id
                       :on-set-reroot-node on-set-reroot-node
                       :on-toggle-selection on-toggle-selection
-                      :on-select-subtree on-select-subtree})))))
+                      :on-select-subtree on-select-subtree
+                      :align-leaf-labels align-leaf-labels})))))
 
 (defui-with-spec TreeNode
   [{:spec :app.specs/tree-node-props :props props}]
@@ -281,7 +295,8 @@
                    :app.specs/active-reference-node-id
                    :app.specs/on-set-reroot-node
                    :app.specs/branch-length-mult
-                   :app.specs/node-distances]))
+                   :app.specs/node-distances
+                   :app.specs/align-leaf-labels]))
 
 (defui PhylogeneticTree*
   "Renders the phylogenetic tree as a positioned SVG group.
@@ -306,7 +321,7 @@
 
   [{:keys [tree x-scale y-scale show-internal-markers show-distance-from-origin scale-origin max-depth marker-radius marker-fill
            highlights selected-ids  active-reference-node-id set-active-reference-node-id! on-toggle-selection on-select-subtree
-           branch-length-mult node-distances]}]
+           branch-length-mult node-distances align-leaf-labels]}]
   ($ :g {:transform (str "translate(" (:svg-padding-x LAYOUT) ", " (:svg-padding-y LAYOUT) ")")}
      ($ TreeNode {:node tree
                   :parent-x 0
@@ -326,7 +341,8 @@
                   :active-reference-node-id active-reference-node-id
                   :on-set-reroot-node set-active-reference-node-id!
                   :on-toggle-selection on-toggle-selection
-                  :on-select-subtree on-select-subtree})))
+                  :on-select-subtree on-select-subtree
+                  :align-leaf-labels align-leaf-labels})))
 
 (defui-with-spec PhylogeneticTree
   [{:spec :app.specs/phylogenetic-tree-props :props props}]

@@ -17,6 +17,7 @@
   - [[!show-scale-gridlines]]  - whether to show scale (distance) gridlines
   - [[!show-distance-from-origin]]   - whether to show internal node distance labels
   - [[!show-distance-from-node]]     - whether to show distances from the ctrl-clicked reference node
+  - [[!align-leaf-labels]]          - whether to align leaf labels to a common right edge
   - [[!scale-origin]]          - scale origin for labels (:tips or :root)
   - [[!branch-length-mult]]    - multiplier applied to branch lengths for display (e.g. number of core SNP sites)
   - [[!scale-units-label]]     - label string for scale units (e.g. \"SNPs\")
@@ -100,6 +101,11 @@
 ;; "Atom holding whether to show distances from the ctrl-clicked reference node
 ;;  on currently selected leaves."
 (defonce !show-distance-from-node
+  (atom false))
+
+;; "Atom holding whether to align all leaf node labels to a common x-coordinate
+;;  at the right edge of the tree, with dashed connector lines from each node."
+(defonce !align-leaf-labels
   (atom false))
 
 ;; "Atom holding scale origin for labels (:tips or :root)."
@@ -207,6 +213,7 @@
    :show-scale-gridlines false
    :show-distance-from-origin false
    :show-distance-from-node false
+   :align-leaf-labels false
    :scale-origin :tips
    :show-pixel-grid false
    :col-spacing 4
@@ -245,6 +252,7 @@
            :show-scale-gridlines      @!show-scale-gridlines
            :show-distance-from-origin @!show-distance-from-origin
            :show-distance-from-node   @!show-distance-from-node
+           :align-leaf-labels         @!align-leaf-labels
            :scale-origin              @!scale-origin
            :show-pixel-grid           @!show-pixel-grid
            :col-spacing               @!col-spacing
@@ -345,6 +353,7 @@
       (reset! !show-scale-gridlines (:show-scale-gridlines merged))
       (reset! !show-distance-from-origin (:show-distance-from-origin merged))
       (reset! !show-distance-from-node (boolean (:show-distance-from-node merged)))
+      (reset! !align-leaf-labels (boolean (:align-leaf-labels merged)))
       (reset! !active-reference-node-id (:active-reference-node-id merged))
       (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
@@ -387,6 +396,7 @@
                    :app.specs/show-scale-gridlines            :app.specs/set-show-scale-gridlines!
                    :app.specs/show-distance-from-origin       :app.specs/set-show-distance-from-origin!
                    :app.specs/show-distance-from-node          :app.specs/set-show-distance-from-node!
+                   :app.specs/align-leaf-labels :app.specs/set-align-leaf-labels!
                    :app.specs/scale-origin    :app.specs/set-scale-origin!
                    :app.specs/show-pixel-grid :app.specs/set-show-pixel-grid!
                    :app.specs/col-spacing     :app.specs/set-col-spacing!
@@ -456,6 +466,9 @@
 
         show-distance-from-node        (uix/use-atom !show-distance-from-node)
         set-show-distance-from-node!   (uix/use-callback #(reset! !show-distance-from-node %) [])
+
+        align-leaf-labels              (uix/use-atom !align-leaf-labels)
+        set-align-leaf-labels!         (uix/use-callback #(reset! !align-leaf-labels %) [])
 
         scale-origin                (uix/use-atom !scale-origin)
         set-scale-origin!           (uix/use-callback #(reset! !scale-origin %) [])
@@ -547,6 +560,8 @@
                       :set-show-distance-from-origin!       set-show-distance-from-origin!
                       :show-distance-from-node              show-distance-from-node
                       :set-show-distance-from-node!         set-show-distance-from-node!
+                      :align-leaf-labels                    align-leaf-labels
+                      :set-align-leaf-labels!               set-align-leaf-labels!
                       :scale-origin         scale-origin
                       :set-scale-origin!    set-scale-origin!
                       :show-pixel-grid      show-pixel-grid
@@ -603,6 +618,7 @@
                     show-scale-gridlines set-show-scale-gridlines!
                     show-distance-from-origin set-show-distance-from-origin!
                     show-distance-from-node set-show-distance-from-node!
+                    align-leaf-labels set-align-leaf-labels!
                     scale-origin set-scale-origin!
                     show-pixel-grid set-show-pixel-grid!
                     col-spacing set-col-spacing!
