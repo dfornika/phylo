@@ -221,7 +221,7 @@
             distance-label))
        ;; Dashed connector line to right-aligned label position
        (when (and is-leaf? align-leaf-labels)
-         ($ :line {:x1 (+ scaled-x (+ marker-radius 3))
+         ($ :line {:x1 (+ scaled-x marker-radius 3)
                    :x2 (- align-x 4)
                    :y1 scaled-y
                    :y2 scaled-y
