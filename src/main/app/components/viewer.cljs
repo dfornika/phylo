@@ -201,7 +201,8 @@
                    :app.specs/scale-units-label
                    :app.specs/node-distances
                    :app.specs/show-distance-from-node
-                   :app.specs/reference-node-name]))
+                   :app.specs/reference-node-name
+                   :app.specs/align-leaf-labels]))
 
 (defui TreeViewer*
   "Top-level visualization shell that combines toolbar, metadata header,
@@ -269,7 +270,8 @@
            branch-length-mult scale-units-label
            node-distances
            show-distance-from-node
-           reference-node-name]}]
+           reference-node-name
+           align-leaf-labels]}]
   (let [;; Dynamic layout math
         current-x-scale (if (pos? max-depth)
                           (* (/ (- width-px 400) max-depth) x-mult)
@@ -556,7 +558,8 @@
                                      :active-reference-node-id active-reference-node-id
                                      :set-active-reference-node-id! set-active-reference-node-id!
                                      :on-toggle-selection toggle-selection
-                                     :on-select-subtree select-subtree})
+                                     :on-select-subtree select-subtree
+                                     :align-leaf-labels align-leaf-labels})
 
                 ;; Metadata columns
                 (when (seq active-cols)
@@ -724,7 +727,8 @@
                 positioned-tree set-positioned-tree!
                 show-distance-from-node
                 branch-length-mult
-                scale-units-label]} (state/use-app-state)
+                scale-units-label
+                align-leaf-labels]} (state/use-app-state)
 
         ;; Stage 1: parse + position — re-runs when newick-str or parsed-tree changes.
         ;; When parsed-tree is available (e.g. Nextstrain import), uses it directly
@@ -820,7 +824,8 @@
                      :scale-units-label scale-units-label
                      :node-distances node-distances
                      :show-distance-from-node show-distance-from-node
-                     :reference-node-name reference-node-name})
+                     :reference-node-name reference-node-name
+                     :align-leaf-labels align-leaf-labels})
       ($ EmptyState {:component-height-px component-height-px}))))
 
 (defui-with-spec TreeContainer
