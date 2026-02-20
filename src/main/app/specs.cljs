@@ -165,6 +165,12 @@
 (s/def ::y-mult (s/and number? pos?))
 (s/def ::set-y-mult! fn?)
 
+(s/def ::branch-length-mult (s/and number? pos?))
+(s/def ::set-branch-length-mult! fn?)
+
+(s/def ::scale-units-label string?)
+(s/def ::set-scale-units-label! fn?)
+
 (s/def ::show-internal-markers boolean?)
 (s/def ::set-show-internal-markers! fn?)
 
@@ -326,7 +332,7 @@
 
 (s/fdef app.tree/assign-x-coords
   :args (s/alt :node-only (s/cat :node ::tree-node)
-               :positioned-node  (s/cat :node ::tree-node 
+               :positioned-node  (s/cat :node ::tree-node
                                         :current-x number?
                                         :is-root? boolean?))
   :ret  ::positioned-node)
@@ -369,7 +375,7 @@
 
 (s/fdef app.tree/assign-node-ids
   :args (s/alt :node-only (s/cat :node ::tree-node)
-               :node-with-next-id (s/cat :node ::tree-node 
+               :node-with-next-id (s/cat :node ::tree-node
                                          :next-id (atom-of nat-int?)))
   :ret  ::positioned-node)
 

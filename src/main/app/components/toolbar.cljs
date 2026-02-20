@@ -71,7 +71,19 @@
                 show-pixel-grid set-show-pixel-grid!  ;; Temporarily disabled pixel grid, these aren't needed but will be if pixel grid is re-enabled.
                 set-metadata-rows! set-active-cols!
                 set-selected-ids! set-highlights!
-                active-reroot-node-id set-active-reroot-node-id!]} (state/use-app-state)]
+                branch-length-mult set-branch-length-mult!
+                scale-units-label set-scale-units-label!
+                active-reroot-node-id set-active-reroot-node-id!]} (state/use-app-state)
+        ;; Local draft for the multiplier so the user can freely edit the
+        ;; text field (including clearing it) before pressing Apply.
+        [draft-mult set-draft-mult!] (uix/use-state (str branch-length-mult))
+        draft-mult-valid? (let [v (js/parseFloat draft-mult)]
+                            (and (not (js/isNaN v)) (pos? v)))
+        ;; Keep draft in sync when the committed value changes externally
+        ;; (e.g. after state import or ×1 reset).
+        _ (uix/use-effect
+           (fn [] (set-draft-mult! (str branch-length-mult)))
+           [branch-length-mult])]
     ($ :div {:style {:padding "6px 8px"
                      :background "#ffffff"
                      :border-bottom "2px solid #e2e6ea"
@@ -241,6 +253,63 @@
                           :style {:accent-color navy}
                           :on-change #(set-show-pixel-grid! (not show-pixel-grid))})
                "Pixel Grid"))
+
+       ;; ── Scale ──
+       ($ :div {:style group-style}
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Scale Multiplier")
+             ($ :input {:type "number"
+                        :min 0.0001
+                        :step 1
+                        :value draft-mult
+                        :style {:width "90px"
+                                :font-family toolbar-font
+                                :font-size "12px"
+                                :color (if draft-mult-valid? navy "#cc0000")
+                                :border (str "1px solid " (if draft-mult-valid? "#cfd6de" "#cc0000"))
+                                :border-radius "6px"
+                                :padding "2px 6px"}
+                        :on-change #(set-draft-mult! (.. % -target -value))})
+             ($ :button {:disabled (not draft-mult-valid?)
+                         :on-click #(set-branch-length-mult! (js/parseFloat draft-mult))
+                         :title "Apply multiplier"
+                         :style {:font-family toolbar-font
+                                 :font-size "12px"
+                                 :font-weight 600
+                                 :color (if draft-mult-valid? navy "#999")
+                                 :padding "2px 8px"
+                                 :cursor (if draft-mult-valid? "pointer" "default")
+                                 :background "#f0f2f5"
+                                 :border (str "1px solid " (if draft-mult-valid? navy "#ccc"))
+                                 :border-radius "6px"}}
+                "Apply")
+             ($ :button {:on-click (fn [_]
+                                     (set-draft-mult! "1")
+                                     (set-branch-length-mult! 1))
+                         :title "Reset multiplier to 1"
+                         :style {:font-family toolbar-font
+                                 :font-size "12px"
+                                 :font-weight 600
+                                 :color navy
+                                 :padding "2px 8px"
+                                 :cursor "pointer"
+                                 :background "#f0f2f5"
+                                 :border (str "1px solid " navy)
+                                 :border-radius "6px"}}
+                "×1"))
+          ($ :div {:style section-style}
+             ($ :label {:style label-style} "Scale Units")
+             ($ :input {:type "text"
+                        :value scale-units-label
+                        :placeholder "e.g. SNPs"
+                        :style {:width "80px"
+                                :font-family toolbar-font
+                                :font-size "12px"
+                                :color navy
+                                :border "1px solid #cfd6de"
+                                :border-radius "6px"
+                                :padding "2px 6px"}
+                        :on-change #(set-scale-units-label! (.. % -target -value))})))
 
 ;; ── Export ──
        ($ :div {:style (merge group-style {:margin-left "auto"})}
