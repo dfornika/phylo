@@ -343,6 +343,7 @@
       (reset! !show-scale-gridlines (:show-scale-gridlines merged))
       (reset! !show-distance-from-origin (:show-distance-from-origin merged))
       (reset! !show-distance-from-node (boolean (:show-distance-from-node merged)))
+      (reset! !active-reference-node-id (:active-reference-node-id merged))
       (reset! !scale-origin (:scale-origin merged))
       (reset! !show-pixel-grid (:show-pixel-grid merged))
       (reset! !col-spacing (:col-spacing merged))
