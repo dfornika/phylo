@@ -205,7 +205,7 @@
        (when active-reference?
          ($ :circle {:cx scaled-x :cy scaled-y :r (+ marker-radius 6)
                      :fill "none"
-                     :stroke "#d9534f"  ;; Red to indicate "this will be new root"
+                     :stroke "#d9534f"  ;; Red to indicate "this is the reference node for distance calculations or rerooting"
                      :stroke-width 2}))
 
        ;; Internal node distance label
