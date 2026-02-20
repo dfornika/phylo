@@ -346,3 +346,68 @@
       (is (some? reparsed))
       (is (= 3 (tree/count-tips reparsed)))
       (is (= #{"A" "B" "C"} (set (map :name (tree/get-leaves reparsed))))))))
+
+;; ===== ladderize =====
+
+(deftest ladderize-single-leaf-unchanged
+  (testing "A single leaf has no children to sort and is returned unchanged"
+    (let [leaf {:name "A" :branch-length 1.0 :children []}]
+      (is (= leaf (tree/ladderize leaf)))
+      (is (= leaf (tree/ladderize leaf :ascending)))
+      (is (= leaf (tree/ladderize leaf :descending))))))
+
+(deftest ladderize-ascending-larger-clade-first
+  (testing "Ascending ladderize places the larger clade as the first child"
+    ;; Tree has 2 children at root: A (1 tip) and D=(B,C) (2 tips).
+    ;; Ascending means larger clade first, so D should be first.
+    (let [t (newick/newick->map "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;")
+          ladderized (tree/ladderize t :ascending)
+          [first-child second-child] (:children ladderized)]
+      (is (>= (tree/count-tips first-child) (tree/count-tips second-child))))))
+
+(deftest ladderize-descending-smaller-clade-first
+  (testing "Descending ladderize places the smaller clade as the first child"
+    ;; Descending means smaller clade first, so A (1 tip) should be first.
+    (let [t (newick/newick->map "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;")
+          ladderized (tree/ladderize t :descending)
+          [first-child second-child] (:children ladderized)]
+      (is (<= (tree/count-tips first-child) (tree/count-tips second-child))))))
+
+(deftest ladderize-default-direction-is-ascending
+  (testing "Calling ladderize with no direction argument is equivalent to :ascending"
+    (let [t (newick/newick->map "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;")]
+      (is (= (tree/ladderize t) (tree/ladderize t :ascending))))))
+
+(deftest ladderize-preserves-tip-count
+  (testing "Ladderize does not add or remove leaves"
+    (let [t (newick/newick->map abc-tree-str)]
+      (is (= 25 (tree/count-tips (tree/ladderize t :ascending))))
+      (is (= 25 (tree/count-tips (tree/ladderize t :descending)))))))
+
+(deftest ladderize-preserves-leaf-names
+  (testing "Ladderize preserves the complete set of leaf names"
+    (let [t (newick/newick->map "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;")
+          orig-names (set (map :name (tree/get-leaves t)))]
+      (is (= orig-names (set (map :name (tree/get-leaves (tree/ladderize t :ascending))))))
+      (is (= orig-names (set (map :name (tree/get-leaves (tree/ladderize t :descending)))))))))
+
+(deftest ladderize-idempotent
+  (testing "Applying ladderize twice in the same direction yields the same result"
+    (let [t (newick/newick->map abc-tree-str)
+          once-asc (tree/ladderize t :ascending)
+          twice-asc (tree/ladderize once-asc :ascending)
+          once-desc (tree/ladderize t :descending)
+          twice-desc (tree/ladderize once-desc :descending)]
+      (is (= once-asc twice-asc))
+      (is (= once-desc twice-desc)))))
+
+(deftest ladderize-newick-round-trip
+  (testing "Ladderized tree serializes to Newick and parses back with same tips"
+    (let [t (newick/newick->map "(A:1.0,(B:2.0,C:3.0)D:4.0)Root;")
+          ladderized (tree/ladderize t)
+          nwk (newick/map->newick ladderized)
+          reparsed (newick/newick->map nwk)]
+      (is (string? nwk))
+      (is (some? reparsed))
+      (is (= 3 (tree/count-tips reparsed)))
+      (is (= #{"A" "B" "C"} (set (map :name (tree/get-leaves reparsed))))))))
