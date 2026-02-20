@@ -59,7 +59,7 @@
   [_props]
   (let [{:keys [newick-str set-newick-str!
                 parsed-tree set-parsed-tree!
-                positioned-tree set-positoned-tree!
+                positioned-tree set-positioned-tree!
                 x-mult set-x-mult!
                 y-mult set-y-mult!
                 col-spacing set-col-spacing!
