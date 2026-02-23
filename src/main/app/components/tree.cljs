@@ -220,8 +220,9 @@
                            :fill "#111"}}
             distance-label))
        ;; Dashed connector line to right-aligned label position
-       ;; Include check that node is to the left of `max-depth`
-       (when (and is-leaf? align-leaf-labels (< (:x node) (- max-depth 0.1)))
+       ;; Only draw when the line would be at least a few pixels long.
+       (when (and is-leaf? align-leaf-labels
+                  (> (- (- align-x 4) (+ scaled-x marker-radius 3)) 4))
          ($ :line {:x1 (+ scaled-x marker-radius 3)
                    :x2 (- align-x 4)
                    :y1 scaled-y
