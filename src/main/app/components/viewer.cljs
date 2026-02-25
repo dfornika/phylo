@@ -463,23 +463,6 @@
                      :padding-bottom "20px"
                      :box-sizing "border-box"}}
 
-       ;; Header
-       ($ :header {:style {:height "24px"
-                           :display "flex"
-                           :align-items "center"
-                           :justify-content "space-between"
-                           :padding "0 20px"
-                           :background "#ffffff"
-                           :color "#003366"
-                           :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-                           :flex-shrink "0"}}
-          ($ :h1 {:style {:font-size "18px"
-                          :font-weight 600
-                          :margin 0
-                          :letter-spacing "0.5px"}}
-             "Phylo Viewer")
-          #_($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
-
 ;; Toolbar
        ($ Toolbar)
 
@@ -632,22 +615,6 @@
                              (str component-height-px "px")
                              "calc(100vh - var(--phylo-top-offset, 0px))")
                    :box-sizing "border-box"}}
-     ;; Header
-     ($ :header {:style {:height "48px"
-                         :display "flex"
-                         :align-items "center"
-                         :justify-content "space-between"
-                         :padding "0 20px"
-                         :background "#ffffff"
-                         :color "#003366"
-                         :font-family "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
-                         :flex-shrink "0"}}
-        ($ :h1 {:style {:font-size "18px"
-                        :font-weight 600
-                        :margin 0
-                        :letter-spacing "0.5px"}}
-           "Phylo Viewer")
-        #_($ :img {:src (asset-src "images/logo.svg") :height "32px"}))
      ;; Toolbar
      ($ Toolbar)
      ;; Empty-state message
