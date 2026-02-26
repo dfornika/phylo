@@ -230,6 +230,29 @@ initial render. This allows exported HTML files to restore state immediately.
 `TreeViewer` resolves the logo source using an asset map if present, so the
 exported HTML does not rely on external files.
 
+## SVG Export
+
+The ⇩ SVG button serializes the `phylo-svg` DOM element with `XMLSerializer` and
+saves it as `phylo-tree.svg` via `app.io/save-blob!`. The exported file is a
+standalone SVG that can be opened in any vector graphics editor.
+
+## PDF Export
+
+The ⇩ PDF button renders the `phylo-svg` element into a PDF document using
+[jsPDF](https://github.com/parallax/jsPDF) and
+[svg2pdf.js](https://github.com/yWorks/svg2pdf.js). The document is sized to
+the SVG's actual pixel dimensions (landscape or portrait depending on aspect
+ratio) and saved as `phylo-tree.pdf`.
+
+> **Password protection** — PDF encryption is not built into Phylo. If you need
+> to password-protect an exported PDF, use an external tool after exporting.
+> For example, with `qpdf`:
+> ```bash
+> qpdf --encrypt <user-pw> <owner-pw> 256 -- phylo-tree.pdf phylo-tree-protected.pdf
+> ```
+> macOS Preview, Adobe Acrobat, and LibreOffice can also add password protection
+> via their "Save As" / "Export as PDF" dialogs.
+
 ## ArborView Import
 
 Phylo can ingest [ArborView](https://github.com/phac-nml/ArborView) HTML exports. 
@@ -377,5 +400,6 @@ UIx's `$` macro auto-converts kebab-case props to camelCase for non-UIx componen
 | `app.components.resizable_panel` | `ResizablePanel` — draggable-resize wrapper for bottom panel |
 | `app.export.html` | Standalone HTML export pipeline |
 | `app.export.svg` | Standalone SVG export helper |
+| `app.export.pdf` | PDF export using jsPDF + svg2pdf.js |
 | `app.import.arborview` | ArborView HTML import parser |
 | `app.import.nextstrain` | Nextstrain JSON import parser |
