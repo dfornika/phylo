@@ -10,6 +10,7 @@
             [app.import.nextstrain :as nextstrain]
             [app.state :as state]
             [app.export.html :as export-html]
+            [app.export.pdf :as export-pdf]
             [app.export.svg :as export-svg]
             [app.layout :refer [LAYOUT]]
             [app.io :as io]
@@ -215,7 +216,19 @@
                                     :border (str "1px solid " navy)
                                     :border-radius "6px"
                                     :transition "background 0.15s"}}
-                   "⇩ HTML")))
+                   "⇩ HTML")
+                ($ :button {:on-click (fn [_] (export-pdf/export-pdf!))
+                            :style {:font-family toolbar-font
+                                    :font-size "13px"
+                                    :font-weight 600
+                                    :color navy
+                                    :padding "6px 12px"
+                                    :cursor "pointer"
+                                    :background "#f0f2f5"
+                                    :border (str "1px solid " navy)
+                                    :border-radius "6px"
+                                    :transition "background 0.15s"}}
+                   "⇩ PDF")))
 
           ;; ── Row 2: Toggles | Scale ──
           ($ :div {:style {:display "flex"

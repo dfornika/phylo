@@ -20,9 +20,11 @@
     "typescript": "^5.9.3"
   },
   "dependencies": {
+    "ag-grid-community": "^35.0.1",
+    "ag-grid-react": "^35.0.1",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
-    "ag-grid-community": "^35.0.1",
-    "ag-grid-react": "^35.0.1"
+    "jspdf": "^4.2.0",
+    "svg2pdf.js": "^2.7.0"
   }
 }
